@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Remarkable demo</title>
+    <script src="https://cdn.jsdelivr.net/npm/remarkable@1"></script>
+</head>
+
+<body>
+    <div id="content">
+        <!-- content will be placed here -->
+    </div>
+    <script>
+        var md = new Remarkable({
+            html: false, // Enable HTML tags in source
+            xhtmlOut: false, // Use '/' to close single tags (<br />)
+            breaks: false, // Convert '\n' in paragraphs into <br>
+            langPrefix: 'language-', // CSS language prefix for fenced blocks
+            
+            // Enable some language-neutral replacement + quotes beautification
+            typographer: false,
+            
+            // Double + single quotes replacement pairs, when typographer enabled,
+            // and smartquotes on. Set doubles to '«»' for Russian, '„“' for German.
+            quotes: '“”‘’',
+            
+            // Highlighter function. Should return escaped HTML,
+            // or '' if the source string is not changed
+            highlight: function (/*str, lang*/) { return ''; }
+        });
+        document.getElementById('content').innerHTML = md.render('# Remarkable rulezz!');
+    </script>
+</html>
