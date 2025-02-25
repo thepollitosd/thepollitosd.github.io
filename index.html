@@ -55,28 +55,7 @@
     <div id="markdown">
     </div>
     <script>
-        function render() {
-            var content = document.getElementById('content');
-            var md = new Remarkable({
-                html: true, // Enable HTML tags in source
-                xhtmlOut: false, // Use '/' to close single tags (<br />)
-                breaks: false, // Convert '\n' in paragraphs into <br>
-                langPrefix: 'language-', // CSS language prefix for fenced blocks
-
-                // Enable some language-neutral replacement + quotes beautification
-                typographer: false,
-
-                // Double + single quotes replacement pairs, when typographer enabled,
-                // and smartquotes on. Set doubles to '«»' for Russian, '„“' for German.
-                quotes: '“”‘’',
-
-                // Highlighter function. Should return escaped HTML,
-                // or '' if the source string is not changed
-                highlight: function (/*str, lang*/) { return ''; }
-            });
-            document.getElementById('markdown').innerHTML = md.render(String(content.value).replace("->","→")).replace("\\n\\","\n").replace("{s}","<div class='section'>").replace("{/s}","</div>");
-        }
-        render();
+            document.getElementById('markdown').innerHTML = md.render(String("# Hello! I'm Diego!\\n\\\\n\\I write code.").replace("->","→")).replace("\\n\\","\n").replace("{s}","<div class='section'>").replace("{/s}","</div>");
     </script>
 </body>
 
