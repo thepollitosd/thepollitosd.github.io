@@ -1,1 +1,83 @@
-<html></html>
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Remarkable demo</title>
+    <script src="https://cdn.jsdelivr.net/npm/remarkable@1/dist/remarkable.min.js"></script>
+    <style>
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+            margin: 20px;
+            background-color: #141414;
+            color: #a9ff94;
+            text-shadow: #00ff40 0 0 3px;
+            word-wrap: break-word;
+
+        }
+
+        code {
+            color: #a9ff94;
+            text-shadow: #00ff40 0 0 3px;
+            background-color: #2c3d2d;
+            padding: 5px;
+            font-size: 85%;
+            border-radius: 3px;
+        }
+
+        .code {
+            color: #a9ff94;
+            text-shadow: #00ff40 0 0 3px;
+            background-color: #2c3d2d;
+            padding: 5px;
+            font-size: 85%;
+            border-radius: 3px;
+        }
+
+        a {
+            color: #ffffff;
+            text-decoration: none;
+        }
+
+        .section {
+            background-color: #2c3d2d;
+            padding: 10px;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <textarea class="code" id="content" style="width: 100%; height: auto;" oninput="this.style.height = ''; this.style.height = this.scrollHeight + 'px'; render();"># Markdown</textarea>
+    <div id="markdown">
+    </div>
+    <script>
+        function render() {
+            var content = document.getElementById('content');
+            var md = new Remarkable({
+                html: true, // Enable HTML tags in source
+                xhtmlOut: false, // Use '/' to close single tags (<br />)
+                breaks: false, // Convert '\n' in paragraphs into <br>
+                langPrefix: 'language-', // CSS language prefix for fenced blocks
+
+                // Enable some language-neutral replacement + quotes beautification
+                typographer: false,
+
+                // Double + single quotes replacement pairs, when typographer enabled,
+                // and smartquotes on. Set doubles to '«»' for Russian, '„“' for German.
+                quotes: '“”‘’',
+
+                // Highlighter function. Should return escaped HTML,
+                // or '' if the source string is not changed
+                highlight: function (/*str, lang*/) { return ''; }
+            });
+            document.getElementById('markdown').innerHTML = md.render(String(content.value).replace("->","→")).replace("\\n\\","\n").replace("{s}","<div class='section'>").replace("{/s}","</div>");
+        }
+        render();
+    </script>
+</body>
+
+</html>
