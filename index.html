@@ -1,62 +1,545 @@
 <!DOCTYPE html>
 <html>
-
 <head>
-    <title>Remarkable demo</title>
-    <script src="https://cdn.jsdelivr.net/npm/remarkable@1/dist/remarkable.min.js"></script>
-    <style>
-        html {
-            scroll-behavior: smooth;
-        }
-
-        body {
-            font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
-            margin: 20px;
-            background-color: #141414;
-            color: #a9ff94;
-            text-shadow: #00ff40 0 0 3px;
-            word-wrap: break-word;
-
-        }
-
-        code {
-            color: #a9ff94;
-            text-shadow: #00ff40 0 0 3px;
-            background-color: #2c3d2d;
-            padding: 5px;
-            font-size: 85%;
-            border-radius: 3px;
-        }
-
-        .code {
-            color: #a9ff94;
-            text-shadow: #00ff40 0 0 3px;
-            background-color: #2c3d2d;
-            padding: 5px;
-            font-size: 85%;
-            border-radius: 3px;
-        }
-
-        a {
-            color: #ffffff;
-            text-decoration: none;
-        }
-
-        .section {
-            background-color: #2c3d2d;
-            padding: 10px;
-            border-radius: 5px;
-        }
-    </style>
+<title>Simple Slither Clone (Mobile Friendly)</title>
+<!-- Make viewport responsive for mobile -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<style>
+  body {
+    margin: 0;
+    overflow: hidden; /* Prevent scrollbars */
+    background-color: #222;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    font-family: sans-serif;
+    color: white;
+    /* Prevent pull-to-refresh and other touch behaviors */
+    overscroll-behavior: none;
+  }
+  canvas {
+    border: 1px solid #555;
+    background-color: #000;
+    /* Ensure canvas doesn't cause overflow issues */
+    max-width: 100%;
+    max-height: 100%;
+    display: block; /* Helps prevent extra space below canvas */
+     /* Prevent highlighting text on canvas during touch */
+    user-select: none;
+    -webkit-user-select: none; /* Safari */
+    -moz-user-select: none; /* Firefox */
+    -ms-user-select: none; /* IE/Edge */
+    /* Improve touch action handling */
+    touch-action: none;
+  }
+  #info {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background: rgba(0,0,0,0.5);
+    padding: 5px 10px;
+    border-radius: 5px;
+    font-size: 14px; /* Slightly smaller for mobile maybe */
+    pointer-events: none; /* Make sure info doesn't block touches */
+  }
+</style>
 </head>
-
 <body>
-    <textarea class="code" id="content" style="width: 100%; height: auto;" oninput="this.style.height = ''; this.style.height = this.scrollHeight + 'px'; render();"># Markdown</textarea>
-    <div id="markdown">
-    </div>
-    <script>
-            document.getElementById('markdown').innerHTML = md.render(String("# Hello! I'm Diego!\\n\\\\n\\I write code.").replace("->","→")).replace("\\n\\","\n").replace("{s}","<div class='section'>").replace("{/s}","</div>");
-    </script>
-</body>
 
+<div id="info">
+  Length: <span id="lengthDisplay">0</span><br>
+  Bots: <span id="botCount">0</span>
+</div>
+
+<canvas id="gameCanvas"></canvas>
+
+<script>
+  // --- Config ---
+  const config = {
+    // Adjust canvas size dynamically or keep fixed? Let's try fixed for simplicity.
+    canvasWidth: 800,
+    canvasHeight: 600,
+    gameBoundsPadding: 50,
+    initialPlayerLength: 10,
+    initialBotLength: 8,
+    snakeSegmentRadius: 5,
+    snakeSpeed: 2.5,
+    snakeTurnSpeed: 0.07,
+    growthPerFood: 1,
+    foodCount: 100,
+    foodRadius: 3,
+    botCount: 15,
+    botUpdateTargetInterval: 100,
+    collisionCheckDistance: 4,
+    respawnTime: 3000,
+    targetIndicatorRadius: 8 // Radius for the touch/mouse target indicator
+  };
+
+  // Calculated bounds
+  const bounds = {
+      minX: -config.gameBoundsPadding,
+      maxX: config.canvasWidth + config.gameBoundsPadding,
+      minY: -config.gameBoundsPadding,
+      maxY: config.canvasHeight + config.gameBoundsPadding
+  };
+
+  // --- Globals ---
+  const canvas = document.getElementById('gameCanvas');
+  const ctx = canvas.getContext('2d');
+  const lengthDisplay = document.getElementById('lengthDisplay');
+  const botCountDisplay = document.getElementById('botCount');
+
+  // Determine appropriate canvas size (optional enhancement - keeping fixed for now)
+  // let canvasW = Math.min(window.innerWidth - 20, config.canvasWidth);
+  // let canvasH = Math.min(window.innerHeight - 20, config.canvasHeight);
+  // canvas.width = canvasW;
+  // canvas.height = canvasH;
+   canvas.width = config.canvasWidth;
+   canvas.height = config.canvasHeight;
+
+
+  let player = null;
+  let bots = [];
+  let food = [];
+  // Combined target position for mouse and touch
+  let targetPos = { x: canvas.width / 2, y: canvas.height / 2 };
+  let isGameOver = false;
+  let gameOverTimeout = null;
+  let lastTouchTime = 0; // To potentially hide indicator if no recent touch
+
+
+  // --- Utility Functions ---
+  function getRandomColor() { /* ... (same as before) ... */
+    const letters = '0123456789ABCDEF';
+    let color = '#';
+    for (let i = 0; i < 6; i++) {
+      color += letters[Math.floor(Math.random() * 16)];
+    }
+    return color;
+   }
+  function getRandomPosition() { /* ... (same as before) ... */
+     return {
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height
+    };
+   }
+  function distance(p1, p2) { /* ... (same as before) ... */
+    const dx = p1.x - p2.x;
+    const dy = p1.y - p2.y;
+    return Math.sqrt(dx * dx + dy * dy);
+   }
+   function normalizeAngle(angle) { /* ... (same as before) ... */
+        while (angle <= -Math.PI) angle += 2 * Math.PI;
+        while (angle > Math.PI) angle -= 2 * Math.PI;
+        return angle;
+    }
+
+
+  // --- Game Objects ---
+  class Snake {
+     constructor(x, y, length, color, isBot = false) { /* ... (mostly same as before) ... */
+      this.x = x;
+      this.y = y;
+      this.length = length;
+      this.color = color;
+      this.isBot = isBot;
+      this.angle = Math.random() * Math.PI * 2;
+      this.targetAngle = this.angle;
+      this.speed = config.snakeSpeed;
+      this.body = [];
+      this.targetFood = null; // For bots
+      this.framesUntilUpdate = 0; // For bots
+      this.isAlive = true;
+
+      // Initialize body
+      for (let i = 0; i < length; i++) {
+        this.body.push({ x: x - i * (config.snakeSegmentRadius), y: y });
+      }
+     }
+
+     setTargetAngle(targetX, targetY) { /* ... (same as before) ... */
+        let desiredAngle = Math.atan2(targetY - this.y, targetX - this.x);
+        let diff = normalizeAngle(desiredAngle - this.angle);
+        let turn = Math.max(-config.snakeTurnSpeed, Math.min(config.snakeTurnSpeed, diff));
+        this.targetAngle = normalizeAngle(this.angle + turn);
+     }
+
+     updateBotTarget() { /* ... (same as before) ... */
+        // Simple AI: Target nearest food, with some randomness/inertia
+        if (this.framesUntilUpdate <= 0 || !this.targetFood || food.indexOf(this.targetFood) === -1) {
+             let closestFood = null;
+             let minDist = Infinity;
+
+             food.forEach(f => {
+                 const d = distance(this, f);
+                 if (d < minDist) {
+                     minDist = d;
+                     closestFood = f;
+                 }
+             });
+
+             // Sometimes just move randomly
+             if(Math.random() < 0.2 || !closestFood) {
+                this.targetAngle = this.angle + (Math.random() - 0.5) * Math.PI * 0.8;
+             } else {
+                this.targetFood = closestFood;
+                this.setTargetAngle(this.targetFood.x, this.targetFood.y);
+             }
+
+            this.framesUntilUpdate = config.botUpdateTargetInterval / 2 + Math.random() * (config.botUpdateTargetInterval / 2);
+
+        } else if (this.targetFood) {
+            this.setTargetAngle(this.targetFood.x, this.targetFood.y);
+            this.framesUntilUpdate--;
+        } else {
+             this.framesUntilUpdate = 0;
+        }
+
+        // Basic avoidance
+        const avoidMargin = 50;
+         if (this.x < bounds.minX + avoidMargin && Math.cos(this.targetAngle) < 0) this.targetAngle += config.snakeTurnSpeed * 2;
+         if (this.x > bounds.maxX - avoidMargin && Math.cos(this.targetAngle) > 0) this.targetAngle += config.snakeTurnSpeed * 2;
+         if (this.y < bounds.minY + avoidMargin && Math.sin(this.targetAngle) < 0) this.targetAngle += config.snakeTurnSpeed * 2;
+         if (this.y > bounds.maxY - avoidMargin && Math.sin(this.targetAngle) > 0) this.targetAngle += config.snakeTurnSpeed * 2;
+
+         this.targetAngle = normalizeAngle(this.targetAngle);
+     }
+
+
+     move() { /* ... (same as before) ... */
+      if (!this.isAlive) return;
+
+      // Update angle smoothly towards target angle
+        let angleDiff = normalizeAngle(this.targetAngle - this.angle);
+        this.angle = normalizeAngle(this.angle + Math.max(-config.snakeTurnSpeed, Math.min(config.snakeTurnSpeed, angleDiff)));
+
+      // Move head
+      this.x += Math.cos(this.angle) * this.speed;
+      this.y += Math.sin(this.angle) * this.speed;
+
+      // Add new head position to body
+      this.body.unshift({ x: this.x, y: this.y });
+
+      // Trim tail if not growing
+      while (this.body.length > this.length) {
+        this.body.pop();
+      }
+
+      // Boundary check
+       if (this.x < bounds.minX || this.x > bounds.maxX || this.y < bounds.minY || this.y > bounds.maxY) {
+           this.die();
+       }
+     }
+
+     draw() { /* ... (same as before, including eyes) ... */
+        if (!this.isAlive) return;
+        ctx.lineWidth = config.snakeSegmentRadius * 2;
+        ctx.strokeStyle = this.color;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+
+        if (this.body.length < 2) return;
+
+        ctx.beginPath();
+        ctx.moveTo(this.body[0].x, this.body[0].y);
+        for (let i = 1; i < this.body.length; i++) {
+              if(distance(this.body[i], this.body[i-1]) > config.snakeSegmentRadius / 2) {
+                   ctx.lineTo(this.body[i].x, this.body[i].y);
+              }
+        }
+         ctx.stroke();
+
+        // Draw head
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, config.snakeSegmentRadius + 1, 0, Math.PI * 2);
+        ctx.fillStyle = this.color;
+        ctx.fill();
+
+         // Draw eyes
+         const eyeOffsetX = Math.cos(this.angle + Math.PI / 2) * config.snakeSegmentRadius * 0.6;
+         const eyeOffsetY = Math.sin(this.angle + Math.PI / 2) * config.snakeSegmentRadius * 0.6;
+         const eyeBaseX = this.x + Math.cos(this.angle) * config.snakeSegmentRadius * 0.5;
+         const eyeBaseY = this.y + Math.sin(this.angle) * config.snakeSegmentRadius * 0.5;
+
+         ctx.beginPath(); ctx.arc(eyeBaseX + eyeOffsetX, eyeBaseY + eyeOffsetY, config.snakeSegmentRadius * 0.4, 0, Math.PI * 2); ctx.fillStyle = 'white'; ctx.fill();
+         ctx.beginPath(); ctx.arc(eyeBaseX - eyeOffsetX, eyeBaseY - eyeOffsetY, config.snakeSegmentRadius * 0.4, 0, Math.PI * 2); ctx.fillStyle = 'white'; ctx.fill();
+         ctx.beginPath(); ctx.arc(eyeBaseX + eyeOffsetX + Math.cos(this.angle)*1, eyeBaseY + eyeOffsetY + Math.sin(this.angle)*1, config.snakeSegmentRadius * 0.2, 0, Math.PI * 2); ctx.fillStyle = 'black'; ctx.fill();
+         ctx.beginPath(); ctx.arc(eyeBaseX - eyeOffsetX + Math.cos(this.angle)*1, eyeBaseY - eyeOffsetY + Math.sin(this.angle)*1, config.snakeSegmentRadius * 0.2, 0, Math.PI * 2); ctx.fillStyle = 'black'; ctx.fill();
+     }
+
+     eat(foodItem) { /* ... (same as before) ... */
+         this.length += config.growthPerFood;
+     }
+
+     checkCollision(otherSnakes) { /* ... (same as before) ... */
+        if (!this.isAlive) return;
+        const head = this.body[0];
+
+        // Collision with other snakes' bodies
+        for (const other of otherSnakes) {
+            if (!other.isAlive || other === this) continue;
+            const checkStartIndex = 3;
+            for (let i = checkStartIndex; i < other.body.length; i++) {
+                if (distance(head, other.body[i]) < config.snakeSegmentRadius + config.collisionCheckDistance) {
+                    this.die();
+                    // other.eat(); // Optional bonus for killer
+                    return;
+                }
+            }
+        }
+         // Self-collision check
+         const selfCheckStartIndex = Math.min(15, Math.floor(this.body.length / 2));
+         for (let i = selfCheckStartIndex; i < this.body.length; i++) {
+              if (distance(head, this.body[i]) < config.snakeSegmentRadius) {
+                 this.die();
+                 return;
+              }
+         }
+     }
+
+     die() { /* ... (same as before) ... */
+        if (!this.isAlive) return;
+        this.isAlive = false;
+        console.log(`${this.isBot ? 'Bot' : 'Player'} died with length ${this.length}`);
+
+        // Drop food
+        for (let i = 0; i < this.body.length; i += 5) {
+            if(Math.random() < 0.5) {
+                 food.push({
+                     x: this.body[i].x + (Math.random() - 0.5) * 10,
+                     y: this.body[i].y + (Math.random() - 0.5) * 10,
+                     radius: config.foodRadius + Math.random() * 2,
+                     color: this.color
+                 });
+            }
+        }
+
+        // Handle player death vs bot death
+        if (!this.isBot) {
+            isGameOver = true;
+            if (gameOverTimeout) clearTimeout(gameOverTimeout);
+            gameOverTimeout = setTimeout(respawnPlayer, config.respawnTime);
+        } else {
+            const botIndex = bots.indexOf(this);
+            if (botIndex > -1) {
+                bots.splice(botIndex, 1);
+                 setTimeout(spawnBot, 1000 + Math.random() * 2000);
+            }
+        }
+    }
+  }
+
+  // --- Food ---
+  function spawnFood(count) { /* ... (same as before) ... */
+    for (let i = 0; i < count; i++) {
+      food.push({
+        ...getRandomPosition(),
+        radius: config.foodRadius,
+        color: getRandomColor()
+      });
+    }
+  }
+  function drawFood() { /* ... (same as before) ... */
+    food.forEach(f => {
+      ctx.beginPath();
+      ctx.arc(f.x, f.y, f.radius, 0, Math.PI * 2);
+      ctx.fillStyle = f.color;
+      ctx.fill();
+    });
+  }
+   function checkFoodCollisions(snake) { /* ... (same as before) ... */
+      if (!snake.isAlive) return;
+        const head = snake.body[0];
+        for (let i = food.length - 1; i >= 0; i--) {
+            const f = food[i];
+            if (distance(head, f) < config.snakeSegmentRadius + f.radius) {
+                snake.eat(f);
+                food.splice(i, 1);
+                spawnFood(1);
+            }
+        }
+    }
+
+  // --- Bot Management ---
+  function spawnBot() { /* ... (same as before) ... */
+      if (bots.length < config.botCount) {
+          const pos = getRandomPosition();
+           const newBot = new Snake(pos.x, pos.y, config.initialBotLength, getRandomColor(), true);
+           bots.push(newBot);
+      }
+  }
+  function updateBots() { /* ... (same as before) ... */
+      bots.forEach(bot => {
+           if (bot.isAlive) {
+                bot.updateBotTarget();
+                bot.move();
+                checkFoodCollisions(bot);
+                bot.checkCollision([player, ...bots]);
+           }
+      });
+      botCountDisplay.textContent = bots.filter(b => b.isAlive).length;
+  }
+
+  // --- Player ---
+   function createPlayer() { /* ... (same as before) ... */
+        const startPos = getRandomPosition();
+        player = new Snake(startPos.x, startPos.y, config.initialPlayerLength, 'lightblue', false);
+        isGameOver = false;
+        console.log("Player created");
+   }
+    function respawnPlayer() { /* ... (same as before) ... */
+        console.log("Respawning player...");
+        if (gameOverTimeout) clearTimeout(gameOverTimeout);
+        gameOverTimeout = null;
+        createPlayer();
+    }
+
+   function updatePlayer() {
+        if (!player || !player.isAlive) return;
+        // Use the unified targetPos for steering
+        player.setTargetAngle(targetPos.x, targetPos.y);
+        player.move();
+        checkFoodCollisions(player);
+        player.checkCollision(bots); // Player only checks collision against bots
+        lengthDisplay.textContent = player.length;
+    }
+
+   // --- Target Indicator ---
+   function drawTargetIndicator() {
+       // Optionally hide if no recent touch/mouse?
+       // const timeSinceLastInput = Date.now() - lastTouchTime;
+       // if (timeSinceLastInput > 1000) return; // Hide after 1 second
+
+       ctx.beginPath();
+       ctx.arc(targetPos.x, targetPos.y, config.targetIndicatorRadius, 0, Math.PI * 2);
+       ctx.fillStyle = 'rgba(255, 255, 255, 0.2)'; // Semi-transparent white
+       ctx.fill();
+       ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+       ctx.lineWidth = 1;
+       ctx.stroke();
+   }
+
+
+  // --- Game Loop ---
+  function gameLoop() {
+    // Clear canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+     // Update and Draw
+     if (!isGameOver && player) {
+         updatePlayer();
+     }
+     updateBots();
+
+     drawFood();
+     bots.forEach(bot => bot.draw());
+
+      if(player) {
+           player.draw();
+      }
+
+      // Draw the target indicator (optional)
+      drawTargetIndicator();
+
+
+    // Game Over Text
+    if (isGameOver) {
+        ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
+        ctx.font = "40px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("Game Over!", canvas.width / 2, canvas.height / 2 - 20);
+        ctx.font = "20px sans-serif";
+         ctx.fillText(`Respawning in ${Math.ceil(config.respawnTime/1000)}s...`, canvas.width / 2, canvas.height / 2 + 20);
+    }
+
+    // Next frame
+    requestAnimationFrame(gameLoop);
+  }
+
+  // --- Event Listeners ---
+
+  // Get position relative to canvas
+  function getEventPosition(event) {
+      const rect = canvas.getBoundingClientRect();
+      let x, y;
+      if (event.touches && event.touches.length > 0) {
+          // Use the first touch point
+          x = event.touches[0].clientX - rect.left;
+          y = event.touches[0].clientY - rect.top;
+      } else {
+          // Use mouse coordinates
+          x = event.clientX - rect.left;
+          y = event.clientY - rect.top;
+      }
+       // Clamp position to be within canvas bounds (optional, but good practice)
+       x = Math.max(0, Math.min(canvas.width, x));
+       y = Math.max(0, Math.min(canvas.height, y));
+       return { x, y };
+  }
+
+  // Mouse Listener
+  canvas.addEventListener('mousemove', (event) => {
+    const pos = getEventPosition(event);
+    targetPos.x = pos.x;
+    targetPos.y = pos.y;
+    lastTouchTime = Date.now(); // Update time for indicator
+  });
+
+  // Touch Listeners
+  canvas.addEventListener('touchstart', (event) => {
+    // Prevent default touch behavior (scrolling, zooming)
+    event.preventDefault();
+    const pos = getEventPosition(event);
+    targetPos.x = pos.x;
+    targetPos.y = pos.y;
+    lastTouchTime = Date.now(); // Update time for indicator
+  }, { passive: false }); // Need passive: false to allow preventDefault
+
+  canvas.addEventListener('touchmove', (event) => {
+    // Prevent default touch behavior
+    event.preventDefault();
+     const pos = getEventPosition(event);
+    targetPos.x = pos.x;
+    targetPos.y = pos.y;
+    lastTouchTime = Date.now(); // Update time for indicator
+  }, { passive: false }); // Need passive: false to allow preventDefault
+
+  // Prevent context menu on long press (mobile)
+  canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+  // Prevent accidental selection/drag behavior on desktop
+  canvas.addEventListener('mousedown', (e) => e.preventDefault());
+
+
+  // --- Initialization ---
+  function init() {
+    console.log("Initializing game...");
+    food = [];
+    bots = [];
+    player = null;
+    targetPos = { x: canvas.width / 2, y: canvas.height / 2 }; // Reset target
+
+    spawnFood(config.foodCount);
+    for (let i = 0; i < config.botCount; i++) {
+        spawnBot();
+    }
+    createPlayer();
+
+    if (gameOverTimeout) {
+        clearTimeout(gameOverTimeout);
+        gameOverTimeout = null;
+    }
+     isGameOver = false;
+    lastTouchTime = Date.now(); // Initialize touch time
+
+    console.log("Initialization complete.");
+  }
+
+  // --- Start Game ---
+  init();
+  gameLoop();
+
+</script>
+
+</body>
 </html>
