@@ -1,514 +1,1294 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Slither Clone</title>
     <style>
-        body { margin: 0; overflow: hidden; background-color: #111; }
-        canvas { display: block; margin: auto; background-color: #222; /* Temporary BG */ }
-        /* Add styles for score, menus etc. later */
+        /* Basic styling */
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #111; /* Dark background */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100vw;
+            height: 100vh;
+            font-family: 'Arial', sans-serif;
+            color: white;
+        }
+        canvas {
+            display: block;
+            /* background-color: #1e1e1e; /* Slightly lighter for debugging */
+            image-rendering: pixelated; /* Optional: for crisp pixels */
+            image-rendering: crisp-edges;
+        }
+        #ui {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 16px;
+            pointer-events: none; /* Allow clicks/touches through */
+        }
+         #gameOverScreen {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.7);
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
+            display: none; /* Hidden by default */
+            z-index: 100;
+         }
+         #gameOverScreen h2 {
+            margin-top: 0;
+         }
+         #restartButton {
+            padding: 10px 20px;
+            font-size: 18px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            border-radius: 5px;
+            margin-top: 15px;
+         }
     </style>
 </head>
 <body>
     <canvas id="gameCanvas"></canvas>
+    <div id="ui">
+        <div>Score: <span id="score">0</span></div>
+        <div>FPS: <span id="fps">0</span></div>
+    </div>
+     <div id="gameOverScreen">
+        <h2>Game Over!</h2>
+        <div>Final Score: <span id="finalScore">0</span></div>
+        <button id="restartButton">Restart</button>
+    </div>
+
     <script>
-// --- Basic Setup ---
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
+        // --- Polyfills & Setup ---
+        window.requestAnimationFrame = window.requestAnimationFrame || window.webkitRequestAnimationFrame || window.mozRequestAnimationFrame || window.oRequestAnimationFrame || window.msRequestAnimationFrame || function(callback) {
+            window.setTimeout(callback, 1000 / 60);
+        };
 
-let canvasWidth = window.innerWidth;
-let canvasHeight = window.innerHeight;
-canvas.width = canvasWidth;
-canvas.height = canvasHeight;
+        // --- Constants ---
+        const CONFIG = {
+            WORLD_SIZE: 4000,       // Virtual size of the world
+            GRID_SIZE: 50,          // Background grid spacing
+            INITIAL_FOOD_COUNT: 300,
+            INITIAL_AI_COUNT: 15,
 
-window.addEventListener('resize', () => {
-    canvasWidth = window.innerWidth;
-    canvasHeight = window.innerHeight;
-    canvas.width = canvasWidth;
-    canvas.height = canvasHeight;
-});
+            PLAYER_INITIAL_LENGTH: 10,
+            PLAYER_BASE_SPEED: 2.0, // Pixels per frame (~120 px/sec at 60fps) - SLOW
+            PLAYER_BOOST_SPEED_MULTIPLIER: 2.0,
+            PLAYER_BOOST_COST: 0.05, // Length units lost per frame while boosting
+            PLAYER_TURN_SPEED: 0.08, // Radians per frame adjustment towards target
 
-// --- Game State ---
-let playerSnake;
-let aiSnakes = [];
-let food = [];
-let score = 0;
-let gameState = 'playing'; // or 'menu', 'gameOver'
-const worldSize = 5000; // Virtual size of the game world
-const foodCount = 200;
-const aiCount = 10;
+            AI_INITIAL_LENGTH_MIN: 5,
+            AI_INITIAL_LENGTH_MAX: 15,
+            AI_BASE_SPEED_MULTIPLIER: 0.85, // AI slightly slower than player base
+            AI_TURN_SPEED: 0.04,     // Base AI turn speed (can vary per AI)
+            AI_VIEW_DISTANCE: 350,  // How far AI looks for food/players
+            AI_AVOIDANCE_DISTANCE: 80, // How far AI looks ahead to avoid bodies
+            AI_AVOIDANCE_WEIGHT: 2.5, // How strongly AI reacts to obstacles
+            AI_WANDER_DISTANCE: 200, // How far wander targets are set
 
-// Camera position (top-left corner of the visible area in world coordinates)
-let cameraX = 0;
-let cameraY = 0;
+            SNAKE_RADIUS: 8,        // Base thickness
+            SEGMENT_GAP: 6,         // Target distance between segment centers (slightly less than radius*2)
+            FOOD_RADIUS: 5,
+            FOOD_VALUE: 1,          // Length gained per food item
+            FOOD_DROP_ON_DEATH_DENSITY: 3, // Lower number = more food dropped
 
-// Target direction (angle in radians)
-let targetAngle = 0;
-let currentAngle = 0;
-const turnSpeed = 0.1; // Radians per frame adjustment
-const baseSpeed = 1.5; // Pixels per frame - MAKE THIS SLOW!
+            PARTICLE_COUNT_DEATH: 50,
+            PARTICLE_COUNT_BOOST: 1,
+            PARTICLE_LIFETIME: 1.0, // seconds
 
-// --- Game Loop ---
-let lastTimestamp = 0;
-function gameLoop(timestamp) {
-    const deltaTime = (timestamp - lastTimestamp) / 1000; // Time since last frame in seconds
-    lastTimestamp = timestamp;
+            QUADTREE_MAX_OBJECTS: 10, // Max objects per node before splitting
+            QUADTREE_MAX_LEVELS: 5,   // Max depth of the tree
 
-    if (gameState === 'playing') {
-        update(deltaTime);
-        render();
-    } else if (gameState === 'gameOver') {
-        // Show game over screen
-    }
+            DEBUG_QUADTREE: false,   // Set to true to draw quadtree boundaries
+        };
 
-    requestAnimationFrame(gameLoop);
-}
+        // --- Utility Functions ---
+        const MathUtils = {
+            distanceSq: (x1, y1, x2, y2) => {
+                const dx = x1 - x2;
+                const dy = y1 - y2;
+                return dx * dx + dy * dy;
+            },
+            distance: (x1, y1, x2, y2) => Math.sqrt(MathUtils.distanceSq(x1, y1, x2, y2)),
+            angle: (x1, y1, x2, y2) => Math.atan2(y2 - y1, x2 - x1),
+            clamp: (value, min, max) => Math.max(min, Math.min(max, value)),
+            wrapAngle: (angle) => {
+                while (angle < -Math.PI) angle += 2 * Math.PI;
+                while (angle > Math.PI) angle -= 2 * Math.PI;
+                return angle;
+            },
+            randomRange: (min, max) => Math.random() * (max - min) + min,
+            randomInt: (min, max) => Math.floor(MathUtils.randomRange(min, max + 1)),
+            lerp: (a, b, t) => a + (b - a) * t, // Linear interpolation
+        };
 
-// --- Update Function ---
-function update(deltaTime) {
-    // Smoothly turn player snake towards target angle
-    // Handle angle wrapping (e.g., from 2PI to 0)
-    let angleDiff = targetAngle - currentAngle;
-    while (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
-    while (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
-    currentAngle += angleDiff * turnSpeed; // Adjust turn speed for smoothness
-
-    playerSnake.update(currentAngle, baseSpeed); // Pass angle and speed
-
-    // Update AI Snakes
-    aiSnakes.forEach(ai => ai.updateAI(playerSnake, food, aiSnakes));
-
-    // Check Collisions (food, other snakes)
-    checkCollisions();
-
-    // Update Camera to follow player
-    // Center the player on screen
-    cameraX = playerSnake.x - canvasWidth / 2;
-    cameraY = playerSnake.y - canvasHeight / 2;
-
-    // Clamp camera to world boundaries (optional, but good practice)
-    // cameraX = Math.max(0, Math.min(worldSize - canvasWidth, cameraX));
-    // cameraY = Math.max(0, Math.min(worldSize - canvasHeight, cameraY));
-}
-
-// --- Render Function ---
-function render() {
-    // Clear canvas
-    ctx.fillStyle = '#1a1a1a'; // Dark background like original
-    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
-
-    // --- Apply Camera Transform ---
-    // IMPORTANT: Everything drawn after this is relative to the world
-    ctx.save();
-    ctx.translate(-cameraX, -cameraY);
-
-    // Draw Background Grid (Example)
-    drawGrid();
-
-    // Draw Food
-    food.forEach(f => f.draw(ctx));
-
-    // Draw AI Snakes
-    aiSnakes.forEach(ai => ai.draw(ctx));
-
-    // Draw Player Snake
-    playerSnake.draw(ctx);
-
-    // --- Restore Context ---
-    // IMPORTANT: Anything drawn after this is relative to the screen (like UI)
-    ctx.restore();
-
-    // Draw Score, UI elements, etc. on top
-    ctx.fillStyle = 'white';
-    ctx.font = '20px Arial';
-    ctx.fillText(`Score: ${score}`, 10, 30);
-
-     // Draw minimap (optional advanced feature)
-}
-
-// --- Helper: Draw Background Grid ---
-function drawGrid() {
-    const gridSize = 50;
-    ctx.strokeStyle = '#333'; // Dark grid lines
-    ctx.lineWidth = 1;
-
-    // Calculate visible grid lines based on camera position
-    const startX = Math.floor(cameraX / gridSize) * gridSize;
-    const startY = Math.floor(cameraY / gridSize) * gridSize;
-    const endX = cameraX + canvasWidth;
-    const endY = cameraY + canvasHeight;
-
-    for (let x = startX; x < endX; x += gridSize) {
-        ctx.beginPath();
-        ctx.moveTo(x, startY);
-        ctx.lineTo(x, endY);
-        ctx.stroke();
-    }
-    for (let y = startY; y < endY; y += gridSize) {
-        ctx.beginPath();
-        ctx.moveTo(startX, y);
-        ctx.lineTo(endX, y);
-        ctx.stroke();
-    }
-}
-
-
-// --- Initialization ---
-function init() {
-    // Create player snake instance
-    playerSnake = new Snake(worldSize / 2, worldSize / 2, 10, '#00FF00'); // Start pos, initial size, color
-
-    // Create AI snakes
-    aiSnakes = [];
-    for (let i = 0; i < aiCount; i++) {
-        const aiX = Math.random() * worldSize;
-        const aiY = Math.random() * worldSize;
-        const aiColor = `hsl(${Math.random() * 360}, 70%, 50%)`;
-        aiSnakes.push(new Snake(aiX, aiY, 8, aiColor, true)); // isAI = true
-    }
-
-    // Create food
-    food = [];
-    for (let i = 0; i < foodCount; i++) {
-        food.push(new Food(Math.random() * worldSize, Math.random() * worldSize));
-    }
-
-    // Setup Controls
-    setupControls();
-
-    // Start the game loop
-    lastTimestamp = performance.now();
-    requestAnimationFrame(gameLoop);
-}
-
-// --- Classes (Simplified) ---
-
-class Food {
-    constructor(x, y) {
-        this.x = x;
-        this.y = y;
-        this.radius = 5;
-        this.color = `hsl(${Math.random() * 360}, 100%, 70%)`; // Bright food colors
-    }
-
-    draw(ctx) {
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-        ctx.fillStyle = this.color;
-        ctx.fill();
-        // Add a slight glow maybe?
-        ctx.shadowBlur = 5;
-        ctx.shadowColor = this.color;
-        ctx.fill();
-        ctx.shadowBlur = 0; // Reset shadow
-    }
-}
-
-class Snake {
-    constructor(x, y, initialLength, color, isAI = false) {
-        this.x = x; // Head X
-        this.y = y; // Head Y
-        this.color = color;
-        this.segments = []; // Array of {x, y} points
-        this.segmentGap = 5; // Distance between segment centers
-        this.radius = 8; // Thickness of the snake
-        this.length = initialLength; // Target number of segments
-        this.isAI = isAI;
-        this.aiState = 'wandering'; // For AI: wandering, seekingFood, avoiding, attacking
-        this.target = null; // For AI: target food or position
-        this.aiTurnSpeed = 0.05 + Math.random() * 0.05; // AI turning variability
-        this.currentAngle = Math.random() * Math.PI * 2; // Initial angle
-
-        // Initialize segments behind the head
-        for (let i = 0; i < initialLength; i++) {
-            this.segments.push({ x: x - i * this.segmentGap, y: y });
-        }
-    }
-
-    update(angle, speed) {
-        this.currentAngle = angle; // Update angle based on input/AI
-
-        // Move head
-        const vx = Math.cos(this.currentAngle) * speed;
-        const vy = Math.sin(this.currentAngle) * speed;
-        this.x += vx;
-        this.y += vy;
-
-        // Keep head within world bounds (simple wrap-around or clamp)
-        // this.x = (this.x + worldSize) % worldSize;
-        // this.y = (this.y + worldSize) % worldSize;
-
-        // Move segments (follow the leader)
-        this.segments.unshift({ x: this.x, y: this.y }); // Add new head position
-
-        // Keep segments spaced correctly - Iterate and adjust towards the previous segment
-        for (let i = 1; i < this.segments.length; i++) {
-             const prevSeg = this.segments[i - 1];
-             const currentSeg = this.segments[i];
-             const dx = prevSeg.x - currentSeg.x;
-             const dy = prevSeg.y - currentSeg.y;
-             const distance = Math.sqrt(dx * dx + dy * dy);
-
-             if (distance > this.segmentGap) {
-                const moveX = (dx / distance) * (distance - this.segmentGap);
-                const moveY = (dy / distance) * (distance - this.segmentGap);
-                currentSeg.x += moveX;
-                currentSeg.y += moveY;
-             }
-        }
-
-
-        // Remove excess segments if snake hasn't grown
-        while (this.segments.length > this.length) {
-            this.segments.pop();
-        }
-    }
-
-    // --- AI Logic ---
-    updateAI(player, allFood, otherSnakes) {
-        if (!this.isAI) return;
-
-        // Simple State Machine Example
-        // 1. Find nearest food
-        let closestFood = null;
-        let minDistSq = Infinity;
-        allFood.forEach(f => {
-            const dx = f.x - this.x;
-            const dy = f.y - this.y;
-            const distSq = dx*dx + dy*dy;
-            if (distSq < minDistSq) {
-                minDistSq = distSq;
-                closestFood = f;
+        // --- Quadtree Implementation ---
+        class Quadtree {
+            constructor(bounds, level = 0) {
+                this.bounds = bounds; // { x, y, width, height }
+                this.level = level;
+                this.objects = []; // Objects stored in this node { object, bounds }
+                this.nodes = null; // Child nodes [null, null, null, null] initially
             }
-        });
 
-        // 2. Basic "Attack Player" logic (if close enough)
-        const playerDistSq = (player.x - this.x)**2 + (player.y - this.y)**2;
-        const attackRangeSq = (300 * 300); // Attack if player is within 300px
+            clear() {
+                this.objects = [];
+                if (this.nodes) {
+                    for (let i = 0; i < this.nodes.length; i++) {
+                        if (this.nodes[i]) {
+                            this.nodes[i].clear();
+                        }
+                    }
+                }
+                this.nodes = null;
+            }
 
-        let targetX, targetY;
+            split() {
+                const nextLevel = this.level + 1;
+                const subWidth = this.bounds.width / 2;
+                const subHeight = this.bounds.height / 2;
+                const x = this.bounds.x;
+                const y = this.bounds.y;
 
-        if (playerDistSq < attackRangeSq && player.length > this.length/2) { // Don't suicide attack tiny players
-             this.aiState = 'attacking';
-             // Aim slightly ahead of the player to intercept
-             const predictTime = 1.0; // How far ahead to predict in seconds (adjust)
-             const playerSpeed = baseSpeed; // Assume player speed for now
-             const playerVx = Math.cos(player.currentAngle) * playerSpeed;
-             const playerVy = Math.sin(player.currentAngle) * playerSpeed;
-             targetX = player.x + playerVx * predictTime * 60; // * 60 assumes ~60fps
-             targetY = player.y + playerVy * predictTime * 60;
+                this.nodes = [
+                    new Quadtree({ x: x + subWidth, y: y, width: subWidth, height: subHeight }, nextLevel), // Top Right
+                    new Quadtree({ x: x, y: y, width: subWidth, height: subHeight }, nextLevel),            // Top Left
+                    new Quadtree({ x: x, y: y + subHeight, width: subWidth, height: subHeight }, nextLevel), // Bottom Left
+                    new Quadtree({ x: x + subWidth, y: y + subHeight, width: subWidth, height: subHeight }, nextLevel) // Bottom Right
+                ];
+            }
 
-        } else if (closestFood) {
-            this.aiState = 'seekingFood';
-            targetX = closestFood.x;
-            targetY = closestFood.y;
-        } else {
-            // Wander aimlessly (change target angle slightly over time)
-            this.aiState = 'wandering';
-             if (!this.wanderTarget || Math.random() < 0.01) { // Pick new wander point occasionally
-                this.wanderTarget = {
-                    x: this.x + (Math.random() - 0.5) * 500,
-                    y: this.y + (Math.random() - 0.5) * 500
+            getIndex(rect) {
+                let index = -1;
+                const verticalMidpoint = this.bounds.x + (this.bounds.width / 2);
+                const horizontalMidpoint = this.bounds.y + (this.bounds.height / 2);
+
+                // Object can completely fit within the top quadrants
+                const topQuadrant = (rect.y < horizontalMidpoint && rect.y + rect.height < horizontalMidpoint);
+                // Object can completely fit within the bottom quadrants
+                const bottomQuadrant = (rect.y > horizontalMidpoint);
+
+                // Object can completely fit within the left quadrants
+                if (rect.x < verticalMidpoint && rect.x + rect.width < verticalMidpoint) {
+                    if (topQuadrant) {
+                        index = 1; // Top Left
+                    } else if (bottomQuadrant) {
+                        index = 2; // Bottom Left
+                    }
+                }
+                // Object can completely fit within the right quadrants
+                else if (rect.x > verticalMidpoint) {
+                    if (topQuadrant) {
+                        index = 0; // Top Right
+                    } else if (bottomQuadrant) {
+                        index = 3; // Bottom Right
+                    }
+                }
+                return index;
+            }
+
+            insert(item) { // item = { object: yourGameObject, bounds: { x, y, width, height } }
+                if (this.nodes) {
+                    const index = this.getIndex(item.bounds);
+                    if (index !== -1) {
+                        this.nodes[index].insert(item);
+                        return;
+                    }
+                }
+
+                this.objects.push(item);
+
+                if (this.objects.length > CONFIG.QUADTREE_MAX_OBJECTS && this.level < CONFIG.QUADTREE_MAX_LEVELS) {
+                    if (!this.nodes) {
+                        this.split();
+                    }
+
+                    let i = 0;
+                    while (i < this.objects.length) {
+                        const objItem = this.objects[i];
+                        const index = this.getIndex(objItem.bounds);
+                        if (index !== -1) {
+                            this.nodes[index].insert(objItem);
+                            this.objects.splice(i, 1); // Remove from current node, add to child
+                        } else {
+                            i++;
+                        }
+                    }
+                }
+            }
+
+            retrieve(rect) { // rect = query bounds { x, y, width, height }
+                let returnObjects = [...this.objects];
+                const index = this.getIndex(rect);
+
+                if (this.nodes) {
+                    // If the query rect fits entirely in a child node
+                    if (index !== -1) {
+                        returnObjects = returnObjects.concat(this.nodes[index].retrieve(rect));
+                    } else {
+                        // If query rect spans multiple child nodes, check all children it overlaps
+                        // Simple (but less efficient): check all children if no single index match
+                         for (let i = 0; i < this.nodes.length; i++) {
+                             // Basic overlap check (could be more precise)
+                             if (this.nodes[i].bounds.x < rect.x + rect.width &&
+                                 this.nodes[i].bounds.x + this.nodes[i].bounds.width > rect.x &&
+                                 this.nodes[i].bounds.y < rect.y + rect.height &&
+                                 this.nodes[i].bounds.y + this.nodes[i].bounds.height > rect.y)
+                             {
+                                returnObjects = returnObjects.concat(this.nodes[i].retrieve(rect));
+                             }
+                         }
+                    }
+                }
+
+                 // Filter duplicates (important if object spans nodes and simple overlap check is used)
+                 // A Set is an efficient way to get unique objects if needed, assuming objects have unique IDs or references
+                 // return [...new Set(returnObjects.map(item => item.object))]; // If returning only objects
+                 return returnObjects; // Return items { object, bounds }
+            }
+
+            // For Debugging
+            draw(ctx) {
+                ctx.strokeStyle = `rgba(255, 255, 255, ${0.1 + this.level * 0.1})`;
+                ctx.strokeRect(this.bounds.x, this.bounds.y, this.bounds.width, this.bounds.height);
+                if (this.nodes) {
+                    this.nodes.forEach(node => node.draw(ctx));
+                }
+            }
+        }
+
+
+        // --- Particle System ---
+        class Particle {
+            constructor(x, y, vx, vy, color, size, lifetime) {
+                this.x = x;
+                this.y = y;
+                this.vx = vx;
+                this.vy = vy;
+                this.color = color;
+                this.size = size;
+                this.lifetime = lifetime;
+                this.age = 0;
+            }
+
+            update(deltaTime) {
+                this.x += this.vx * deltaTime;
+                this.y += this.vy * deltaTime;
+                this.age += deltaTime;
+                this.size *= 0.98; // Shrink over time
+            }
+
+            isAlive() {
+                return this.age < this.lifetime && this.size > 0.5;
+            }
+
+            draw(ctx) {
+                const alpha = 1 - (this.age / this.lifetime);
+                ctx.fillStyle = `${this.color}${Math.round(alpha * 255).toString(16).padStart(2, '0')}`; // Assuming hex color #RRGGBB
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        class ParticleSystem {
+            constructor() {
+                this.particles = [];
+            }
+
+            emit(x, y, count, color, speedScale = 1, size = 3) {
+                for (let i = 0; i < count; i++) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const speed = Math.random() * 50 * speedScale + 10; // Pixels per second
+                    const vx = Math.cos(angle) * speed;
+                    const vy = Math.sin(angle) * speed;
+                    const lifetime = MathUtils.randomRange(CONFIG.PARTICLE_LIFETIME * 0.5, CONFIG.PARTICLE_LIFETIME * 1.5);
+                    this.particles.push(new Particle(x, y, vx, vy, color, size, lifetime));
+                }
+            }
+
+            update(deltaTime) {
+                for (let i = this.particles.length - 1; i >= 0; i--) {
+                    this.particles[i].update(deltaTime);
+                    if (!this.particles[i].isAlive()) {
+                        this.particles.splice(i, 1);
+                    }
+                }
+            }
+
+            draw(ctx) {
+                // Draw oldest particles first for better alpha blending? Maybe not necessary.
+                this.particles.forEach(p => p.draw(ctx));
+            }
+        }
+
+
+        // --- Food Class ---
+        class Food {
+            constructor(x, y, id) {
+                this.x = x;
+                this.y = y;
+                this.id = id; // Unique ID for tracking/removal
+                this.radius = CONFIG.FOOD_RADIUS;
+                this.color = `hsl(${MathUtils.randomRange(0, 360)}, 100%, 70%)`; // Bright food colors
+                // Pre-calculate bounds for Quadtree
+                this.bounds = { x: this.x - this.radius, y: this.y - this.radius, width: this.radius * 2, height: this.radius * 2 };
+            }
+
+            draw(ctx) {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                // Simple glow effect
+                ctx.shadowBlur = 5;
+                ctx.shadowColor = this.color;
+                ctx.fill();
+                ctx.shadowBlur = 0; // Reset shadow IMPORTANT
+            }
+        }
+
+
+        // --- Snake Class ---
+        class Snake {
+            constructor(x, y, initialLength, color, id, isAI = false, game) {
+                this.x = x; // Head X
+                this.y = y; // Head Y
+                this.id = id; // Unique ID
+                this.color = color;
+                this.segments = []; // Array of {x, y} points
+                this.radius = CONFIG.SNAKE_RADIUS;
+                this.targetLength = initialLength; // Target number of segments based on score/food eaten
+                this.currentLength = initialLength; // Actual current length (can decrease when boosting)
+                this.isAI = isAI;
+                this.game = game; // Reference to the main game object
+                this.isAlive = true;
+
+                // Movement
+                this.currentAngle = MathUtils.randomRange(-Math.PI, Math.PI); // Current movement direction
+                this.targetAngle = this.currentAngle; // Target direction (for smoothing)
+                this.speed = CONFIG.PLAYER_BASE_SPEED * (isAI ? CONFIG.AI_BASE_SPEED_MULTIPLIER : 1);
+                this.turnSpeed = isAI ? CONFIG.AI_TURN_SPEED * MathUtils.randomRange(0.8, 1.2) : CONFIG.PLAYER_TURN_SPEED; // Allow variance in AI turning
+
+                // Boosting
+                this.isBoosting = false;
+                this.boostCooldown = 0; // Timer to prevent instant length loss
+
+                // AI Specific
+                this.aiState = 'wandering'; // wandering, seekingFood, avoiding, attacking
+                this.aiTarget = null; // Target food object or {x, y} position
+                this.aiWanderTarget = null;
+                this.aiTimeUntilDecision = 0; // Cooldown for changing targets/states
+
+                 // Initialize segments slightly behind the head
+                for (let i = 0; i < Math.floor(this.currentLength); i++) {
+                    // Start segments in a line based on initial angle (more natural than straight left)
+                    const segX = this.x - Math.cos(this.currentAngle) * i * CONFIG.SEGMENT_GAP;
+                    const segY = this.y - Math.sin(this.currentAngle) * i * CONFIG.SEGMENT_GAP;
+                    this.segments.push({ x: segX, y: segY });
+                }
+
+                // Pre-create gradient pattern (can be updated if color changes)
+                this.pattern = this.createGradientPattern(game.ctx);
+            }
+
+            createGradientPattern(ctx) {
+                // Basic repeating pattern example
+                const patternCanvas = document.createElement('canvas');
+                const patternCtx = patternCanvas.getContext('2d');
+                const size = 32; // Size of the pattern tile
+                patternCanvas.width = size;
+                patternCanvas.height = size;
+
+                const colorDarker = tinycolor(this.color).darken(15).toHexString(); // Using tinycolor library (needs to be included or use manual color manipulation)
+                const colorLighter = tinycolor(this.color).lighten(15).toHexString();
+
+                // Example: Diagonal stripes
+                patternCtx.fillStyle = colorDarker;
+                patternCtx.fillRect(0, 0, size, size);
+                patternCtx.strokeStyle = colorLighter;
+                patternCtx.lineWidth = size / 4;
+                patternCtx.beginPath();
+                for(let i = -size; i < size*2; i += size/2) {
+                    patternCtx.moveTo(i, -size/2);
+                    patternCtx.lineTo(i + size * 1.5, size * 1.5);
+                }
+                patternCtx.stroke();
+
+                return ctx.createPattern(patternCanvas, 'repeat');
+            }
+
+
+            update(deltaTime, allSnakes) {
+                 if (!this.isAlive) return;
+
+                // --- AI Decision Making ---
+                if (this.isAI) {
+                    this.aiTimeUntilDecision -= deltaTime;
+                    if (this.aiTimeUntilDecision <= 0) {
+                        this.updateAIDecision(allSnakes);
+                        this.aiTimeUntilDecision = MathUtils.randomRange(0.2, 0.8); // Decide every 0.2-0.8 seconds
+                    }
+                    this.performAISteering(deltaTime);
+                }
+
+                // --- Handle Boosting ---
+                 const baseSpeed = CONFIG.PLAYER_BASE_SPEED * (this.isAI ? CONFIG.AI_BASE_SPEED_MULTIPLIER : 1);
+                if (this.isBoosting && this.currentLength > CONFIG.PLAYER_INITIAL_LENGTH * 0.8) { // Can only boost if long enough
+                    this.speed = baseSpeed * CONFIG.PLAYER_BOOST_SPEED_MULTIPLIER;
+                    this.boostCooldown -= deltaTime;
+                    if (this.boostCooldown <= 0) {
+                        this.currentLength -= CONFIG.PLAYER_BOOST_COST;
+                        this.targetLength -= CONFIG.PLAYER_BOOST_COST; // Ensure target length also decreases
+                        this.boostCooldown = 1 / 60; // Lose length roughly per frame
+                         // Drop food particle trail?
+                        if (Math.random() < 0.5) { // Chance to drop food
+                            const tailSeg = this.segments[this.segments.length - 1] || this.segments[0];
+                             if(tailSeg) this.game.spawnFoodPellet(tailSeg.x, tailSeg.y, this.color);
+                        }
+                    }
+                } else {
+                    this.speed = baseSpeed;
+                    this.isBoosting = false; // Stop boosting if too short
+                }
+
+                // --- Smooth Turning ---
+                let angleDiff = MathUtils.wrapAngle(this.targetAngle - this.currentAngle);
+                const turnAmount = MathUtils.clamp(angleDiff, -this.turnSpeed, this.turnSpeed); // Clamp turn speed
+                this.currentAngle = MathUtils.wrapAngle(this.currentAngle + turnAmount);
+
+                // --- Move Head ---
+                const moveSpeed = this.speed; // Use calculated speed (boosted or normal)
+                const vx = Math.cos(this.currentAngle) * moveSpeed;
+                const vy = Math.sin(this.currentAngle) * moveSpeed;
+                this.x += vx;
+                this.y += vy;
+
+                // --- World Boundaries (Wrap Around) ---
+                this.x = (this.x + CONFIG.WORLD_SIZE) % CONFIG.WORLD_SIZE;
+                this.y = (this.y + CONFIG.WORLD_SIZE) % CONFIG.WORLD_SIZE;
+
+                // --- Move Segments (Follow the Leader) ---
+                let head = { x: this.x, y: this.y };
+                this.segments.unshift(head); // Add new head position
+
+                // Adjust segment positions to maintain spacing
+                let accumulatedLength = 0;
+                for (let i = 1; i < this.segments.length; i++) {
+                    const prevSeg = this.segments[i - 1];
+                    const currentSeg = this.segments[i];
+                    const dx = prevSeg.x - currentSeg.x;
+                    const dy = prevSeg.y - currentSeg.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    const desiredDist = CONFIG.SEGMENT_GAP;
+
+                    if (distance > desiredDist) {
+                        // Move current segment towards the previous one
+                        const moveRatio = (distance - desiredDist) / distance;
+                        currentSeg.x += dx * moveRatio;
+                        currentSeg.y += dy * moveRatio;
+                    }
+                     accumulatedLength += MathUtils.distance(currentSeg.x, currentSeg.y, prevSeg.x, prevSeg.y); // More accurate length calc
+                }
+
+                 // --- Manage Length ---
+                 // Smoothly adjust actual number of segments towards targetLength * factor
+                 const desiredSegmentCount = Math.max(1, Math.floor(this.currentLength));
+
+                 // Remove excess segments if needed (more efficient than checking distance)
+                 while (this.segments.length > desiredSegmentCount + 1 && this.segments.length > 1) { // Keep at least one segment + head
+                     this.segments.pop();
+                 }
+
+                 // Gradually grow towards targetLength if needed (less critical than shrinking)
+                 if (this.currentLength < this.targetLength) {
+                     this.currentLength += 0.1; // Slowly catch up graphically if needed
+                 }
+                 this.currentLength = Math.max(this.currentLength, CONFIG.PLAYER_INITIAL_LENGTH * 0.5); // Minimum length
+                 this.targetLength = Math.max(this.targetLength, CONFIG.PLAYER_INITIAL_LENGTH * 0.5);
+
+
+            }
+
+            updateAIDecision(allSnakes) {
+                // --- AI State Logic ---
+                let closestFood = null;
+                let closestEnemySnake = null;
+                let minDistFoodSq = CONFIG.AI_VIEW_DISTANCE ** 2;
+                let minDistEnemySq = CONFIG.AI_VIEW_DISTANCE ** 2;
+                let potentialThreats = [];
+
+                // Use Quadtree to find nearby objects
+                const queryBounds = {
+                    x: this.x - CONFIG.AI_VIEW_DISTANCE,
+                    y: this.y - CONFIG.AI_VIEW_DISTANCE,
+                    width: CONFIG.AI_VIEW_DISTANCE * 2,
+                    height: CONFIG.AI_VIEW_DISTANCE * 2
                 };
-            }
-            targetX = this.wanderTarget.x;
-            targetY = this.wanderTarget.y;
-        }
+                const nearbyItems = this.game.quadtree.retrieve(queryBounds);
 
-        // Calculate angle towards target
-        const targetDx = targetX - this.x;
-        const targetDy = targetY - this.y;
-        let desiredAngle = Math.atan2(targetDy, targetDx);
+                nearbyItems.forEach(item => {
+                    const obj = item.object;
+                    if (!obj) return;
 
-        // TODO: Add Obstacle Avoidance (check for other snakes nearby and steer away)
-        // This is more complex, involves checking points ahead of the snake
+                    const dx = obj.x - this.x;
+                    const dy = obj.y - this.y;
+                    const distSq = dx * dx + dy * dy;
 
-        // Smoothly turn towards desired angle
-        let angleDiff = desiredAngle - this.currentAngle;
-        while (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
-        while (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
+                    // Find closest food
+                    if (obj instanceof Food && distSq < minDistFoodSq) {
+                        minDistFoodSq = distSq;
+                        closestFood = obj;
+                    }
+                    // Find potential threats (other snake segments) and closest enemy head
+                    else if (obj.type === 'snake_segment' && obj.snakeId !== this.id) {
+                        potentialThreats.push(obj); // obj here is { x, y, radius, snakeId, type: 'snake_segment' }
+                         // Check if it's a head segment of another snake
+                         const otherSnake = allSnakes.find(s => s.id === obj.snakeId && s.isAlive);
+                         if (otherSnake && obj.isHead && distSq < minDistEnemySq) {
+                            minDistEnemySq = distSq;
+                            closestEnemySnake = otherSnake; // The actual snake object
+                         }
+                    }
+                });
 
-        // Limit turning speed
-        const turn = Math.max(-this.aiTurnSpeed, Math.min(this.aiTurnSpeed, angleDiff));
-        let nextAngle = this.currentAngle + turn;
 
-        // Update the AI snake's movement
-        this.update(nextAngle, baseSpeed * 0.9); // AI slightly slower?
-    }
+                // --- Determine State ---
+                // Priority: Avoid immediate danger > Attack > Seek Food > Wander
 
-
-    grow(amount = 1) {
-        this.length += amount;
-        score += amount; // Increase score when player grows
-    }
-
-    draw(ctx) {
-        // Draw segments with gradient for Slither.io look
-        for (let i = this.segments.length - 1; i >= 0; i--) {
-            const seg = this.segments[i];
-            const nextSeg = this.segments[i - 1] || seg; // Use current if it's the head
-
-            // Simple circle for now, gradients are more complex
-            ctx.beginPath();
-            ctx.arc(seg.x, seg.y, this.radius, 0, Math.PI * 2);
-            ctx.fillStyle = this.color; // Apply pattern/gradient later
-            ctx.fill();
-        }
-
-        // Draw Eyes (on the head segment)
-        const head = this.segments[0];
-        const eyeSize = this.radius * 0.4;
-        const pupilSize = eyeSize * 0.5;
-        const eyeOffset = this.radius * 0.5; // Distance from center
-
-        // Calculate eye positions based on angle
-        const eyeAngle1 = this.currentAngle + Math.PI / 2;
-        const eyeAngle2 = this.currentAngle - Math.PI / 2;
-
-        const eyeX1 = head.x + Math.cos(eyeAngle1) * eyeOffset;
-        const eyeY1 = head.y + Math.sin(eyeAngle1) * eyeOffset;
-        const eyeX2 = head.x + Math.cos(eyeAngle2) * eyeOffset;
-        const eyeY2 = head.y + Math.sin(eyeAngle2) * eyeOffset;
-
-        // White part
-        ctx.fillStyle = 'white';
-        ctx.beginPath();
-        ctx.arc(eyeX1, eyeY1, eyeSize, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(eyeX2, eyeY2, eyeSize, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Pupil part (looking towards movement direction)
-        const pupilOffsetX = Math.cos(this.currentAngle) * eyeSize * 0.3;
-        const pupilOffsetY = Math.sin(this.currentAngle) * eyeSize * 0.3;
-        ctx.fillStyle = 'black';
-        ctx.beginPath();
-        ctx.arc(eyeX1 + pupilOffsetX, eyeY1 + pupilOffsetY, pupilSize, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(eyeX2 + pupilOffsetX, eyeY2 + pupilOffsetY, pupilSize, 0, Math.PI * 2);
-        ctx.fill();
-    }
-}
-
-// --- Controls ---
-function setupControls() {
-    // Mouse/Touch for direction
-    const getTargetAngle = (x, y) => {
-        // Calculate angle from center of screen (player position) to cursor/touch point
-        const dx = x - canvasWidth / 2;
-        const dy = y - canvasHeight / 2;
-        return Math.atan2(dy, dx);
-    };
-
-    canvas.addEventListener('mousemove', (e) => {
-        targetAngle = getTargetAngle(e.clientX, e.clientY);
-    });
-
-    canvas.addEventListener('touchmove', (e) => {
-        e.preventDefault(); // Prevent scrolling
-        const touch = e.touches[0];
-        targetAngle = getTargetAngle(touch.clientX, touch.clientY);
-    }, { passive: false });
-
-     canvas.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        const touch = e.touches[0];
-        targetAngle = getTargetAngle(touch.clientX, touch.clientY);
-        // Maybe add boost on touch start?
-     }, { passive: false });
-
-    // Keyboard (Optional fallback for desktop)
-    // You might map keys to specific angles or have WASD control angle change
-}
-
-// --- Collision Detection ---
-function checkCollisions() {
-    const head = playerSnake.segments[0];
-
-    // 1. Food Collision
-    for (let i = food.length - 1; i >= 0; i--) {
-        const f = food[i];
-        const dx = head.x - f.x;
-        const dy = head.y - f.y;
-        const distSq = dx * dx + dy * dy;
-        const radiiSumSq = (playerSnake.radius + f.radius) ** 2;
-
-        if (distSq < radiiSumSq) {
-            playerSnake.grow();
-            // Respawn food elsewhere
-            food[i] = new Food(Math.random() * worldSize, Math.random() * worldSize);
-        }
-    }
-
-    // 2. Snake vs Snake Collision (Player vs AI, AI vs AI)
-    const allSnakes = [playerSnake, ...aiSnakes];
-    for (let i = 0; i < allSnakes.length; i++) {
-        const snakeA = allSnakes[i];
-        const headA = snakeA.segments[0];
-
-        for (let j = 0; j < allSnakes.length; j++) {
-            const snakeB = allSnakes[j];
-             // Check if snakeA's head hits any segment of snakeB (excluding its own head)
-            for(let k = 1; k < snakeB.segments.length; k++) { // Start from k=1 to avoid head-on-head detection unless desired
-                 const segB = snakeB.segments[k];
-                 const dx = headA.x - segB.x;
-                 const dy = headA.y - segB.y;
-                 const distSq = dx*dx + dy*dy;
-                 const radiiSumSq = (snakeA.radius + snakeB.radius * 0.8)**2; // Use slightly smaller radius for body segments
-
-                 if (distSq < radiiSumSq) {
-                     // Collision detected! Snake A hit Snake B
-                     console.log("Collision!");
-                     handleCollision(snakeA, snakeB);
-                     return; // Handle one collision per frame for simplicity
+                // Check for immediate collision threats
+                 const avoidanceVector = this.calculateAvoidanceVector(potentialThreats);
+                 if (avoidanceVector.mag > 0.1) { // Threshold to react
+                    this.aiState = 'avoiding';
+                    this.aiTarget = { x: this.x + avoidanceVector.x * 50, y: this.y + avoidanceVector.y * 50 }; // Target a point away from danger
+                 }
+                 // Simple Attack Logic: If an enemy is close and smaller, or if player is close
+                 else if (closestEnemySnake && (closestEnemySnake.id === this.game.playerSnake?.id || closestEnemySnake.currentLength < this.currentLength * 0.8)) {
+                    this.aiState = 'attacking';
+                    // Predict enemy movement slightly (simple)
+                    const predictTime = 0.5; // seconds
+                    const enemySpeed = closestEnemySnake.speed;
+                    const enemyVx = Math.cos(closestEnemySnake.currentAngle) * enemySpeed;
+                    const enemyVy = Math.sin(closestEnemySnake.currentAngle) * enemySpeed;
+                    this.aiTarget = {
+                        x: closestEnemySnake.x + enemyVx * predictTime * 60, // Rough prediction
+                        y: closestEnemySnake.y + enemyVy * predictTime * 60
+                    };
+                 }
+                 // Seek Food
+                 else if (closestFood) {
+                    this.aiState = 'seekingFood';
+                    this.aiTarget = closestFood; // Target the food object directly
+                 }
+                 // Wander
+                 else {
+                     this.aiState = 'wandering';
+                     if (!this.aiWanderTarget || MathUtils.distanceSq(this.x, this.y, this.aiWanderTarget.x, this.aiWanderTarget.y) < 100*100) {
+                        // Pick new wander point within world bounds
+                        this.aiWanderTarget = {
+                            x: MathUtils.clamp(this.x + MathUtils.randomRange(-CONFIG.AI_WANDER_DISTANCE, CONFIG.AI_WANDER_DISTANCE), 0, CONFIG.WORLD_SIZE),
+                            y: MathUtils.clamp(this.y + MathUtils.randomRange(-CONFIG.AI_WANDER_DISTANCE, CONFIG.AI_WANDER_DISTANCE), 0, CONFIG.WORLD_SIZE)
+                        };
+                     }
+                      this.aiTarget = this.aiWanderTarget;
                  }
             }
+
+             calculateAvoidanceVector(potentialThreats) {
+                 let avoidance = { x: 0, y: 0, mag: 0 };
+                 const feelerLength = CONFIG.AI_AVOIDANCE_DISTANCE;
+
+                 // Simple single feeler check
+                 const feelerX = this.x + Math.cos(this.currentAngle) * feelerLength;
+                 const feelerY = this.y + Math.sin(this.currentAngle) * feelerLength;
+
+                 let closestThreatDistSq = feelerLength * feelerLength;
+                 let threatToAvoid = null;
+
+                 potentialThreats.forEach(threat => {
+                    // Check distance from feeler point to the threat segment's center
+                    const distSq = MathUtils.distanceSq(feelerX, feelerY, threat.x, threat.y);
+                    const combinedRadiiSq = (this.radius + threat.radius) ** 2 * 1.5; // Add buffer
+
+                    if (distSq < combinedRadiiSq && distSq < closestThreatDistSq) {
+                        // Check if the threat is generally in front of the snake
+                        const dx = threat.x - this.x;
+                        const dy = threat.y - this.y;
+                        const dotProduct = (dx * Math.cos(this.currentAngle) + dy * Math.sin(this.currentAngle)); // Cosine of angle difference
+                        if (dotProduct > 0) { // Threat is generally ahead
+                             closestThreatDistSq = distSq;
+                             threatToAvoid = threat;
+                        }
+                    }
+                 });
+
+                 if (threatToAvoid) {
+                    // Steer away: Calculate vector from threat to feeler, normalize
+                    const steerX = feelerX - threatToAvoid.x;
+                    const steerY = feelerY - threatToAvoid.y;
+                    const steerMag = Math.sqrt(steerX * steerX + steerY * steerY);
+                    if (steerMag > 0.01) {
+                        avoidance.x = steerX / steerMag;
+                        avoidance.y = steerY / steerMag;
+                        avoidance.mag = 1.0 - (Math.sqrt(closestThreatDistSq) / feelerLength); // Stronger avoidance closer the threat
+                    }
+                 }
+
+                 return avoidance;
+            }
+
+
+            performAISteering(deltaTime) {
+                if (!this.aiTarget) return;
+
+                let desiredAngle = this.currentAngle; // Default to current angle if no target
+
+                 // --- Calculate Steering based on Target ---
+                 const targetX = this.aiTarget.x;
+                 const targetY = this.aiTarget.y;
+                 const targetDx = targetX - this.x;
+                 const targetDy = targetY - this.y;
+                 let angleToTarget = Math.atan2(targetDy, targetDx);
+
+                 // --- Calculate Avoidance Steering ---
+                 // Re-check avoidance constantly, not just on decision update
+                 const queryBoundsAvoid = {
+                     x: this.x - CONFIG.AI_AVOIDANCE_DISTANCE, y: this.y - CONFIG.AI_AVOIDANCE_DISTANCE,
+                     width: CONFIG.AI_AVOIDANCE_DISTANCE * 2, height: CONFIG.AI_AVOIDANCE_DISTANCE * 2
+                 };
+                 const nearbyForAvoid = this.game.quadtree.retrieve(queryBoundsAvoid)
+                                     .map(item => item.object)
+                                     .filter(obj => obj && obj.type === 'snake_segment' && obj.snakeId !== this.id);
+                 const avoidanceVector = this.calculateAvoidanceVector(nearbyForAvoid);
+
+
+                 // --- Blend Steering Behaviors ---
+                 if (avoidanceVector.mag > 0.1) {
+                     // If avoiding, prioritize the avoidance direction
+                     let avoidanceAngle = Math.atan2(avoidanceVector.y, avoidanceVector.x);
+                     // Blend avoidance with target angle based on avoidance strength
+                     // This is tricky - let's try simple weighted average of vectors first
+                     const targetWeight = 1.0;
+                     const avoidanceWeight = CONFIG.AI_AVOIDANCE_WEIGHT * avoidanceVector.mag;
+
+                     const finalVecX = Math.cos(angleToTarget) * targetWeight + avoidanceVector.x * avoidanceWeight;
+                     const finalVecY = Math.sin(angleToTarget) * targetWeight + avoidanceVector.y * avoidanceWeight;
+
+                     desiredAngle = Math.atan2(finalVecY, finalVecX);
+
+                 } else {
+                      // If not actively avoiding, just steer towards the primary target
+                      desiredAngle = angleToTarget;
+                 }
+
+
+                this.targetAngle = desiredAngle; // Set the target angle for smooth turning
+            }
+
+            grow(amount = CONFIG.FOOD_VALUE) {
+                this.targetLength += amount;
+                if(!this.isAI) {
+                    this.game.score += amount; // Only player score counts for display
+                }
+            }
+
+             setBoosting(isBoosting) {
+                if (!this.isAI) { // Only player can boost manually
+                    this.isBoosting = isBoosting;
+                }
+             }
+
+            die() {
+                 if (!this.isAlive) return;
+                 this.isAlive = false;
+                 console.log(`Snake ${this.id} died.`);
+
+                 // Spawn food particles from body
+                 this.segments.forEach((seg, index) => {
+                     if (index % CONFIG.FOOD_DROP_ON_DEATH_DENSITY === 0) {
+                         // Use segment color or snake color for dropped food
+                         this.game.spawnFoodPellet(seg.x, seg.y, this.color, true); // isBig=true for death food?
+                     }
+                 });
+
+                 // Emit death particles
+                 const head = this.segments[0] || {x: this.x, y: this.y};
+                 this.game.particleSystem.emit(head.x, head.y, CONFIG.PARTICLE_COUNT_DEATH, this.color, 1.5, 5);
+
+                 if (this.isAI) {
+                     this.game.removeAI(this.id);
+                     this.game.addAI(); // Respawn a new AI
+                 } else {
+                     this.game.gameOver();
+                 }
+            }
+
+            draw(ctx) {
+                if (!this.isAlive || this.segments.length === 0) return;
+
+                // --- Draw Body Segments ---
+                 ctx.lineWidth = this.radius * 2;
+                 ctx.lineCap = 'round';
+                 ctx.lineJoin = 'round';
+
+                // Attempt 1: Simple lines (can look gappy)
+                // ctx.strokeStyle = this.color;
+                // ctx.beginPath();
+                // ctx.moveTo(this.segments[0].x, this.segments[0].y);
+                // for (let i = 1; i < this.segments.length; i++) {
+                //     ctx.lineTo(this.segments[i].x, this.segments[i].y);
+                // }
+                // ctx.stroke();
+
+                 // Attempt 2: Overlapping circles (better look)
+                 // Or use the pre-calculated pattern
+                 ctx.fillStyle = this.pattern || this.color; // Fallback to solid color
+
+                 for (let i = this.segments.length - 1; i >= 0; i--) {
+                     const seg = this.segments[i];
+                     ctx.beginPath();
+                     ctx.arc(seg.x, seg.y, this.radius, 0, Math.PI * 2);
+                     ctx.fill();
+                 }
+
+
+                // --- Draw Eyes (on the head segment) ---
+                const head = this.segments[0];
+                const eyeRadius = this.radius * 0.4;
+                const pupilRadius = eyeRadius * 0.5;
+                const eyeOffsetDist = this.radius * 0.5; // Distance from center
+
+                // Calculate eye base positions perpendicular to current angle
+                const eyeAngleOffset = Math.PI / 2;
+                const eyeBaseX1 = head.x + Math.cos(this.currentAngle + eyeAngleOffset) * eyeOffsetDist;
+                const eyeBaseY1 = head.y + Math.sin(this.currentAngle + eyeAngleOffset) * eyeOffsetDist;
+                const eyeBaseX2 = head.x + Math.cos(this.currentAngle - eyeAngleOffset) * eyeOffsetDist;
+                const eyeBaseY2 = head.y + Math.sin(this.currentAngle - eyeAngleOffset) * eyeOffsetDist;
+
+                // White part
+                ctx.fillStyle = 'white';
+                ctx.beginPath();
+                ctx.arc(eyeBaseX1, eyeBaseY1, eyeRadius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(eyeBaseX2, eyeBaseY2, eyeRadius, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Pupil part (looking towards movement direction or target angle)
+                const pupilLookAngle = this.targetAngle; // Look towards where it wants to go
+                const pupilOffsetX = Math.cos(pupilLookAngle) * (eyeRadius - pupilRadius) * 0.8; // Move pupil within eye bounds
+                const pupilOffsetY = Math.sin(pupilLookAngle) * (eyeRadius - pupilRadius) * 0.8;
+                ctx.fillStyle = 'black';
+                ctx.beginPath();
+                ctx.arc(eyeBaseX1 + pupilOffsetX, eyeBaseY1 + pupilOffsetY, pupilRadius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(eyeBaseX2 + pupilOffsetX, eyeBaseY2 + pupilOffsetY, pupilRadius, 0, Math.PI * 2);
+                ctx.fill();
+            }
         }
-    }
 
-    // 3. Boundary Collision (If not wrapping around)
-    // if (head.x < 0 || head.x > worldSize || head.y < 0 || head.y > worldSize) {
-    //    handleCollision(playerSnake, null); // Hit boundary
-    // }
-}
 
-function handleCollision(colliderSnake, collidedSnake) {
-    // If player collided
-    if (colliderSnake === playerSnake) {
-        console.log("Game Over!");
-        gameState = 'gameOver';
-        // Turn player snake into food
-        spawnFoodFromSnake(playerSnake);
-        // Maybe reset playerSnake or show menu
-    } else {
-         // An AI snake collided
-         console.log("AI died");
-         spawnFoodFromSnake(colliderSnake);
-         // Remove the dead AI snake
-         const index = aiSnakes.indexOf(colliderSnake);
-         if (index > -1) {
-             aiSnakes.splice(index, 1);
-             // Add a new AI snake to replace it?
-             const aiX = Math.random() * worldSize;
-             const aiY = Math.random() * worldSize;
-             const aiColor = `hsl(${Math.random() * 360}, 70%, 50%)`;
-             aiSnakes.push(new Snake(aiX, aiY, 8, aiColor, true));
-         }
-    }
-}
+        // --- Game Class ---
+        class Game {
+            constructor() {
+                this.canvas = document.getElementById('gameCanvas');
+                this.ctx = this.canvas.getContext('2d', { alpha: false }); // No alpha on main canvas improves perf
+                this.uiScore = document.getElementById('score');
+                this.uiFps = document.getElementById('fps');
+                this.gameOverScreen = document.getElementById('gameOverScreen');
+                this.finalScoreEl = document.getElementById('finalScore');
+                this.restartButton = document.getElementById('restartButton');
 
-function spawnFoodFromSnake(snake) {
-    // Drop food items along the snake's body path
-    snake.segments.forEach((seg, index) => {
-        if (index % 5 === 0) { // Drop food every 5 segments or so
-             food.push(new Food(seg.x + (Math.random()-0.5)*5, seg.y + (Math.random()-0.5)*5)); // Add slight randomness
+                this.canvasWidth = 0;
+                this.canvasHeight = 0;
+                this.resizeCanvas();
+                window.addEventListener('resize', () => this.resizeCanvas());
+
+                // Input state
+                this.pointer = { x: this.canvasWidth / 2, y: this.canvasHeight / 2, active: false };
+
+                // Game Objects
+                this.playerSnake = null;
+                this.aiSnakes = [];
+                this.food = [];
+                this.particleSystem = new ParticleSystem();
+                this.quadtree = new Quadtree({ x: 0, y: 0, width: CONFIG.WORLD_SIZE, height: CONFIG.WORLD_SIZE });
+                this.nextFoodId = 0;
+                this.nextSnakeId = 0;
+
+                // Game State
+                this.gameState = 'playing'; // playing, gameOver
+                this.score = 0;
+                this.camera = { x: 0, y: 0 };
+
+                // Timing
+                this.lastTimestamp = 0;
+                this.deltaTime = 0;
+                this.fps = 0;
+                this.frameCount = 0;
+                this.fpsUpdateTimer = 0;
+
+                this.init();
+            }
+
+            init() {
+                this.score = 0;
+                this.gameState = 'playing';
+                this.aiSnakes = [];
+                this.food = [];
+                this.particleSystem.particles = []; // Clear particles
+                this.gameOverScreen.style.display = 'none'; // Hide game over screen
+
+                // Create Player
+                const startX = CONFIG.WORLD_SIZE / 2;
+                const startY = CONFIG.WORLD_SIZE / 2;
+                this.playerSnake = new Snake(startX, startY, CONFIG.PLAYER_INITIAL_LENGTH, '#33FF33', this.getNextSnakeId(), false, this);
+                this.camera.x = startX - this.canvasWidth / 2;
+                this.camera.y = startY - this.canvasHeight / 2;
+
+                // Create Initial AI
+                for (let i = 0; i < CONFIG.INITIAL_AI_COUNT; i++) {
+                    this.addAI();
+                }
+
+                // Create Initial Food
+                for (let i = 0; i < CONFIG.INITIAL_FOOD_COUNT; i++) {
+                    this.spawnFoodPellet(
+                        MathUtils.randomRange(0, CONFIG.WORLD_SIZE),
+                        MathUtils.randomRange(0, CONFIG.WORLD_SIZE)
+                    );
+                }
+
+                this.setupControls();
+
+                // Start Game Loop
+                this.lastTimestamp = performance.now();
+                requestAnimationFrame((ts) => this.gameLoop(ts));
+            }
+
+            reset() {
+                 console.log("Resetting game...");
+                 // Clean up references if necessary (less critical in JS with GC, but good practice)
+                 this.playerSnake = null;
+                 this.aiSnakes.forEach(ai => ai = null); // Help GC?
+                 this.food.forEach(f => f = null);
+                 this.init(); // Re-initialize everything
+            }
+
+            getNextFoodId() { return this.nextFoodId++; }
+            getNextSnakeId() { return this.nextSnakeId++; }
+
+            addAI() {
+                const margin = 100; // Spawn away from edges
+                const aiX = MathUtils.randomRange(margin, CONFIG.WORLD_SIZE - margin);
+                const aiY = MathUtils.randomRange(margin, CONFIG.WORLD_SIZE - margin);
+                const aiLength = MathUtils.randomInt(CONFIG.AI_INITIAL_LENGTH_MIN, CONFIG.AI_INITIAL_LENGTH_MAX);
+                const aiColor = `hsl(${MathUtils.randomRange(0, 360)}, 60%, 50%)`;
+                this.aiSnakes.push(new Snake(aiX, aiY, aiLength, aiColor, this.getNextSnakeId(), true, this));
+            }
+
+             removeAI(id) {
+                 this.aiSnakes = this.aiSnakes.filter(ai => ai.id !== id);
+             }
+
+            spawnFoodPellet(x, y, color = null, isBig = false) {
+                 const foodItem = new Food(x, y, this.getNextFoodId());
+                 if (color) foodItem.color = color; // Use specific color if provided (e.g., from dead snake)
+                 if (isBig) foodItem.radius = CONFIG.FOOD_RADIUS * 1.5; // Make death food bigger?
+                 // Update bounds if radius changed
+                 foodItem.bounds = { x: foodItem.x - foodItem.radius, y: foodItem.y - foodItem.radius, width: foodItem.radius * 2, height: foodItem.radius * 2 };
+                 this.food.push(foodItem);
+            }
+
+            removeFood(id) {
+                this.food = this.food.filter(f => f.id !== id);
+            }
+
+            resizeCanvas() {
+                this.canvasWidth = window.innerWidth;
+                this.canvasHeight = window.innerHeight;
+                this.canvas.width = this.canvasWidth;
+                this.canvas.height = this.canvasHeight;
+                 // Update pointer position relative to new center if needed
+                 this.pointer.x = this.canvasWidth / 2;
+                 this.pointer.y = this.canvasHeight / 2;
+                 console.log(`Canvas resized to ${this.canvasWidth}x${this.canvasHeight}`);
+            }
+
+            setupControls() {
+                // --- Mouse Controls ---
+                this.canvas.addEventListener('mousemove', (e) => {
+                     if (this.gameState !== 'playing' || !this.playerSnake) return;
+                     this.pointer.x = e.clientX;
+                     this.pointer.y = e.clientY;
+                     this.pointer.active = true; // Indicate pointer is providing input
+                     this.updatePlayerTargetAngle();
+                });
+
+                this.canvas.addEventListener('mousedown', (e) => {
+                     if (this.gameState !== 'playing' || !this.playerSnake) return;
+                     if (e.button === 0) { // Left click
+                        this.playerSnake.setBoosting(true);
+                     }
+                });
+
+                this.canvas.addEventListener('mouseup', (e) => {
+                     if (this.gameState !== 'playing' || !this.playerSnake) return;
+                     if (e.button === 0) { // Left click
+                        this.playerSnake.setBoosting(false);
+                     }
+                });
+
+                 this.canvas.addEventListener('mouseleave', () => {
+                     this.pointer.active = false; // Stop using mouse position if it leaves
+                      if (this.playerSnake) this.playerSnake.setBoosting(false);
+                 });
+
+                // --- Touch Controls ---
+                const handleTouch = (e) => {
+                    if (this.gameState !== 'playing' || !this.playerSnake) return;
+                    e.preventDefault(); // Prevent scrolling/zooming
+                    if (e.touches.length > 0) {
+                        const touch = e.touches[0];
+                        this.pointer.x = touch.clientX;
+                        this.pointer.y = touch.clientY;
+                        this.pointer.active = true;
+                        this.updatePlayerTargetAngle();
+                        this.playerSnake.setBoosting(true); // Boost while touching
+                    } else {
+                        this.pointer.active = false;
+                        this.playerSnake.setBoosting(false); // Stop boosting when touch ends
+                    }
+                };
+
+                this.canvas.addEventListener('touchstart', handleTouch, { passive: false });
+                this.canvas.addEventListener('touchmove', handleTouch, { passive: false });
+                this.canvas.addEventListener('touchend', handleTouch, { passive: false });
+                this.canvas.addEventListener('touchcancel', handleTouch, { passive: false });
+
+                 // --- Restart Button ---
+                 this.restartButton.addEventListener('click', () => {
+                    this.reset();
+                 });
+            }
+
+            updatePlayerTargetAngle() {
+                if (!this.pointer.active || !this.playerSnake) return;
+                 // Angle from center of screen (where player is assumed to be) to pointer
+                 const dx = this.pointer.x - this.canvasWidth / 2;
+                 const dy = this.pointer.y - this.canvasHeight / 2;
+                 // Avoid setting angle if pointer is exactly center (causes NaN)
+                 if (Math.abs(dx) > 0.1 || Math.abs(dy) > 0.1) {
+                    this.playerSnake.targetAngle = Math.atan2(dy, dx);
+                 }
+            }
+
+            update(deltaTime) {
+                 const allSnakes = [this.playerSnake, ...this.aiSnakes].filter(s => s && s.isAlive);
+
+                 // --- Update Snakes ---
+                 allSnakes.forEach(snake => snake.update(deltaTime, allSnakes));
+
+                 // --- Update Particles ---
+                 this.particleSystem.update(deltaTime);
+
+                 // --- Populate Quadtree ---
+                 this.quadtree.clear();
+                 // Add food to quadtree
+                 this.food.forEach(f => {
+                    this.quadtree.insert({ object: f, bounds: f.bounds });
+                 });
+                 // Add snake segments to quadtree (can be performance intensive - optimize!)
+                 allSnakes.forEach(snake => {
+                    // Add only a subset of segments for performance? e.g., every 3rd segment + head
+                    snake.segments.forEach((seg, index) => {
+                         if (index % 3 === 0 || index === 0) { // Optimization: only index head and every 3rd segment
+                            const segBounds = {
+                                x: seg.x - snake.radius,
+                                y: seg.y - snake.radius,
+                                width: snake.radius * 2,
+                                height: snake.radius * 2
+                            };
+                            this.quadtree.insert({
+                                object: { x: seg.x, y: seg.y, radius: snake.radius, snakeId: snake.id, type: 'snake_segment', isHead: index === 0 }, // Store relevant info
+                                bounds: segBounds
+                            });
+                         }
+                    });
+                 });
+
+
+                 // --- Check Collisions ---
+                 this.checkCollisions(allSnakes);
+
+
+                 // --- Update Camera ---
+                 if (this.playerSnake && this.playerSnake.isAlive) {
+                     // Smooth camera follow
+                     const targetCamX = this.playerSnake.x - this.canvasWidth / 2;
+                     const targetCamY = this.playerSnake.y - this.canvasHeight / 2;
+                     this.camera.x = MathUtils.lerp(this.camera.x, targetCamX, 0.1); // Adjust lerp factor for smoothness
+                     this.camera.y = MathUtils.lerp(this.camera.y, targetCamY, 0.1);
+
+                    // Optional: Clamp camera to world boundaries (prevents seeing empty space)
+                     this.camera.x = MathUtils.clamp(this.camera.x, 0, CONFIG.WORLD_SIZE - this.canvasWidth);
+                     this.camera.y = MathUtils.clamp(this.camera.y, 0, CONFIG.WORLD_SIZE - this.canvasHeight);
+                 }
+            }
+
+             checkCollisions(allSnakes) {
+                allSnakes.forEach(snake => {
+                    if (!snake.isAlive) return;
+
+                    const head = snake.segments[0];
+                    if (!head) return; // Skip if snake somehow has no segments
+
+                    const headRadius = snake.radius;
+                    const queryBounds = {
+                        x: head.x - headRadius * 2, // Query slightly larger area
+                        y: head.y - headRadius * 2,
+                        width: headRadius * 4,
+                        height: headRadius * 4
+                    };
+                    const nearbyItems = this.quadtree.retrieve(queryBounds);
+
+                    // Check against nearby items
+                    for (const item of nearbyItems) {
+                        const obj = item.object;
+                        if (!obj) continue;
+
+                        // --- Head vs Food ---
+                        if (obj instanceof Food) {
+                            const distSq = MathUtils.distanceSq(head.x, head.y, obj.x, obj.y);
+                            const radiiSumSq = (headRadius + obj.radius) ** 2;
+                            if (distSq < radiiSumSq) {
+                                snake.grow(CONFIG.FOOD_VALUE * (obj.radius / CONFIG.FOOD_RADIUS)); // Grow more for bigger food?
+                                this.removeFood(obj.id);
+                                // Spawn new food elsewhere?
+                                if (this.food.length < CONFIG.INITIAL_FOOD_COUNT * 1.2) { // Keep food density up
+                                     this.spawnFoodPellet(MathUtils.randomRange(0, CONFIG.WORLD_SIZE), MathUtils.randomRange(0, CONFIG.WORLD_SIZE));
+                                }
+                            }
+                        }
+                        // --- Head vs Snake Segment ---
+                        else if (obj.type === 'snake_segment' && obj.snakeId !== snake.id) {
+                            const distSq = MathUtils.distanceSq(head.x, head.y, obj.x, obj.y);
+                             // Use smaller radius for body segments collision?
+                             const bodySegmentRadius = obj.radius * 0.8;
+                             const radiiSumSq = (headRadius + bodySegmentRadius) ** 2;
+
+                            if (distSq < radiiSumSq) {
+                                // Collision! The current 'snake' dies.
+                                snake.die();
+                                // Find the snake that was hit (for potential score/logging, though not needed by rules)
+                                // const victimSnake = allSnakes.find(s => s.id === obj.snakeId);
+                                // console.log(`${snake.id} hit ${obj.snakeId}`);
+                                return; // Stop checking collisions for this snake once dead
+                            }
+                        }
+                    }
+
+                     // --- Self Collision (Optional, Slither.io doesn't have this) ---
+                     // for (let i = 3; i < snake.segments.length; i++) { // Start far enough from head
+                     //     const seg = snake.segments[i];
+                     //     const distSq = MathUtils.distanceSq(head.x, head.y, seg.x, seg.y);
+                     //     if (distSq < (headRadius * 0.8) ** 2) { // Use small radius for self check
+                     //          console.log(`${snake.id} hit self`);
+                     //          snake.die();
+                     //          return;
+                     //     }
+                     // }
+                });
+            }
+
+            render() {
+                const ctx = this.ctx;
+
+                // --- Clear Canvas (Draw Background) ---
+                ctx.fillStyle = '#181818'; // Dark background
+                ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
+
+                // --- Apply Camera Transform ---
+                ctx.save();
+                ctx.translate(-this.camera.x, -this.camera.y);
+
+                // --- Draw Background Grid ---
+                this.drawGrid(ctx);
+
+                 // --- Draw Food ---
+                 // Optimization: Only draw food visible in the camera view
+                 const viewBounds = {
+                     x: this.camera.x - 50, y: this.camera.y - 50, // Add buffer
+                     width: this.canvasWidth + 100, height: this.canvasHeight + 100
+                 };
+                 const visibleFood = this.quadtree.retrieve(viewBounds)
+                                     .map(item => item.object)
+                                     .filter(obj => obj instanceof Food);
+                 visibleFood.forEach(f => f.draw(ctx));
+                 // this.food.forEach(f => f.draw(ctx)); // Non-optimized drawing
+
+                 // --- Draw Snakes ---
+                 const allSnakes = [this.playerSnake, ...this.aiSnakes].filter(s => s && s.isAlive);
+                 // Draw AI snakes first (so player is on top)
+                 allSnakes.filter(s => s.isAI).forEach(snake => snake.draw(ctx));
+                 // Draw Player
+                 if (this.playerSnake && this.playerSnake.isAlive) {
+                    this.playerSnake.draw(ctx);
+                 }
+
+                 // --- Draw Particles ---
+                 this.particleSystem.draw(ctx);
+
+                 // --- Draw Quadtree (Debug) ---
+                 if (CONFIG.DEBUG_QUADTREE) {
+                    this.quadtree.draw(ctx);
+                 }
+
+                // --- Restore Context ---
+                ctx.restore(); // Resets transform to screen space
+
+                // --- Draw UI (Score, FPS) ---
+                this.uiScore.textContent = this.score;
+                this.uiFps.textContent = this.fps;
+            }
+
+            drawGrid(ctx) {
+                const gridSize = CONFIG.GRID_SIZE;
+                ctx.strokeStyle = '#333'; // Dark grid lines
+                ctx.lineWidth = 1;
+
+                // Calculate visible grid lines based on camera position
+                const startX = Math.floor(this.camera.x / gridSize) * gridSize;
+                const startY = Math.floor(this.camera.y / gridSize) * gridSize;
+                const endX = this.camera.x + this.canvasWidth;
+                const endY = this.camera.y + this.canvasHeight;
+
+                ctx.beginPath();
+                for (let x = startX; x < endX; x += gridSize) {
+                    ctx.moveTo(x, startY);
+                    ctx.lineTo(x, endY);
+                }
+                for (let y = startY; y < endY; y += gridSize) {
+                    ctx.moveTo(startX, y);
+                    ctx.lineTo(endX, y);
+                }
+                ctx.stroke();
+            }
+
+            updateFPS(timestamp) {
+                this.frameCount++;
+                const elapsed = timestamp - this.fpsUpdateTimer;
+                if (elapsed >= 1000) { // Update FPS every second
+                    this.fps = Math.round((this.frameCount * 1000) / elapsed);
+                    this.frameCount = 0;
+                    this.fpsUpdateTimer = timestamp;
+                }
+            }
+
+             gameOver() {
+                 if (this.gameState === 'gameOver') return; // Prevent multiple calls
+                 console.log("GAME OVER - Player Died");
+                 this.gameState = 'gameOver';
+                 this.finalScoreEl.textContent = this.score;
+                 this.gameOverScreen.style.display = 'block';
+                 // Optional: Stop AI movement? Or let them keep going?
+             }
+
+
+            gameLoop(timestamp) {
+                this.deltaTime = Math.max(0.001, (timestamp - this.lastTimestamp) / 1000); // Delta time in seconds, prevent 0
+                this.lastTimestamp = timestamp;
+
+                this.updateFPS(timestamp);
+
+                if (this.gameState === 'playing') {
+                    this.update(this.deltaTime);
+                }
+
+                this.render();
+
+                // Continue loop
+                requestAnimationFrame((ts) => this.gameLoop(ts));
+            }
         }
-    });
-}
+
+        // --- TinyColor Library (Minimal version included for gradients) ---
+        // Source: https://github.com/bgrins/TinyColor (MIT License)
+        // NOTE: Including the full library is better, this is a minimal extract
+        (function(Math) {
+        const trimLeft = /^\s+/, trimRight = /\s+$/;
+        function tinycolor (color, opts) {
+            color = (color) ? color : ''; opts = opts || { };
+            if (color instanceof tinycolor) return color;
+            if (!(this instanceof tinycolor)) return new tinycolor(color, opts);
+            const rgb = inputToRGB(color);
+            this._originalInput = color, this._r = rgb.r, this._g = rgb.g, this._b = rgb.b, this._a = rgb.a,
+            this._roundA = Math.round(100*this._a) / 100, this._format = opts.format || rgb.format;
+        }
+        tinycolor.prototype = {
+            toHexString: function(allow3Char) { return rgbToHex(this._r, this._g, this._b, allow3Char); },
+            darken: function(amount) { amount = (amount === 0) ? 0 : (amount || 10); const hsl = rgbToHsl(this._r, this._g, this._b); hsl.l -= amount / 100; hsl.l = MathUtils.clamp(hsl.l, 0, 1); return new tinycolor(hslToRgb(hsl.h, hsl.s, hsl.l)); },
+            lighten: function(amount) { amount = (amount === 0) ? 0 : (amount || 10); const hsl = rgbToHsl(this._r, this._g, this._b); hsl.l += amount / 100; hsl.l = MathUtils.clamp(hsl.l, 0, 1); return new tinycolor(hslToRgb(hsl.h, hsl.s, hsl.l)); },
+        };
+        function inputToRGB(color) {
+            let rgb = { r: 0, g: 0, b: 0 }; let a = 1; let s = null; let v = null; let l = null; let ok = false; let format = false;
+            if (typeof color == "string") color = stringInputToObject(color);
+            if (typeof color == "object") { if (isValidCSSUnit(color.r) && isValidCSSUnit(color.g) && isValidCSSUnit(color.b)) { rgb = rgbToRgb(color.r, color.g, color.b); ok = true; format = String(color.r).substr(-1) === "%" ? "prgb" : "rgb"; } else if (isValidCSSUnit(color.h) && isValidCSSUnit(color.s) && isValidCSSUnit(color.v)) { s = convertToPercentage(color.s); v = convertToPercentage(color.v); rgb = hsvToRgb(color.h, s, v); ok = true; format = "hsv"; } else if (isValidCSSUnit(color.h) && isValidCSSUnit(color.s) && isValidCSSUnit(color.l)) { s = convertToPercentage(color.s); l = convertToPercentage(color.l); rgb = hslToRgb(color.h, s, l); ok = true; format = "hsl"; } if (color.hasOwnProperty("a")) a = color.a; }
+            a = boundAlpha(a);
+            return { ok: ok, format: color.format || format, r: Math.min(255, Math.max(0, rgb.r)), g: Math.min(255, Math.max(0, rgb.g)), b: Math.min(255, Math.max(0, rgb.b)), a: a };
+        }
+        function rgbToRgb(r, g, b){ return { r: bound01(r, 255) * 255, g: bound01(g, 255) * 255, b: bound01(b, 255) * 255 }; }
+        function rgbToHsl(r, g, b) { r = bound01(r, 255); g = bound01(g, 255); b = bound01(b, 255); const max = Math.max(r, g, b), min = Math.min(r, g, b); let h, s, l = (max + min) / 2; if(max == min) h = s = 0; else { const d = max - min; s = l > 0.5 ? d / (2 - max - min) : d / (max + min); switch(max) { case r: h = (g - b) / d + (g < b ? 6 : 0); break; case g: h = (b - r) / d + 2; break; case b: h = (r - g) / d + 4; break; } h /= 6; } return { h: h, s: s, l: l }; }
+        function hslToRgb(h, s, l) { let r, g, b; if(s === 0) r = g = b = l; else { function hue2rgb(p, q, t) { if(t < 0) t += 1; if(t > 1) t -= 1; if(t < 1/6) return p + (q - p) * 6 * t; if(t < 1/2) return q; if(t < 2/3) return p + (q - p) * (2/3 - t) * 6; return p; } const q = l < 0.5 ? l * (1 + s) : l + s - l * s; const p = 2 * l - q; r = hue2rgb(p, q, h + 1/3); g = hue2rgb(p, q, h); b = hue2rgb(p, q, h - 1/3); } return { r: r * 255, g: g * 255, b: b * 255 }; }
+        function hsvToRgb(h, s, v) { h = bound01(h, 360) * 6; const i = Math.floor(h), f = h - i, p = v * (1 - s), q = v * (1 - f * s), t = v * (1 - (1 - f) * s), mod = i % 6; const r = [v, q, p, p, t, v][mod], g = [t, v, v, q, p, p][mod], b = [p, p, t, v, v, q][mod]; return { r: r * 255, g: g * 255, b: b * 255 }; }
+        function rgbToHex(r, g, b, allow3Char) { const hex = [ pad2(Math.round(r).toString(16)), pad2(Math.round(g).toString(16)), pad2(Math.round(b).toString(16)) ]; if (allow3Char && hex[0].charAt(0) == hex[0].charAt(1) && hex[1].charAt(0) == hex[1].charAt(1) && hex[2].charAt(0) == hex[2].charAt(1)) return hex[0].charAt(0) + hex[1].charAt(0) + hex[2].charAt(0); return hex.join(""); }
+        function pad2(c) { return c.length == 1 ? '0' + c : '' + c; }
+        function boundAlpha(a) { a = parseFloat(a); if (isNaN(a) || a < 0 || a > 1) a = 1; return a; }
+        function bound01(n, max) { if (isOnePointZero(n)) n = "100%"; const processPercent = isPercentage(n); n = Math.min(max, Math.max(0, parseFloat(n))); if (processPercent) n = parseInt(n * max, 10) / 100; if ((Math.abs(n - max) < 0.000001)) return 1; return (n % max) / parseFloat(max); }
+        function isOnePointZero(n) { return typeof n == "string" && n.indexOf('.') != -1 && parseFloat(n) === 1; }
+        function isPercentage(n) { return typeof n === "string" && n.indexOf('%') != -1; }
+        function convertToPercentage(n) { if (n <= 1) n = (n * 100) + "%"; return n; }
+        function isValidCSSUnit(color) { return !!matchers.CSS_UNIT.exec(color); }
+        function stringInputToObject(color) {
+            color = color.replace(trimLeft,'').replace(trimRight, '').toLowerCase(); let named = false; if (names[color]) { color = names[color]; named = true; } else if (color == 'transparent') return { r: 0, g: 0, b: 0, a: 0, format: "name" };
+            let match; if ((match = matchers.rgb.exec(color))) return { r: match[1], g: match[2], b: match[3] }; if ((match = matchers.rgba.exec(color))) return { r: match[1], g: match[2], b: match[3], a: match[4] }; if ((match = matchers.hsl.exec(color))) return { h: match[1], s: match[2], l: match[3] }; if ((match = matchers.hsla.exec(color))) return { h: match[1], s: match[2], l: match[3], a: match[4] }; if ((match = matchers.hsv.exec(color))) return { h: match[1], s: match[2], v: match[3] }; if ((match = matchers.hex8.exec(color))) return { r: parseIntFromHex(match[1]), g: parseIntFromHex(match[2]), b: parseIntFromHex(match[3]), a: convertHexToDecimal(match[4]), format: named ? "name" : "hex8" }; if ((match = matchers.hex6.exec(color))) return { r: parseIntFromHex(match[1]), g: parseIntFromHex(match[2]), b: parseIntFromHex(match[3]), format: named ? "name" : "hex" }; if ((match = matchers.hex3.exec(color))) return { r: parseIntFromHex(match[1] + '' + match[1]), g: parseIntFromHex(match[2] + '' + match[2]), b: parseIntFromHex(match[3] + '' + match[3]), format: named ? "name" : "hex" };
+            return false;
+        }
+        function parseIntFromHex(val) { return parseInt(val, 16); } function convertHexToDecimal(h) { return (parseIntFromHex(h) / 255); }
+        const matchers = (function() { const CSS_INTEGER = "[-\\+]?\\d+%?"; const CSS_NUMBER = "[-\\+]?\\d*\\.\\d+%?"; const CSS_UNIT = "(?:" + CSS_NUMBER + ")|(?:" + CSS_INTEGER + ")"; const PERMISSIVE_MATCH3 = "[\\s|\\(]+(" + CSS_UNIT + ")[,|\\s]+(" + CSS_UNIT + ")[,|\\s]+(" + CSS_UNIT + ")\\s*\\)?"; const PERMISSIVE_MATCH4 = "[\\s|\\(]+(" + CSS_UNIT + ")[,|\\s]+(" + CSS_UNIT + ")[,|\\s]+(" + CSS_UNIT + ")[,|\\s]+(" + CSS_UNIT + ")\\s*\\)?"; return { CSS_UNIT: new RegExp(CSS_UNIT), rgb: new RegExp("rgb" + PERMISSIVE_MATCH3), rgba: new RegExp("rgba" + PERMISSIVE_MATCH4), hsl: new RegExp("hsl" + PERMISSIVE_MATCH3), hsla: new RegExp("hsla" + PERMISSIVE_MATCH4), hsv: new RegExp("hsv" + PERMISSIVE_MATCH3), hex3: /^#?([0-9a-fA-F]{1})([0-9a-fA-F]{1})([0-9a-fA-F]{1})$/, hex6: /^#?([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})$/, hex8: /^#?([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})$/ }; })();
+        const names = tinycolor.names = { aliceblue: "f0f8ff", /* ... many more colors ... */ whitesmoke: "f5f5f5", yellow: "ffff00", yellowgreen: "9acd32" }; // Add full list if needed
+        window.tinycolor = tinycolor; // Expose to global scope
+        })(Math);
 
 
-// --- Start Everything ---
-init();</script>
+        // --- Start the Game ---
+        document.addEventListener('DOMContentLoaded', () => {
+             // Ensure tinycolor is loaded before starting the game
+             if (typeof tinycolor === 'undefined') {
+                 console.error("TinyColor library not found or loaded incorrectly.");
+                 // Handle error appropriately - maybe show a message to the user
+                 return;
+             }
+            console.log("DOM loaded, starting game...");
+            const game = new Game();
+            window.slitherGame = game; // Optional: Expose game to console for debugging
+        });
+
+    </script>
 </body>
 </html>
