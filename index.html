@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Box Organizer Pro - V16 (Display Fix)</title>
+    <title>3D Box Organizer - V17 (Rendering Fix)</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <style>
         :root {
@@ -81,7 +81,7 @@
         let boxes = []; 
         let selectedBoxData = null;
         let hoveredBoxData = null;
-        let infoPanelEl, hoverTooltipEl; 
+        let infoPanelEl, hoverTooltipEl, starField;
 
         class ActionManager { constructor() { this.undoStack = []; this.redoStack = []; } pushState(state) { this.undoStack.push(state); this.redoStack = []; if (this.undoStack.length > 50) this.undoStack.shift(); } undo() { if (this.undoStack.length <= 1) return null; const currentState = this.undoStack.pop(); this.redoStack.push(currentState); return JSON.parse(JSON.stringify(this.undoStack[this.undoStack.length - 1])); } redo() { if (this.redoStack.length === 0) return null; const nextState = this.redoStack.pop(); this.undoStack.push(nextState); return JSON.parse(JSON.stringify(nextState)); } }
         const actionManager = new ActionManager();
@@ -99,10 +99,11 @@
             renderer.shadowMap.enabled = true;
             renderer.shadowMap.type = THREE.PCFSoftShadowMap;
             renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.outputColorSpace = THREE.SRGBColorSpace; // Important for correct colors with ACES
             document.body.appendChild(renderer.domElement);
 
-            scene.add(new THREE.AmbientLight(0xffffff, 0.8));
-            const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+            scene.add(new THREE.AmbientLight(0xffffff, 0.7)); // Slightly reduced ambient
+            const dirLight = new THREE.DirectionalLight(0xffffff, 1.0); // Slightly reduced directional
             dirLight.position.set(30, 50, 40);
             dirLight.castShadow = true;
             dirLight.shadow.mapSize.width = 2048;
@@ -110,6 +111,7 @@
             scene.add(dirLight);
 
             createFloorAndGrid();
+            createStarfield();
             
             orbitControls = new OrbitControls(camera, renderer.domElement);
             orbitControls.enableDamping = true;
@@ -120,7 +122,8 @@
             scene.add(transformControls);
             
             const renderPass = new RenderPass(scene, camera);
-            const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.4, 0.5, 0.1); // Adjusted bloom
+            // Tuned Bloom Pass parameters
+            const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.6, 0.4, 0.75); 
             composer = new EffectComposer(renderer);
             composer.addPass(renderPass);
             composer.addPass(bloomPass);
@@ -156,58 +159,57 @@
 
             const baseMesh = new THREE.Mesh(baseGeometry, baseMaterial);
             const lidMesh = new THREE.Mesh(lidGeometry, lidMaterial);
+            const iconSprite = createIconSprite(boxData.icon); // Restored full icon creation
             
             [baseMesh, lidMesh].forEach(m => { m.castShadow = true; m.receiveShadow = true; });
-            group.add(baseMesh, lidMesh);
+            group.add(baseMesh, lidMesh, iconSprite);
             
             boxData.threeGroup = group; 
-            updateBoxVisuals(boxData); 
+            applyBoxState(group, boxData);
 
             boxes.push(boxData);
             scene.add(group);
 
             if (isNew) { 
-                const finalScale = {x: baseMesh.scale.x, y: baseMesh.scale.y, z: baseMesh.scale.z};
-                baseMesh.scale.set(0.01,0.01,0.01);
+                const finalScale = {x: boxData.size.x, y: boxData.size.y, z: boxData.size.z};
+                baseMesh.scale.set(0.01,0.01,0.01); // Start small
                  new TWEEN.Tween(baseMesh.scale).to(finalScale, 600).easing(TWEEN.Easing.Back.Out)
-                    .onUpdate(() => updateBoxVisuals(boxData)) 
+                    .onUpdate(() => applyBoxState(group, {...boxData, size: baseMesh.scale.clone()})) 
                     .start();
+                createPlopEffect(group.position);
             }
             return boxData;
         }
         
-        function updateBoxVisuals(boxData) {
-            if (!boxData.threeGroup) return;
-            const group = boxData.threeGroup;
-            const baseMesh = group.children[0];
-            const lidMesh = group.children[1];
-
-            group.position.copy(boxData.position);
-            baseMesh.scale.copy(boxData.size);
-            baseMesh.material.color.set(boxData.color);
-
-            lidMesh.scale.set(boxData.size.x * 1.02, LID_THICKNESS, boxData.size.z * 1.02);
-            lidMesh.position.y = boxData.size.y; 
-            lidMesh.material.color.set(new THREE.Color(boxData.color).multiplyScalar(0.8));
+        function applyBoxState(group, data) {
+            const { baseMesh, lidMesh, iconSprite } = { baseMesh: group.children[0], lidMesh: group.children[1], iconSprite: group.children[2] };
+            baseMesh.scale.set(data.size.x, data.size.y, data.size.z);
+            lidMesh.scale.set(data.size.x * 1.02, LID_THICKNESS, data.size.z * 1.02);
+            lidMesh.position.y = data.size.y;
+            iconSprite.position.y = data.size.y + 0.075; // Centered on lid thickness
+            iconSprite.scale.set(data.size.x * 0.1, data.size.x * 0.1, 1); // Icon scales with box width
+            group.position.copy(data.position);
+            
+            // Update materials if color changed
+            baseMesh.material.color.set(data.color);
+            lidMesh.material.color.set(new THREE.Color(data.color).multiplyScalar(0.8));
         }
 
         function onTransformObject() { 
             if (!selectedBoxData || !selectedBoxData.threeGroup) return;
             const group = selectedBoxData.threeGroup;
+            const baseMesh = group.children[0];
             
             if (transformControls.mode === 'scale') {
-                selectedBoxData.size.x = Math.max(SNAP_GRID_SIZE, Math.round(group.children[0].scale.x / SNAP_GRID_SIZE) * SNAP_GRID_SIZE);
-                selectedBoxData.size.y = Math.max(SNAP_GRID_SIZE, Math.round(group.children[0].scale.y / SNAP_GRID_SIZE) * SNAP_GRID_SIZE);
-                selectedBoxData.size.z = Math.max(SNAP_GRID_SIZE, Math.round(group.children[0].scale.z / SNAP_GRID_SIZE) * SNAP_GRID_SIZE); // Corrected .d to .z
-                selectedBoxData.position.y = Math.round(group.position.y / SNAP_GRID_SIZE) * SNAP_GRID_SIZE;
-
-
-            } else { 
-                selectedBoxData.position.x = Math.round(group.position.x / SNAP_GRID_SIZE) * SNAP_GRID_SIZE;
-                selectedBoxData.position.y = Math.round(group.position.y / SNAP_GRID_SIZE) * SNAP_GRID_SIZE;
-                selectedBoxData.position.z = Math.round(group.position.z / SNAP_GRID_SIZE) * SNAP_GRID_SIZE;
+                selectedBoxData.size.x = Math.max(SNAP_GRID_SIZE, Math.round(baseMesh.scale.x / SNAP_GRID_SIZE) * SNAP_GRID_SIZE);
+                selectedBoxData.size.y = Math.max(SNAP_GRID_SIZE, Math.round(baseMesh.scale.y / SNAP_GRID_SIZE) * SNAP_GRID_SIZE);
+                selectedBoxData.size.z = Math.max(SNAP_GRID_SIZE, Math.round(baseMesh.scale.z / SNAP_GRID_SIZE) * SNAP_GRID_SIZE);
             }
-            updateBoxVisuals(selectedBoxData);
+            selectedBoxData.position.x = Math.round(group.position.x / SNAP_GRID_SIZE) * SNAP_GRID_SIZE;
+            selectedBoxData.position.y = Math.round(group.position.y / SNAP_GRID_SIZE) * SNAP_GRID_SIZE; // Base is at Y=0
+            selectedBoxData.position.z = Math.round(group.position.z / SNAP_GRID_SIZE) * SNAP_GRID_SIZE;
+            
+            applyBoxState(group, selectedBoxData);
         }
 
         function selectBox(boxData) {
@@ -235,6 +237,7 @@
         }
         
         function setupUIEventListeners() {
+            infoPanelEl.innerHTML = `<h3 id="infoPanelTitle">Box Properties</h3><div><label for="boxNameInput">Name:</label><input type="text" id="boxNameInput" placeholder="Enter box name"></div><div><label for="boxColorInput">Color:</label><input type="color" id="boxColorInput" value="#cccccc"></div><p>ID: <span id="infoPanelId"></span></p><button id="deleteBoxBtn" style="background-color: #d9534f; border-color: #d43f3a; width: 100%;"><i class="bi bi-trash"></i> Delete Box</button>`;
             document.getElementById('addBoxBtn').addEventListener('click', () => {
                 const newBoxData = createBoxData({position: new THREE.Vector3(0,0,0)}); 
                 addBoxToScene(newBoxData, true);
@@ -251,7 +254,7 @@
             document.getElementById('boxColorInput').addEventListener('change', (e) => { if(selectedBoxData) {selectedBoxData.color = e.target.value; updateBoxVisuals(selectedBoxData); recordAction();}});
             
             document.getElementById('exportBtn').addEventListener('click', () => {
-                 const exportData = JSON.stringify(boxes.map(b => ({...b, threeGroup: undefined})), null, 2); // Exclude threeGroup
+                 const exportData = JSON.stringify(boxes.map(b => ({...b, threeGroup: undefined})), null, 2);
                  const a = document.createElement('a');
                  a.href = URL.createObjectURL(new Blob([exportData], {type: 'application/json'}));
                  a.download = 'box_organizer_layout.json';
@@ -309,7 +312,7 @@
                            if (c.isMesh) new TWEEN.Tween(c.material.emissive).to({ r: 0.2, g: 0.2, b: 0.2 }, 100).start();
                         });
                     }
-                    hoverTooltipEl.textContent = boxData.name;
+                    hoverTooltipEl.innerHTML = `<i class="${ICON_MAP[boxData.icon] ? boxData.icon : ''}"></i> ${boxData.name}`; // Show icon in tooltip
                     hoverTooltipEl.classList.remove('hidden');
                     hoverTooltipEl.style.left = (event.clientX + 15) + 'px';
                     hoverTooltipEl.style.top = (event.clientY + 15) + 'px';
@@ -333,7 +336,7 @@
                  if (e.key.toLowerCase() === 'z') stateToRestore = actionManager.undo();
                  if (e.key.toLowerCase() === 'y') stateToRestore = actionManager.redo();
                  if (stateToRestore) {
-                     deselectBox(); // Clear selection before restoring
+                     deselectBox(); 
                      boxes.forEach(b => { scene.remove(b.threeGroup); disposeThreeObject(b.threeGroup); });
                      boxes = [];
                      const parsedState = JSON.parse(stateToRestore);
@@ -348,7 +351,17 @@
         
         function createFloorAndGrid() { const floor = new THREE.Mesh(new THREE.PlaneGeometry(GRID_EXTENT * 2, GRID_EXTENT * 2), new THREE.MeshStandardMaterial({ color: 0x333840, roughness: 0.8, metalness: 0.2 })); floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor); const dotGeometry = new THREE.CircleGeometry(0.05, 12); dotGeometry.rotateX(-Math.PI / 2); const dotMaterial = new THREE.MeshBasicMaterial({ color: 0x555c66, transparent: true, opacity: 0.7 }); const instancedDots = new THREE.InstancedMesh(dotGeometry, dotMaterial, Math.pow(Math.floor(GRID_EXTENT / SNAP_GRID_SIZE) * 2 + 1, 2)); const dummy = new THREE.Object3D(); let i = 0; for (let x = -GRID_EXTENT; x <= GRID_EXTENT; x += SNAP_GRID_SIZE) { for (let z = -GRID_EXTENT; z <= GRID_EXTENT; z += SNAP_GRID_SIZE) { dummy.position.set(x, 0.01, z); dummy.updateMatrix(); instancedDots.setMatrixAt(i++, dummy.matrix); } } scene.add(instancedDots); }
         function createStarfield() { const starVertices = []; for (let i = 0; i < 10000; i++) { const x = THREE.MathUtils.randFloatSpread(2000); const y = THREE.MathUtils.randFloatSpread(2000); const z = THREE.MathUtils.randFloatSpread(2000); starVertices.push(x, y, z); } const starGeometry = new THREE.BufferGeometry(); starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starVertices, 3)); const starMaterial = new THREE.PointsMaterial({ color: 0x666666, size: 0.5, sizeAttenuation: true }); starField = new THREE.Points(starGeometry, starMaterial); scene.add(starField); }
-        function createIconSprite(iconClass) { return new THREE.Sprite(); }
+        function createIconSprite(iconClass) {
+            const canvas = document.createElement('canvas'); canvas.width = 256; canvas.height = 256; 
+            const context = canvas.getContext('2d'); 
+            const character = ICON_MAP[iconClass]; 
+            if (character) { context.font = '200px "bootstrap-icons"'; context.textAlign = 'center'; context.textBaseline = 'middle'; context.fillStyle = 'rgba(255, 255, 255, 0.8)'; context.fillText(character, 128, 128); } 
+            const texture = new THREE.CanvasTexture(canvas); 
+            const material = new THREE.SpriteMaterial({ map: texture, transparent: true, sizeAttenuation: false, depthTest: false }); 
+            const sprite = new THREE.Sprite(material); 
+            sprite.position.z = 0.51; // Slightly in front of the lid face
+            return sprite;
+        }
         function disposeThreeObject(object) { if (!object) return; object.traverse(child => { if (child.geometry) child.geometry.dispose(); if (child.material) { if (Array.isArray(child.material)) { child.material.forEach(m => { if (m.map) m.map.dispose(); m.dispose(); }); } else { if (child.material.map) child.material.map.dispose(); child.material.dispose(); } } }); }
         
         function animate(time) {
@@ -356,7 +369,7 @@
             TWEEN.update(time);
             orbitControls.update();
             if (starField) starField.rotation.y -= 0.00005;
-            composer.render(); // FIXED: Use composer to render
+            composer.render(); // Ensure composer is rendering
         }
 
         init();
