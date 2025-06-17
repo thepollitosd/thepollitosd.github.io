@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Box Organizer V9</title>
+    <title>3D Box Organizer V10</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <style>
         body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f0f0f0; color: #333; overflow: hidden; cursor: default; }
@@ -21,7 +21,6 @@
         .item-name-input:focus { border-color: #aaa; background: white; }
         .item-qty-input { width: 45px; text-align: right; border: 1px solid #ddd; border-radius: 3px; padding: 4px; }
         #deleteBoxBtn { width: 100%; margin-top: 10px; background-color: #ff4d4d; color: white; }
-        /* NEW: Hover Tooltip */
         #hoverTooltip { position: absolute; background-color: rgba(0, 0, 0, 0.75); color: white; padding: 5px 10px; border-radius: 5px; pointer-events: none; z-index: 101; display: flex; align-items: center; gap: 8px; font-size: 14px; }
     </style>
 </head>
@@ -29,7 +28,7 @@
     <div id="top-bar">
         <div class="ui-panel">
             <button id="addBoxBtn">Add Box</button>
-            <button id="toggleModeBtn">Switch to Move Mode</button>
+            <button id="toggleModeBtn">Switch to Move</button>
             <button id="exportBtn">Export</button>
             <input type="file" id="importFile" accept=".json" style="display: none;">
             <button onclick="document.getElementById('importFile').click()">Import</button>
@@ -39,10 +38,7 @@
             <button id="findBtn">Find</button>
         </div>
     </div>
-    <div id="infoPanel" class="ui-panel hidden">
-        <!-- Info panel content is populated by JS -->
-    </div>
-    <!-- NEW: Hover Tooltip element -->
+    <div id="infoPanel" class="ui-panel hidden"></div>
     <div id="hoverTooltip" class="hidden"></div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/20.0.3/tween.umd.js"></script>
@@ -64,7 +60,7 @@
         let boxes = [], selectedBox = null, hoveredBox = null, clipboard = null;
         let infoPanel, hoverTooltip;
 
-        class ActionManager { /* Unchanged from V8 */ constructor() { this.undoStack = []; this.redoStack = []; } pushState(state) { this.undoStack.push(state); this.redoStack = []; if (this.undoStack.length > 50) this.undoStack.shift(); } undo() { if (this.undoStack.length <= 1) return null; const currentState = this.undoStack.pop(); this.redoStack.push(currentState); return JSON.parse(JSON.stringify(this.undoStack[this.undoStack.length - 1])); } redo() { if (this.redoStack.length === 0) return null; const nextState = this.redoStack.pop(); this.undoStack.push(nextState); return JSON.parse(JSON.stringify(nextState)); } }
+        class ActionManager { /* Unchanged */ constructor() { this.undoStack = []; this.redoStack = []; } pushState(state) { this.undoStack.push(state); this.redoStack = []; if (this.undoStack.length > 50) this.undoStack.shift(); } undo() { if (this.undoStack.length <= 1) return null; const currentState = this.undoStack.pop(); this.redoStack.push(currentState); return JSON.parse(JSON.stringify(this.undoStack[this.undoStack.length - 1])); } redo() { if (this.redoStack.length === 0) return null; const nextState = this.redoStack.pop(); this.undoStack.push(nextState); return JSON.parse(JSON.stringify(nextState)); } }
         const actionManager = new ActionManager();
 
         function init() {
@@ -95,17 +91,12 @@
 
             transformControls = new TransformControls(camera, renderer.domElement);
             transformControls.setMode('scale');
-            transformControls.addEventListener('dragging-changed', e => {
-                orbitControls.enabled = !e.value;
-                if (!e.value) { // On drag end
-                    actionManager.pushState(getCurrentState());
-                }
-            });
-            transformControls.addEventListener('objectChange', onTransformObject); // Live snapping
+            transformControls.addEventListener('dragging-changed', e => { orbitControls.enabled = !e.value; if (!e.value) actionManager.pushState(getCurrentState()); });
+            transformControls.addEventListener('objectChange', onTransformObject);
             scene.add(transformControls);
             
             setupUIEventListeners();
-            actionManager.pushState(getCurrentState()); // Initial state
+            actionManager.pushState(getCurrentState());
             animate();
         }
 
@@ -130,7 +121,7 @@
             [baseMesh, lidMesh].forEach(m => { m.castShadow = true; m.receiveShadow = true; });
             const iconSprite = createIconSprite(data.icon);
             group.add(baseMesh, lidMesh, iconSprite);
-            // FIXED: Correct non-uniform scaling
+            // Non-uniform scaling setup
             group.scale.set(data.size.w, 1, data.size.d);
             baseMesh.scale.y = data.size.h;
             lidMesh.position.y = data.size.h / 2 + 0.15 / 2;
@@ -147,19 +138,22 @@
             if (!selectedBox) return;
             const group = selectedBox.group;
             const baseMesh = group.children[0];
-            const lidMesh = group.children[1];
-            const iconSprite = selectedBox.iconSprite;
             
-            // FIXED: Live snapping and correct transformations
+            // FIXED: Resizing and snapping logic
             if (transformControls.mode === 'scale') {
-                const newHeight = Math.max(SNAP_GRID_SIZE, Math.round(baseMesh.scale.y / SNAP_GRID_SIZE) * SNAP_GRID_SIZE);
+                // Snap scale values
                 group.scale.x = Math.max(SNAP_GRID_SIZE, Math.round(group.scale.x / SNAP_GRID_SIZE) * SNAP_GRID_SIZE);
                 group.scale.z = Math.max(SNAP_GRID_SIZE, Math.round(group.scale.z / SNAP_GRID_SIZE) * SNAP_GRID_SIZE);
-                baseMesh.scale.y = newHeight;
-                group.position.y = newHeight / 2;
-                lidMesh.position.y = newHeight / 2 + 0.15 / 2;
-                iconSprite.position.y = lidMesh.position.y;
+                const newHeight = Math.max(SNAP_GRID_SIZE, Math.round(baseMesh.scale.y * group.scale.y / SNAP_GRID_SIZE) * SNAP_GRID_SIZE);
                 
+                // Apply changes
+                baseMesh.scale.y = newHeight; // Only base mesh height changes
+                group.scale.y = 1; // Group Y scale is always 1
+                group.position.y = newHeight / 2; // Keep base on the floor
+                
+                // Update children and data model
+                group.children[1].position.y = newHeight / 2 + 0.15 / 2;
+                group.children[2].position.y = group.children[1].position.y;
                 selectedBox.size = { w: group.scale.x, h: newHeight, d: group.scale.z };
             } else { // translate
                 group.position.x = Math.round(group.position.x / SNAP_GRID_SIZE) * SNAP_GRID_SIZE;
@@ -169,20 +163,26 @@
             selectedBox.position.copy(group.position);
         }
 
-        function createIconSprite(iconClass) { const canvas = document.createElement('canvas'); canvas.width = 256; canvas.height = 256; const context = canvas.getContext('2d'); const character = ICON_MAP[iconClass]; if (character) { context.font = '200px "bootstrap-icons"'; context.textAlign = 'center'; context.textBaseline = 'middle'; context.fillStyle = 'rgba(0, 0, 0, 0.7)'; context.fillText(character, 128, 128); } const texture = new THREE.CanvasTexture(canvas); const material = new THREE.SpriteMaterial({ map: texture, transparent: true }); const sprite = new THREE.Sprite(material); sprite.scale.set(1, 1, 1); sprite.position.z = 0.51 * 1.02; return sprite; }
         function disposeOfBox(box) { box.group.traverse(child => { if (child.geometry) child.geometry.dispose(); if (child.material) { if (child.material.map) child.material.map.dispose(); child.material.dispose(); } }); }
 
         // --- UI & EVENT LISTENERS ---
         function setupUIEventListeners() {
-            // Panel setup
-            infoPanel.innerHTML = ` <div id="panelHeader"> <input type="text" id="boxNameInput" value="My Box"> <span id="boxCode"></span> </div> <div class="info-row"> <div id="boxThumbnail"></div> <div> <label for="boxColorInput">Color:</label> <input type="color" id="boxColorInput" value="#cccccc"> <input type="file" id="imageUpload" accept="image/*" style="display:none;"> <button onclick="document.getElementById('imageUpload').click()" style="margin-top: 5px;">Upload Image</button> </div> </div> <div><p style="margin:10px 0 5px 0;">Icon:</p><div id="iconSelection"></div></div> <p style="margin:15px 0 5px 0;">Contents:</p> <ul id="itemList"></ul> <input type="text" id="addItemInput" placeholder="New item name..." style="width: calc(100% - 20px);"> <button id="deleteBoxBtn">Delete Box</button> `;
+            infoPanel.innerHTML = `<div id="panelHeader"><input type="text" id="boxNameInput"><span id="boxCode"></span></div><div class="info-row"><div id="boxThumbnail"></div><div><label for="boxColorInput">Color:</label><input type="color" id="boxColorInput"><input type="file" id="imageUpload" accept="image/*" style="display:none;"><button onclick="document.getElementById('imageUpload').click()" style="margin-top: 5px;">Upload Image</button></div></div><div><p style="margin:10px 0 5px 0;">Icon:</p><div id="iconSelection"></div></div><p style="margin:15px 0 5px 0;">Contents:</p><ul id="itemList"></ul><input type="text" id="addItemInput" placeholder="New item name..."><button id="deleteBoxBtn">Delete Box</button>`;
             
-            // Top bar buttons
             document.getElementById('addBoxBtn').addEventListener('click', () => { const data = { code: generateUniqueCode(), name: 'New Box', color: '#cccccc', icon: 'none', thumbnail: null, items: [], position: new THREE.Vector3(0, 1.5, 0), size: { w: 4, h: 3, d: 3 } }; const newBox = createBox(data); selectBox(newBox, true); actionManager.pushState(getCurrentState()); });
             document.getElementById('toggleModeBtn').addEventListener('click', (e) => { const currentMode = transformControls.getMode(); if (currentMode === 'scale') { transformControls.setMode('translate'); e.target.textContent = 'Switch to Resize'; } else { transformControls.setMode('scale'); e.target.textContent = 'Switch to Move'; } });
             document.getElementById('findBtn').addEventListener('click', () => { const code = document.getElementById('findCodeInput').value.toUpperCase(); const foundBox = boxes.find(b => b.code === code); if (foundBox) selectBox(foundBox, true); else alert('Box not found!'); });
             
-            // Window-level events
+            // FIXED: Export button listener
+            document.getElementById('exportBtn').addEventListener('click', () => {
+                const exportData = getCurrentState();
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(new Blob([exportData], { type: 'application/json' }));
+                a.download = 'box-layout.json';
+                a.click();
+                URL.revokeObjectURL(a.href);
+            });
+
             window.addEventListener('keydown', onKeyDown);
             renderer.domElement.addEventListener('mousemove', onMouseMove);
             renderer.domElement.addEventListener('click', onCanvasClick);
@@ -206,75 +206,48 @@
             raycaster.setFromCamera(mouse, camera);
             const intersects = raycaster.intersectObjects(boxes.map(b => b.group), true);
             
-            // Reset previous hover effect if any
-            if (hoveredBox && (!intersects.length || intersects[0].object.userData.boxData !== hoveredBox)) {
-                if (hoveredBox !== selectedBox) { // Don't un-highlight if it's selected
-                    hoveredBox.group.traverse(c => { if (c.isMesh) c.material.emissive.set(0x000000); });
-                }
-                hoveredBox = null;
-                hoverTooltip.classList.add('hidden');
-            }
-
+            let newHoveredBox = null;
             if (intersects.length > 0) {
                 let object = intersects[0].object;
                 while (object.parent && !object.userData.boxData) object = object.parent;
-                const boxData = object.userData.boxData;
-                if (boxData && boxData !== hoveredBox) {
-                    hoveredBox = boxData;
-                    hoverTooltip.innerHTML = `<i class="${boxData.icon}"></i> ${boxData.name}`;
-                    hoverTooltip.classList.remove('hidden');
-                    if (boxData !== selectedBox) {
-                        boxData.group.traverse(c => { if (c.isMesh) c.material.emissive.set(0x444444); });
-                    }
-                }
+                newHoveredBox = object.userData.boxData;
             }
-            // Move tooltip
+
+            if (hoveredBox !== newHoveredBox) {
+                if (hoveredBox && hoveredBox !== selectedBox) { // Un-highlight old
+                    hoveredBox.group.traverse(c => { if (c.isMesh) c.material.emissive.set(0x000000); });
+                }
+                if (newHoveredBox && newHoveredBox !== selectedBox) { // Highlight new
+                    newHoveredBox.group.traverse(c => { if (c.isMesh) c.material.emissive.set(0x444444); });
+                }
+                hoveredBox = newHoveredBox;
+            }
+
             if (hoveredBox) {
+                hoverTooltip.innerHTML = `<i class="${hoveredBox.icon}"></i> ${hoveredBox.name}`;
+                hoverTooltip.classList.remove('hidden');
                 hoverTooltip.style.left = (event.clientX + 15) + 'px';
                 hoverTooltip.style.top = (event.clientY + 15) + 'px';
+            } else {
+                hoverTooltip.classList.add('hidden');
             }
         }
         
         function onCanvasClick() {
             if (transformControls.dragging) return;
-            raycaster.setFromCamera(mouse, camera);
-            const intersects = raycaster.intersectObjects(boxes.map(b => b.group), true);
-            if (intersects.length > 0) {
-                let object = intersects[0].object;
-                while (object.parent && !object.userData.boxData) object = object.parent;
-                const boxData = object.userData.boxData;
-                if (boxData) {
-                    if (boxData !== selectedBox) selectBox(boxData);
-                }
-            } else {
+            if (hoveredBox) { // If we are hovering over something, select it
+                if (hoveredBox !== selectedBox) selectBox(hoveredBox);
+            } else { // Otherwise, deselect
                 deselectBox();
             }
         }
 
-        // --- SELECTION & UI PANEL ---
-        function selectBox(boxData, panTo = false) {
-            deselectBox(); // Deselect previous first
-            selectedBox = boxData;
-            selectedBox.group.traverse(c => { if (c.isMesh) c.material.emissive.set(0x0055aa); });
-            transformControls.attach(selectedBox.group);
-            populateInfoPanel(selectedBox);
-            infoPanel.classList.remove('hidden');
-            if (panTo) focusOnBox(boxData);
-        }
-        function deselectBox() {
-            if (!selectedBox) return;
-            selectedBox.group.traverse(c => { if (c.isMesh) c.material.emissive.set(0x000000); });
-            selectedBox = null;
-            transformControls.detach();
-            infoPanel.classList.add('hidden');
-        }
+        function selectBox(boxData, panTo = false) { deselectBox(); selectedBox = boxData; selectedBox.group.traverse(c => { if (c.isMesh) c.material.emissive.set(0x0055aa); }); transformControls.attach(selectedBox.group); populateInfoPanel(selectedBox); infoPanel.classList.remove('hidden'); if (panTo) focusOnBox(boxData); }
+        function deselectBox() { if (!selectedBox) return; selectedBox.group.traverse(c => { if (c.isMesh) c.material.emissive.set(0x000000); }); selectedBox = null; transformControls.detach(); infoPanel.classList.add('hidden'); }
         function deleteSelectedBox() { if (!selectedBox) return; const boxToDelete = selectedBox; deselectBox(); scene.remove(boxToDelete.group); disposeOfBox(boxToDelete); boxes.splice(boxes.findIndex(b => b.code === boxToDelete.code), 1); }
         function populateInfoPanel(box) {
-            document.getElementById('boxNameInput').value = box.name;
-            document.getElementById('boxNameInput').onchange = (e) => { box.name = e.target.value; actionManager.pushState(getCurrentState()); };
-            document.getElementById('boxCode').textContent = `Code: ${box.code}`;
-            document.getElementById('boxColorInput').value = box.color;
-            document.getElementById('boxColorInput').onchange = (e) => { box.color = e.target.value; box.baseMaterial.color.set(e.target.value); box.lidMaterial.color.set(new THREE.Color(e.target.value).multiplyScalar(0.8)); actionManager.pushState(getCurrentState()); };
+            document.getElementById('boxNameInput').value = box.name; document.getElementById('boxNameInput').onchange = (e) => { box.name = e.target.value; actionManager.pushState(getCurrentState()); };
+            document.getElementById('boxCode').textContent = `Code: ${box.code}`; document.getElementById('boxColorInput').value = box.color; document.getElementById('boxColorInput').onchange = (e) => { box.color = e.target.value; box.baseMaterial.color.set(e.target.value); box.lidMaterial.color.set(new THREE.Color(e.target.value).multiplyScalar(0.8)); actionManager.pushState(getCurrentState()); };
             document.getElementById('imageUpload').onchange = (e) => { if (!e.target.files[0]) return; const reader = new FileReader(); reader.onload = (event) => { const img = new Image(); img.onload = () => { const canvas = document.createElement('canvas'); const size = 128; canvas.width = size; canvas.height = size; const ctx = canvas.getContext('2d'); const scale = size / Math.min(img.width, img.height); const w = img.width * scale; const h = img.height * scale; ctx.drawImage(img, (size - w) / 2, (size - h) / 2, w, h); box.thumbnail = canvas.toDataURL('image/jpeg', 0.7); populateInfoPanel(box); actionManager.pushState(getCurrentState()); }; img.src = event.target.result; }; reader.readAsDataURL(e.target.files[0]); };
             document.getElementById('boxThumbnail').style.backgroundImage = box.thumbnail ? `url(${box.thumbnail})` : 'none';
             const iconContainer = document.getElementById('iconSelection'); iconContainer.innerHTML = ''; ICONS.forEach(iconClass => { const btn = document.createElement('button'); btn.className = `icon-btn`; if (iconClass === box.icon) btn.classList.add('selected'); btn.innerHTML = iconClass === 'none' ? 'X' : `<i class="${iconClass}"></i>`; btn.onclick = () => { updateBoxIcon(box, iconClass); populateInfoPanel(box); actionManager.pushState(getCurrentState()); }; iconContainer.appendChild(btn); });
@@ -283,7 +256,8 @@
             document.getElementById('deleteBoxBtn').onclick = () => { deleteSelectedBox(); actionManager.pushState(getCurrentState()); };
         }
         
-        // ---UNCHANGED HELPERS---
+        //UNCHANGED HELPERS
+        function createIconSprite(iconClass) { const canvas = document.createElement('canvas'); canvas.width = 256; canvas.height = 256; const context = canvas.getContext('2d'); const character = ICON_MAP[iconClass]; if (character) { context.font = '200px "bootstrap-icons"'; context.textAlign = 'center'; context.textBaseline = 'middle'; context.fillStyle = 'rgba(0, 0, 0, 0.7)'; context.fillText(character, 128, 128); } const texture = new THREE.CanvasTexture(canvas); const material = new THREE.SpriteMaterial({ map: texture, transparent: true }); const sprite = new THREE.Sprite(material); sprite.scale.set(1, 1, 1); sprite.position.z = 0.51 * 1.02; return sprite; }
         function createFloorAndGrid() { const floorMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.2, metalness: 0.1 }); const floor = new THREE.Mesh(new THREE.PlaneGeometry(GRID_EXTENT * 2, GRID_EXTENT * 2), floorMaterial); floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor); const dotGeometry = new THREE.CircleGeometry(0.05, 12); dotGeometry.rotateX(-Math.PI / 2); const dotMaterial = new THREE.MeshBasicMaterial({ color: 0x555555 }); const count = Math.pow(Math.floor(GRID_EXTENT / SNAP_GRID_SIZE) * 2 + 1, 2); const instancedDots = new THREE.InstancedMesh(dotGeometry, dotMaterial, count); const dummy = new THREE.Object3D(); let i = 0; for (let x = -GRID_EXTENT; x <= GRID_EXTENT; x += SNAP_GRID_SIZE) { for (let z = -GRID_EXTENT; z <= GRID_EXTENT; z += SNAP_GRID_SIZE) { dummy.position.set(x, 0.01, z); dummy.updateMatrix(); instancedDots.setMatrixAt(i++, dummy.matrix); } } scene.add(instancedDots); }
         function updateBoxIcon(box, iconClass) { box.icon = iconClass; box.group.remove(box.iconSprite); disposeOfBox({ group: { children: [box.iconSprite] } }); box.iconSprite = createIconSprite(iconClass); box.iconSprite.position.y = box.group.children[0].scale.y / 2 + 0.15/2; box.group.add(box.iconSprite); }
         function focusOnBox(box) { const targetPos = box.group.position.clone(); const offset = new THREE.Vector3(10, 10, 10); const cameraPos = targetPos.clone().add(offset); new TWEEN.Tween(camera.position).to(cameraPos, 800).easing(TWEEN.Easing.Quadratic.Out).start(); new TWEEN.Tween(orbitControls.target).to(targetPos, 800).easing(TWEEN.Easing.Quadratic.Out).start(); }
