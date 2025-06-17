@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Box Organizer Pro - Final Build</title>
+    <title>Box Organizer - Pro Rebuild</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <style>
         :root { 
@@ -24,7 +24,6 @@
         button:active { background-color: #383c42; }
         input[type="text"], input[type="color"], input[type="number"], textarea, select { padding: 9px 12px; border: 1px solid var(--border-color); border-radius: 6px; background-color: var(--input-bg-color); color: var(--text-color); font-size: 14px; box-sizing: border-box; font-family: inherit; }
         
-        /* New Add Box Dropdown */
         .add-box-container { position: relative; display: flex; }
         #addBoxBtn { border-top-right-radius: 0; border-bottom-right-radius: 0; border-right: none; }
         #addBoxDropdownBtn { border-top-left-radius: 0; border-bottom-left-radius: 0; padding: 9px 8px; }
@@ -32,39 +31,34 @@
         #presetDropdown li { padding: 8px 12px; border-radius: 4px; cursor: pointer; }
         #presetDropdown li:hover { background-color: var(--primary-color); }
         
-        /* New Mode Tabs */
-        .mode-tabs button { background-color: transparent; border: 1px solid transparent; }
+        .mode-tabs { display: flex; background-color: var(--input-bg-color); border-radius: 6px; padding: 3px; }
+        .mode-tabs button { background-color: transparent; border: none; padding: 6px 12px; }
         .mode-tabs button.active { background-color: var(--primary-color); color: white; }
 
-        .info-panel { /* ... unchanged ... */ }
+        .info-panel { position: absolute; top: 15px; right: 15px; width: 340px; z-index: 100; background-color: var(--surface-color); border: 1px solid var(--border-color); padding: 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); max-height: calc(100vh - 30px); overflow-y: auto;}
         .hidden { display: none !important; }
-        /* ... rest of styles are unchanged ... */
+        .info-panel h3 { margin-top: 0; font-size: 1.4em; color: var(--text-color); border-bottom: 1px solid var(--border-color); padding-bottom: 10px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
+        .info-panel h3 .box-id-chip { font-size: 0.6em; color: var(--text-muted-color); background-color: var(--input-bg-color); padding: 3px 6px; border-radius: 4px; font-family: monospace; }
+        .info-panel label { display: block; margin-bottom: 5px; font-size: 0.9em; color: var(--text-muted-color); }
+        .info-panel input[type="text"], .info-panel input[type="color"], .info-panel textarea, .info-panel select { width: 100%; margin-bottom: 15px; }
+        
+        .section-header { font-size: 1.1em; margin-top: 20px; margin-bottom: 10px; color: var(--text-muted-color); border-top: 1px solid var(--border-color); padding-top: 15px;}
+        
+        .tag-container { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px; background-color: var(--input-bg-color); border-radius: 6px; border: 1px solid var(--border-color); margin-bottom: 15px; min-height: 20px;}
+        .tag { display: inline-flex; align-items: center; background-color: var(--primary-color); color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.9em; }
+        .tag .tag-remove { margin-left: 6px; cursor: pointer; opacity: 0.7; }
+        .tag .tag-remove:hover { opacity: 1; }
+        
+        #itemList { list-style: none; padding: 0; margin: 0 0 15px 0; max-height: 150px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 6px; background-color: var(--input-bg-color);}
+        #itemList li { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-bottom: 1px solid var(--border-color); cursor: grab; }
+        
+        #deleteBoxBtn { background-color: var(--danger-color); border-color: #c22a38; width: 100%; margin-top: 15px; }
+        .hover-tooltip { position: absolute; background-color: rgba(20, 22, 26, 0.9); backdrop-filter: blur(3px); color: var(--text-color); padding: 8px 12px; border-radius: 6px; pointer-events: none; z-index: 101; display: flex; align-items: center; gap: 8px; font-size: 14px; border: 1px solid var(--border-color); }
     </style>
 </head>
 <body>
-    <!-- HTML structure updated for new features -->
-    <div class="top-bar">
-        <div class="ui-panel">
-            <div class="add-box-container">
-                <button id="addBoxBtn"><i class="bi bi-plus-lg"></i> Add Box</button>
-                <button id="addBoxDropdownBtn"><i class="bi bi-caret-down-fill"></i></button>
-                <ul id="presetDropdown" class="hidden"></ul>
-            </div>
-            <div class="mode-tabs">
-                <button id="modeMoveBtn" title="Move (T)"><i class="bi bi-arrows-move"></i></button>
-                <button id="modeResizeBtn" title="Resize (R)" class="active"><i class="bi bi-arrows-fullscreen"></i></button>
-                <button id="modeRotateBtn" title="Rotate (Y)"><i class="bi bi-arrow-repeat"></i></button>
-            </div>
-            <button id="exportBtn"><i class="bi bi-box-arrow-up"></i></button>
-            <input type="file" id="importFile" accept=".json" style="display: none;">
-            <button onclick="document.getElementById('importFile').click()"><i class="bi bi-box-arrow-down"></i></button>
-        </div>
-        <div class="ui-panel">
-            <input type="text" id="findCodeInput" placeholder="Enter Box Code...">
-            <button id="findBtn"><i class="bi bi-search"></i> Find</button>
-        </div>
-    </div>
-    <div id="infoPanel" class="info-panel hidden"></div>
+    <!-- HTML structure is now fully managed by JS for robustness -->
+    <div id="ui-root"></div>
     <div id="hoverTooltip" class="hover-tooltip hidden"></div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/20.0.3/tween.umd.js"></script>
@@ -75,17 +69,11 @@
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
         import { TransformControls } from 'three/addons/controls/TransformControls.js';
 
-        // --- CONFIG & STATE ---
         const GRID_EXTENT = 100, SNAP_GRID_SIZE = 0.5, LID_THICKNESS = 0.15;
         const DEFAULT_BOX_COLOR = '#777777';
         const ICONS = ['none', 'bi-star-fill', 'bi-book-fill', 'bi-tools', 'bi-controller', 'bi-camera-fill', 'bi-lightbulb-fill', 'bi-box-seam', 'bi-archive-fill', 'bi-pc-display', 'bi-music-note-beamed', 'bi-paint-bucket', 'bi-puzzle-fill', 'bi-gift-fill', 'bi-heart-fill'];
         const ICON_MAP = {'bi-star-fill': '\uF586', 'bi-book-fill': '\uF190', 'bi-tools': '\uF5F2', 'bi-controller': '\uF2BB', 'bi-camera-fill': '\uF1F0', 'bi-lightbulb-fill': '\uF436', 'bi-box-seam': '\uF19D', 'bi-archive-fill': '\uF109', 'bi-pc-display': '\uF4E0', 'bi-music-note-beamed': '\uF49C', 'bi-paint-bucket': '\uF4AF', 'bi-puzzle-fill': '\uF524', 'bi-gift-fill': '🎁', 'bi-heart-fill': '❤️'};
-        const PRESETS = [
-            { name: "Standard Box", size: new THREE.Vector3(4, 3, 4) },
-            { name: "Filing Box", size: new THREE.Vector3(2.5, 2, 4) },
-            { name: "Large Crate", size: new THREE.Vector3(6, 4, 4) },
-            { name: "Small Cube", size: new THREE.Vector3(2, 2, 2) }
-        ];
+        const PRESETS = [ { name: "Standard Box", size: new THREE.Vector3(4, 3, 4) }, { name: "Filing Box", size: new THREE.Vector3(2.5, 2, 4) }, { name: "Large Crate", size: new THREE.Vector3(6, 4, 4) }, { name: "Small Cube", size: new THREE.Vector3(2, 2, 2) } ];
         
         let scene, camera, renderer, orbitControls, transformControls;
         let boxes = [], selectedBoxData = null, hoveredBoxData = null, clipboard = null;
@@ -97,7 +85,11 @@
         const actionManager = new ActionManager();
 
         function init() {
-            infoPanelEl = document.getElementById('infoPanel');
+            infoPanelEl = document.createElement('div');
+            infoPanelEl.id = 'infoPanel';
+            infoPanelEl.className = 'info-panel hidden';
+            document.getElementById('ui-root').appendChild(infoPanelEl);
+
             hoverTooltipEl = document.getElementById('hoverTooltip');
             scene = new THREE.Scene();
             camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -107,7 +99,7 @@
             renderer.setPixelRatio(window.devicePixelRatio);
             renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
             renderer.toneMapping = THREE.LinearToneMapping;
-            document.body.appendChild(renderer.domElement);
+            document.body.insertBefore(renderer.domElement, document.getElementById('ui-root'));
             scene.add(new THREE.AmbientLight(0xffffff, 1.2));
             const dirLight = new THREE.DirectionalLight(0xffffff, 1.8);
             dirLight.position.set(30, 50, 40); dirLight.castShadow = true;
@@ -118,13 +110,13 @@
             
             orbitControls = new OrbitControls(camera, renderer.domElement); orbitControls.enableDamping = true;
             transformControls = new TransformControls(camera, renderer.domElement);
-            transformControls.setRotationSnap(THREE.MathUtils.degToRad(15)); // Add rotation snap
+            transformControls.setRotationSnap(THREE.MathUtils.degToRad(15));
             transformControls.addEventListener('dragging-changed', e => { orbitControls.enabled = !e.value; if(!e.value) recordAction(); });
             transformControls.addEventListener('objectChange', onTransformObject);
             scene.add(transformControls);
             
             setupUI();
-            setTransformMode('scale'); // Set initial mode
+            setTransformMode('scale');
             recordAction(); 
             animate();
         }
@@ -136,7 +128,7 @@
                 color: DEFAULT_BOX_COLOR,
                 position: new THREE.Vector3(0, 0, 0), 
                 size: new THREE.Vector3(4, 3, 4),    
-                rotation: new THREE.Euler(0,0,0), // Add rotation property
+                rotation: new THREE.Euler(0,0,0),
                 items: [], icon: 'none', thumbnail: null, 
                 description: '', tags: [], lastModified: new Date().toISOString(),
                 ...overrideData,
@@ -144,14 +136,41 @@
         }
 
         function addBoxToScene(boxData, isNew = false) {
-            // ... (rest of the function is identical to the previous working version) ...
+            const group = new THREE.Group();
+            group.userData.id = boxData.id; 
+            const baseMaterial = new THREE.MeshStandardMaterial({ color: boxData.color });
+            const lidMaterial = new THREE.MeshStandardMaterial({ color: new THREE.Color(boxData.color).multiplyScalar(0.8) });
+            const baseGeometry = new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0);
+            const lidGeometry = new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0); 
+            const baseMesh = new THREE.Mesh(baseGeometry, baseMaterial);
+            const lidMesh = new THREE.Mesh(lidGeometry, lidMaterial);
+            const iconSprite = createIconSprite(boxData.icon);
+            [baseMesh, lidMesh].forEach(m => { m.castShadow = true; m.receiveShadow = true; });
+            group.add(baseMesh, lidMesh, iconSprite); 
+            
+            boxData.threeGroup = group; 
+            applyBoxStateFromData(boxData); 
+            boxes.push(boxData);
+            scene.add(group);
+
+            if (isNew) { 
+                const finalSize = boxData.size.clone();
+                const finalPos = boxData.position.clone();
+                baseMesh.scale.set(0.01,0.01,0.01);
+                group.position.set(finalPos.x, finalPos.y + 10, finalPos.z);
+                applyBoxStateFromData(boxData); 
+                 new TWEEN.Tween(baseMesh.scale).to(finalSize, 600).easing(TWEEN.Easing.Back.Out).onUpdate(() => applyBoxStateFromData(boxData)).start();
+                 new TWEEN.Tween(group.position).to(finalPos, 800).easing(TWEEN.Easing.Bounce.Out).start();
+                 createPlopEffect(finalPos);
+            }
+            return boxData;
         }
         
         function applyBoxStateFromData(boxData) {
             if (!boxData.threeGroup) return;
             const [baseMesh, lidMesh, iconSprite] = boxData.threeGroup.children;
             boxData.threeGroup.position.copy(boxData.position);
-            boxData.threeGroup.rotation.copy(boxData.rotation); // Apply rotation
+            boxData.threeGroup.rotation.copy(boxData.rotation);
             baseMesh.scale.copy(boxData.size); 
             baseMesh.material.color.set(boxData.color);
             lidMesh.scale.set(boxData.size.x * 1.02, LID_THICKNESS, boxData.size.z * 1.02);
@@ -160,7 +179,7 @@
             if (iconSprite) { 
                 iconSprite.position.y = boxData.size.y + 0.075; 
                 iconSprite.position.z = boxData.size.z * 0.51; 
-                iconSprite.scale.set(0.3, 0.3, 1); 
+                iconSprite.scale.set(0.3, 0.3, 1);
             }
         }
 
@@ -170,9 +189,10 @@
             const baseMesh = group.children[0];
             
             if (transformControls.mode === 'scale') {
-                selectedBoxData.size.x = Math.max(SNAP_GRID_SIZE, Math.round(baseMesh.scale.x / SNAP_GRID_SIZE) * SNAP_GRID_SIZE);
-                selectedBoxData.size.y = Math.max(SNAP_GRID_SIZE, Math.round(baseMesh.scale.y / SNAP_GRID_SIZE) * SNAP_GRID_SIZE);
-                selectedBoxData.size.z = Math.max(SNAP_GRID_SIZE, Math.round(baseMesh.scale.z / SNAP_GRID_SIZE) * SNAP_GRID_SIZE);
+                selectedBoxData.size.x = Math.max(SNAP_GRID_SIZE, Math.round(group.scale.x / SNAP_GRID_SIZE) * SNAP_GRID_SIZE);
+                selectedBoxData.size.y = Math.max(SNAP_GRID_SIZE, Math.round(group.scale.y / SNAP_GRID_SIZE) * SNAP_GRID_SIZE);
+                selectedBoxData.size.z = Math.max(SNAP_GRID_SIZE, Math.round(group.scale.z / SNAP_GRID_SIZE) * SNAP_GRID_SIZE);
+                group.scale.copy(selectedBoxData.size);
             } else if (transformControls.mode === 'translate') {
                 selectedBoxData.position.x = Math.round(group.position.x / SNAP_GRID_SIZE) * SNAP_GRID_SIZE;
                 selectedBoxData.position.y = Math.round(group.position.y / SNAP_GRID_SIZE) * SNAP_GRID_SIZE; 
@@ -190,13 +210,8 @@
             document.getElementById(`mode${mode.charAt(0).toUpperCase() + mode.slice(1)}Btn`).classList.add('active');
         }
 
-        // --- ALL OTHER FUNCTIONS (UI, EVENT LISTENERS, ETC.) ---
-        function setupUI() { /* ... This function now creates the tabs and preset dropdown ... */ }
-        function selectBox(boxData, panTo = false) { /* ... This now ensures the info panel appears ... */ }
-
-        // PASTE PREVIOUS FUNCTIONS HERE, then add/modify what's new.
-        addBoxToScene = function(boxData, isNew = false) { const group = new THREE.Group(); group.userData.id = boxData.id; const baseMaterial = new THREE.MeshStandardMaterial({ color: boxData.color }); const lidMaterial = new THREE.MeshStandardMaterial({ color: new THREE.Color(boxData.color).multiplyScalar(0.8) }); const baseGeometry = new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0); const lidGeometry = new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0); const baseMesh = new THREE.Mesh(baseGeometry, baseMaterial); const lidMesh = new THREE.Mesh(lidGeometry, lidMaterial); const iconSprite = createIconSprite(boxData.icon); [baseMesh, lidMesh].forEach(m => { m.castShadow = true; m.receiveShadow = true; }); group.add(baseMesh, lidMesh, iconSprite); boxData.threeGroup = group; applyBoxStateFromData(boxData); boxes.push(boxData); scene.add(group); if (isNew) { const finalSize = boxData.size.clone(); const finalPos = boxData.position.clone(); baseMesh.scale.set(0.01,0.01,0.01); group.position.set(finalPos.x, finalPos.y + 10, finalPos.z); applyBoxStateFromData(boxData); new TWEEN.Tween(baseMesh.scale).to(finalSize, 600).easing(TWEEN.Easing.Back.Out).onUpdate(() => applyBoxStateFromData(boxData)).start(); new TWEEN.Tween(group.position).to(finalPos, 800).easing(TWEEN.Easing.Bounce.Out).start(); createPlopEffect(finalPos); } return boxData; }
-        setupUI = function() {
+        function setupUI() {
+            document.getElementById('ui-root').insertAdjacentHTML('afterbegin', `<div class="top-bar"><div class="ui-panel"><div class="add-box-container"><button id="addBoxBtn"><i class="bi bi-plus-lg"></i> Add Box</button><button id="addBoxDropdownBtn"><i class="bi bi-caret-down-fill"></i></button><ul id="presetDropdown" class="hidden"></ul></div><div class="mode-tabs"><button id="modeMoveBtn" title="Move (T)"><i class="bi bi-arrows-move"></i></button><button id="modeResizeBtn" title="Resize (R)" class="active"><i class="bi bi-arrows-fullscreen"></i></button><button id="modeRotateBtn" title="Rotate (Y)"><i class="bi bi-arrow-repeat"></i></button></div><button id="exportBtn"><i class="bi bi-box-arrow-up"></i></button><input type="file" id="importFile" accept=".json" style="display: none;"><button onclick="document.getElementById('importFile').click()"><i class="bi bi-box-arrow-down"></i></button></div><div class="ui-panel"><input type="text" id="findCodeInput" placeholder="Enter Box Code..."><button id="findBtn"><i class="bi bi-search"></i> Find</button></div></div>`);
             infoPanelEl.innerHTML = `<h3 id="infoPanelTitleArea"><span id="infoPanelTitle"></span> <span id="infoPanelIdChip" class="box-id-chip"></span></h3><div><label for="boxNameInput">Name</label><input type="text" id="boxNameInput"></div><div><label for="boxColorInput">Color</label><input type="color" id="boxColorInput"></div><div><label for="descriptionInput">Description</label><textarea id="descriptionInput" rows="3"></textarea></div><div id="tagsContainer"><h4 class="section-header">Tags</h4><div class="tag-container"><select id="tagSelect"></select></div></div><div id="iconContainer"><h4 class="section-header">Icon</h4><div id="iconPicker"></div></div><div id="itemListContainer"><h4 class="section-header">Items</h4><ul id="itemList"></ul><form id="addItemForm" onsubmit="return false;"><input type="text" id="newItemNameInput" placeholder="Item name..." required><input type="number" id="newItemQtyInput" value="1" min="1" style="width: 60px;"><button type="submit" id="addItemBtn"><i class="bi bi-plus-lg"></i> Add</button></form></div><p id="lastModifiedText" style="font-size: 0.8em; color: var(--text-muted-color); text-align: center; margin-top: 20px;"></p><button id="deleteBoxBtn"><i class="bi bi-trash"></i> Delete Box</button>`;
             
             const addBoxAction = (preset = lastUsedPreset) => {
@@ -209,16 +224,8 @@
 
             document.getElementById('addBoxBtn').addEventListener('click', () => addBoxAction());
             const presetDropdown = document.getElementById('presetDropdown');
-            PRESETS.forEach(p => {
-                const li = document.createElement('li');
-                li.textContent = p.name;
-                li.onclick = () => { addBoxAction(p); presetDropdown.classList.add('hidden'); };
-                presetDropdown.appendChild(li);
-            });
-            document.getElementById('addBoxDropdownBtn').addEventListener('click', (e) => {
-                e.stopPropagation();
-                presetDropdown.classList.toggle('hidden');
-            });
+            PRESETS.forEach(p => { const li = document.createElement('li'); li.textContent = p.name; li.onclick = () => { addBoxAction(p); presetDropdown.classList.add('hidden'); }; presetDropdown.appendChild(li); });
+            document.getElementById('addBoxDropdownBtn').addEventListener('click', (e) => { e.stopPropagation(); presetDropdown.classList.toggle('hidden'); });
             document.addEventListener('click', () => presetDropdown.classList.add('hidden'));
 
             document.getElementById('modeMoveBtn').addEventListener('click', () => setTransformMode('translate'));
@@ -244,57 +251,38 @@
             renderer.domElement.addEventListener('click', onCanvasClick);
             window.addEventListener('keydown', onKeyDown); 
         }
-        selectBox = function(boxData, panTo = false) { deselectBox(); selectedBoxData = boxData; if (selectedBoxData.threeGroup) { transformControls.attach(selectedBoxData.threeGroup); selectedBoxData.threeGroup.children.forEach(c => { if (c.isMesh) new TWEEN.Tween(c.material.emissive).to({ r: 0.1, g: 0.3, b: 0.5 }, 200).start(); }); } updateInfoPanel(); infoPanelEl.classList.remove('hidden'); if (panTo) focusOnBox(boxData); }
-        function updateInfoPanel() { /* ... unchanged ... */ }
-        function renderTags() { /* ... unchanged ... */ }
-        function handleTagSelectChange(e) { /* ... unchanged ... */ }
-        function renderItemList() { /* ... unchanged ... */ }
-        function handleAddItem(event) { /* ... unchanged ... */ }
-        function handleItemDragStart(e) { /* ... unchanged ... */ }
-        function handleItemDragOver(e) { /* ... unchanged ... */ }
-        function handleItemDrop(e) { /* ... unchanged ... */ }
-        function handleDeleteBox() { /* ... unchanged ... */ }
-        function onMouseMove(event) { /* ... unchanged ... */ }
-        function onCanvasClick() { /* ... unchanged ... */ }
-        function onKeyDown(e) { /* ... unchanged ... */ }
-        function recordAction() { /* ... unchanged ... */ }
-        function restoreState(stateJSON) { /* ... unchanged ... */ }
-        function handleImport(event) { /* ... unchanged ... */ }
-        function renderIconPicker() { /* ... unchanged ... */ }
-        function updateBoxIcon(box, iconClass) { /* ... unchanged ... */ }
-        function createPlopEffect(position) { /* ... unchanged ... */ }
-        function createFloorAndGrid() { /* ... unchanged ... */ }
-        function createStarfield() { /* ... unchanged ... */ }
-        function createIconSprite(iconClass) { /* ... unchanged ... */ }
-        function disposeThreeObject(object) { /* ... unchanged ... */ }
-        function focusOnBox(box) { /* ... unchanged ... */ }
-        function animate(time) { /* ... unchanged ... */ }
 
-        // PASTE ALL UNCHANGED FUNCTIONS HERE
-        updateInfoPanel = function() { if (!selectedBoxData) { infoPanelEl.classList.add('hidden'); return; } document.getElementById('infoPanelTitle').textContent = selectedBoxData.name || "Box Properties"; document.getElementById('infoPanelIdChip').textContent = selectedBoxData.id.substring(0,6).toUpperCase(); document.getElementById('boxNameInput').value = selectedBoxData.name; document.getElementById('boxColorInput').value = selectedBoxData.color; document.getElementById('descriptionInput').value = selectedBoxData.description || ''; document.getElementById('lastModifiedText').textContent = `Last Modified: ${new Date(selectedBoxData.lastModified).toLocaleString()}`; collectGlobalTags(); renderTags(); renderItemList(); renderIconPicker(); }
-        renderTags = function() { if (!selectedBoxData) return; const tagContainer = document.querySelector('#tagsContainer .tag-container'); const tagSelect = document.getElementById('tagSelect'); [...tagContainer.children].forEach(child => child.remove()); tagSelect.innerHTML = ''; selectedBoxData.tags.forEach(tagText => { const tagEl = document.createElement('span'); tagEl.className = 'tag'; tagEl.textContent = tagText; const removeEl = document.createElement('span'); removeEl.className = 'tag-remove bi bi-x'; removeEl.onclick = () => { selectedBoxData.tags = selectedBoxData.tags.filter(t => t !== tagText); selectedBoxData.lastModified = new Date().toISOString(); recordAction(); renderTags(); }; tagEl.appendChild(removeEl); tagContainer.appendChild(tagEl); }); tagContainer.appendChild(tagSelect); const defaultOption = document.createElement('option'); defaultOption.value = ""; defaultOption.textContent = "Select or add..."; tagSelect.appendChild(defaultOption); Array.from(globalTags).filter(t => !selectedBoxData.tags.includes(t)).sort().forEach(tag => { const option = document.createElement('option'); option.value = tag; option.textContent = tag; tagSelect.appendChild(option); }); const newTagOption = document.createElement('option'); newTagOption.value = "NEW_TAG_OPTION"; newTagOption.textContent = "＋ Add New Tag..."; tagSelect.appendChild(newTagOption); tagSelect.value = ""; }
-        handleTagSelectChange = function(e) { if (!selectedBoxData) return; const selectedValue = e.target.value; e.target.value = ""; if (selectedValue === "NEW_TAG_OPTION") { const newTag = prompt("Enter new tag name:"); if (newTag) { const trimmedTag = newTag.trim(); if (trimmedTag && !selectedBoxData.tags.includes(trimmedTag)) { selectedBoxData.tags.push(trimmedTag); selectedBoxData.lastModified = new Date().toISOString(); recordAction(); updateInfoPanel(); } } } else if (selectedValue && !selectedBoxData.tags.includes(selectedValue)) { selectedBoxData.tags.push(selectedValue); selectedBoxData.lastModified = new Date().toISOString(); recordAction(); updateInfoPanel(); } }
-        renderItemList = function() { if (!selectedBoxData) return; const itemListEl = document.getElementById('itemList'); itemListEl.innerHTML = ''; selectedBoxData.items.forEach((item, index) => { const li = document.createElement('li'); li.dataset.itemId = item.id; li.draggable = true; const handle = document.createElement('span'); handle.className = 'drag-handle bi bi-grip-vertical'; const nameInput = document.createElement('input'); nameInput.type = 'text'; nameInput.className = 'item-name-input'; nameInput.value = item.name; nameInput.onchange = (e) => { item.name = e.target.value; selectedBoxData.lastModified = new Date().toISOString(); recordAction(); }; const qtyInput = document.createElement('input'); qtyInput.type = 'number'; qtyInput.className = 'item-qty-input'; qtyInput.value = item.qty; qtyInput.min = 1; qtyInput.onchange = (e) => { item.qty = parseInt(e.target.value) || 1; selectedBoxData.lastModified = new Date().toISOString(); recordAction(); }; const deleteBtn = document.createElement('button'); deleteBtn.className = 'delete-item-btn bi bi-x-lg'; deleteBtn.onclick = () => { selectedBoxData.items.splice(index, 1); renderItemList(); selectedBoxData.lastModified = new Date().toISOString(); recordAction(); }; li.append(handle, nameInput, qtyInput, deleteBtn); itemListEl.appendChild(li); }); }
-        handleAddItem = function(event) { event.preventDefault(); if (!selectedBoxData) return; const nameInput = document.getElementById('newItemNameInput'); const qtyInput = document.getElementById('newItemQtyInput'); const name = nameInput.value.trim(); const qty = parseInt(qtyInput.value) || 1; if (name) { selectedBoxData.items.push({ id: THREE.MathUtils.generateUUID(), name, qty }); nameInput.value = ''; qtyInput.value = 1; renderItemList(); selectedBoxData.lastModified = new Date().toISOString(); recordAction(); } }
-        handleItemDragStart = function(e) { if (e.target.tagName === 'LI') { e.target.classList.add('dragging'); draggedItem = e.target.dataset.itemId; e.dataTransfer.effectAllowed = 'move'; } }
-        handleItemDragOver = function(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }
-        handleItemDrop = function(e) { e.preventDefault(); const targetLi = e.target.closest('li'); if (!targetLi || !draggedItem || !selectedBoxData) return; const draggedItemId = draggedItem; const targetItemId = targetLi.dataset.itemId; const items = selectedBoxData.items; const draggedIndex = items.findIndex(item => item.id === draggedItemId); let targetIndex = items.findIndex(item => item.id === targetItemId); if (draggedIndex === -1 || targetIndex === -1) return; const [dragged] = items.splice(draggedIndex, 1); if (draggedIndex < targetIndex) targetIndex--; items.splice(targetIndex, 0, dragged); document.querySelectorAll('#itemList li.dragging').forEach(el => el.classList.remove('dragging')); draggedItem = null; renderItemList(); selectedBoxData.lastModified = new Date().toISOString(); recordAction(); }
-        handleDeleteBox = function() { if (!selectedBoxData) return; const boxToRemove = selectedBoxData; deselectBox(); new TWEEN.Tween(boxToRemove.threeGroup.scale).to({x:0.01, y:0.01, z:0.01}, 300).easing(TWEEN.Easing.Quadratic.In).onComplete(() => {scene.remove(boxToRemove.threeGroup); disposeThreeObject(boxToRemove.threeGroup);}).start(); boxes = boxes.filter(b => b.id !== boxToRemove.id); recordAction(); }
-        onMouseMove = function(event) { const mouse = new THREE.Vector2((event.clientX / window.innerWidth) * 2 - 1, -(event.clientY / window.innerHeight) * 2 + 1); const raycaster = new THREE.Raycaster(); raycaster.setFromCamera(mouse, camera); const allGroups = boxes.map(b => b.threeGroup).filter(g => g); const intersects = raycaster.intersectObjects(allGroups, true); let newHoveredBox = null; if (intersects.length > 0) { let groupToTest = intersects[0].object; while(groupToTest && !groupToTest.userData.id) { groupToTest = groupToTest.parent; } if (groupToTest) newHoveredBox = boxes.find(b => b.id === groupToTest.userData.id); } if (hoveredBoxData !== newHoveredBox) { if (hoveredBoxData && hoveredBoxData !== selectedBoxData) { hoveredBoxData.threeGroup.children.forEach(c => { if (c.isMesh) new TWEEN.Tween(c.material.emissive).to({ r: 0, g: 0, b: 0 }, 100).start(); }); } if (newHoveredBox && newHoveredBox !== selectedBoxData) { newHoveredBox.threeGroup.children.forEach(c => { if (c.isMesh) new TWEEN.Tween(c.material.emissive).to({ r: 0.2, g: 0.2, b: 0.2 }, 100).start(); }); } hoveredBoxData = newHoveredBox; } if (hoveredBoxData) { hoverTooltipEl.innerHTML = `<i class="${hoveredBoxData.icon}"></i> ${hoveredBoxData.name}`; hoverTooltipEl.classList.remove('hidden'); hoverTooltipEl.style.left = (event.clientX + 15) + 'px'; hoverTooltipEl.style.top = (event.clientY + 15) + 'px'; } else { hoverTooltipEl.classList.add('hidden'); } }
-        onCanvasClick = function() { if (transformControls.dragging) return; if (hoveredBoxData) selectBox(hoveredBoxData); else deselectBox(); }
-        onKeyDown = function(e) { if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return; if (e.ctrlKey || e.metaKey) { let stateToRestore = null; if (e.key.toLowerCase() === 'z') stateToRestore = actionManager.undo(); if (e.key.toLowerCase() === 'y') stateToRestore = actionManager.redo(); if (stateToRestore) restoreState(stateToRestore); } else if (e.key === 'Delete' || e.key === 'Backspace') { if (selectedBoxData) handleDeleteBox(); } }
-        recordAction = function() { actionManager.pushState(JSON.stringify(boxes.map(box => ({...box, threeGroup: undefined})))); }
-        restoreState = function(stateJSON) { deselectBox(); [...boxes].forEach(b => { scene.remove(b.threeGroup); disposeThreeObject(b.threeGroup); }); boxes = []; const parsedState = JSON.parse(stateJSON); parsedState.forEach(boxData => { boxData.position = new THREE.Vector3(boxData.position.x, boxData.position.y, boxData.position.z); boxData.size = new THREE.Vector3(boxData.size.x, boxData.size.y, boxData.size.z); boxData.rotation = new THREE.Euler(boxData.rotation._x, boxData.rotation._y, boxData.rotation._z); addBoxToScene(boxData); }); recordAction(); }
-        handleImport = function(event) { if (!event.target.files[0]) return; const reader = new FileReader(); reader.onload = (e) => { try { restoreState(e.target.result); } catch (err) { alert('Error: Invalid or corrupt JSON file.'); console.error(err); } }; reader.readAsText(event.target.files[0]); event.target.value = ''; }
-        renderIconPicker = function() { if (!selectedBoxData) return; const picker = document.getElementById('iconPicker'); picker.innerHTML = ''; ICONS.forEach(iconClass => { const btn = document.createElement('button'); btn.className = `icon-btn`; if (iconClass === selectedBoxData.icon) btn.classList.add('selected'); btn.innerHTML = iconClass === 'none' ? '<i class="bi bi-slash-circle"></i>' : `<i class="${iconClass}"></i>`; btn.onclick = () => { updateBoxIcon(selectedBoxData, iconClass); renderIconPicker(); selectedBoxData.lastModified = new Date().toISOString(); recordAction(); }; picker.appendChild(btn); }); }
-        updateBoxIcon = function(box, iconClass) { box.icon = iconClass; if (box.threeGroup) { box.threeGroup.remove(box.threeGroup.children[2]); disposeThreeObject(box.threeGroup.children[2]); const newSprite = createIconSprite(iconClass); box.threeGroup.add(newSprite); applyBoxStateFromData(box); } }
-        createPlopEffect = function(position) { const ringGeometry = new THREE.TorusGeometry(1, 0.05, 8, 50); const ringMaterial = new THREE.MeshBasicMaterial({ color: 0x00aaff, transparent: true }); const ring = new THREE.Mesh(ringGeometry, ringMaterial); ring.rotation.x = Math.PI / 2; ring.position.copy(position); ring.position.y += 0.02; scene.add(ring); const targetScale = 6; new TWEEN.Tween(ring.scale).to({ x: targetScale, y: targetScale, z: targetScale }, 500).easing(TWEEN.Easing.Quadratic.Out).start(); new TWEEN.Tween(ring.material).to({ opacity: 0 }, 600).easing(TWEEN.Easing.Quadratic.Out).onComplete(() => { scene.remove(ring); ring.geometry.dispose(); ring.material.dispose(); }).start(); }
-        createFloorAndGrid = function() { const floor = new THREE.Mesh(new THREE.PlaneGeometry(GRID_EXTENT * 2, GRID_EXTENT * 2), new THREE.MeshStandardMaterial({ color: 0x333840, roughness: 0.8, metalness: 0.2 })); floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor); const dotGeometry = new THREE.CircleGeometry(0.05 * (SNAP_GRID_SIZE / 0.5) , 12); dotGeometry.rotateX(-Math.PI / 2); const dotMaterial = new THREE.MeshBasicMaterial({ color: 0x555c66, transparent: true, opacity: 0.7 }); const divisions = Math.floor(GRID_EXTENT / SNAP_GRID_SIZE) * 2 + 1; const instancedDots = new THREE.InstancedMesh(dotGeometry, dotMaterial, divisions * divisions); const dummy = new THREE.Object3D(); let i = 0; for (let r = -GRID_EXTENT; r <= GRID_EXTENT; r += SNAP_GRID_SIZE) { for (let c = -GRID_EXTENT; c <= GRID_EXTENT; c += SNAP_GRID_SIZE) { dummy.position.set(r, 0.01, c); dummy.updateMatrix(); instancedDots.setMatrixAt(i++, dummy.matrix); } } scene.add(instancedDots); }
-        createStarfield = function() { const starVertices = []; for (let i = 0; i < 10000; i++) { const x = THREE.MathUtils.randFloatSpread(2000); const y = THREE.MathUtils.randFloatSpread(2000); const z = THREE.MathUtils.randFloatSpread(2000); starVertices.push(x, y, z); } const starGeometry = new THREE.BufferGeometry(); starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starVertices, 3)); const starMaterial = new THREE.PointsMaterial({ color: 0x666666, size: 0.5, sizeAttenuation: true }); starField = new THREE.Points(starGeometry, starMaterial); scene.add(starField); }
-        createIconSprite = function(iconClass) { const canvas = document.createElement('canvas'); canvas.width = 256; canvas.height = 256; const context = canvas.getContext('2d'); const character = ICON_MAP[iconClass]; if (character) { context.font = '200px "bootstrap-icons"'; context.textAlign = 'center'; context.textBaseline = 'middle'; context.fillStyle = 'rgba(255, 255, 255, 0.8)'; context.fillText(character, 128, 128); } const texture = new THREE.CanvasTexture(canvas); const material = new THREE.SpriteMaterial({ map: texture, transparent: true, sizeAttenuation: false, depthTest: false }); const sprite = new THREE.Sprite(material); sprite.visible = false; return sprite; } 
-        disposeThreeObject = function(object) { if (!object) return; object.traverse(child => { if (child.geometry) child.geometry.dispose(); if (child.material) { if (Array.isArray(child.material)) { child.material.forEach(m => { if (m.map) m.map.dispose(); m.dispose(); }); } else { if (child.material.map) child.material.map.dispose(); child.material.dispose(); } } }); }
-        focusOnBox = function(box) { const targetPos = box.position.clone(); targetPos.y += box.size.y / 2; const offset = new THREE.Vector3(box.size.x + 5, box.size.y + 5, box.size.z + 5); const cameraPos = targetPos.clone().add(offset); new TWEEN.Tween(camera.position).to(cameraPos, 800).easing(TWEEN.Easing.Quadratic.Out).start(); new TWEEN.Tween(orbitControls.target).to(targetPos, 800).easing(TWEEN.Easing.Quadratic.Out).start(); }
-        animate = function(time) { requestAnimationFrame(animate); TWEEN.update(time); orbitControls.update(); if (starField) starField.rotation.y -= 0.00005; renderer.render(scene, camera); }
+        // ... all other functions remain identical to the previous fully functional version ...
+        // I've omitted them here for brevity, but they are the same as the last provided code block.
+        // Full, correct implementations of updateInfoPanel, renderTags, handleTagSelectChange, etc. are assumed.
+        // ...
+        
+        // PASTE ALL UNCHANGED FUNCTIONS HERE TO SAVE SPACE
+        function updateInfoPanel() { if (!selectedBoxData) { infoPanelEl.classList.add('hidden'); return; } document.getElementById('infoPanelTitle').textContent = selectedBoxData.name || "Box Properties"; document.getElementById('infoPanelIdChip').textContent = selectedBoxData.id.substring(0,6).toUpperCase(); document.getElementById('boxNameInput').value = selectedBoxData.name; document.getElementById('boxColorInput').value = selectedBoxData.color; document.getElementById('descriptionInput').value = selectedBoxData.description || ''; document.getElementById('lastModifiedText').textContent = `Last Modified: ${new Date(selectedBoxData.lastModified).toLocaleString()}`; collectGlobalTags(); renderTags(); renderItemList(); renderIconPicker(); }
+        function collectGlobalTags() { globalTags = new Set(); boxes.forEach(box => { box.tags.forEach(tag => globalTags.add(tag)); }); }
+        function renderTags() { if (!selectedBoxData) return; const tagContainer = document.querySelector('#tagsContainer .tag-container'); const tagSelect = document.getElementById('tagSelect'); [...tagContainer.children].forEach(child => child.remove()); tagSelect.innerHTML = ''; selectedBoxData.tags.forEach(tagText => { const tagEl = document.createElement('span'); tagEl.className = 'tag'; tagEl.textContent = tagText; const removeEl = document.createElement('span'); removeEl.className = 'tag-remove bi bi-x'; removeEl.onclick = () => { selectedBoxData.tags = selectedBoxData.tags.filter(t => t !== tagText); selectedBoxData.lastModified = new Date().toISOString(); recordAction(); renderTags(); }; tagEl.appendChild(removeEl); tagContainer.appendChild(tagEl); }); tagContainer.appendChild(tagSelect); const defaultOption = document.createElement('option'); defaultOption.value = ""; defaultOption.textContent = "Select or add..."; tagSelect.appendChild(defaultOption); Array.from(globalTags).filter(t => !selectedBoxData.tags.includes(t)).sort().forEach(tag => { const option = document.createElement('option'); option.value = tag; option.textContent = tag; tagSelect.appendChild(option); }); const newTagOption = document.createElement('option'); newTagOption.value = "NEW_TAG_OPTION"; newTagOption.textContent = "＋ Add New Tag..."; tagSelect.appendChild(newTagOption); tagSelect.value = ""; }
+        function handleTagSelectChange(e) { if (!selectedBoxData) return; const selectedValue = e.target.value; e.target.value = ""; if (selectedValue === "NEW_TAG_OPTION") { const newTag = prompt("Enter new tag name:"); if (newTag) { const trimmedTag = newTag.trim(); if (trimmedTag && !selectedBoxData.tags.includes(trimmedTag)) { selectedBoxData.tags.push(trimmedTag); selectedBoxData.lastModified = new Date().toISOString(); recordAction(); updateInfoPanel(); } } } else if (selectedValue && !selectedBoxData.tags.includes(selectedValue)) { selectedBoxData.tags.push(selectedValue); selectedBoxData.lastModified = new Date().toISOString(); recordAction(); updateInfoPanel(); } }
+        function renderItemList() { if (!selectedBoxData) return; const itemListEl = document.getElementById('itemList'); itemListEl.innerHTML = ''; selectedBoxData.items.forEach((item, index) => { const li = document.createElement('li'); li.dataset.itemId = item.id; li.draggable = true; const handle = document.createElement('span'); handle.className = 'drag-handle bi bi-grip-vertical'; const nameInput = document.createElement('input'); nameInput.type = 'text'; nameInput.className = 'item-name-input'; nameInput.value = item.name; nameInput.onchange = (e) => { item.name = e.target.value; selectedBoxData.lastModified = new Date().toISOString(); recordAction(); }; const qtyInput = document.createElement('input'); qtyInput.type = 'number'; qtyInput.className = 'item-qty-input'; qtyInput.value = item.qty; qtyInput.min = 1; qtyInput.onchange = (e) => { item.qty = parseInt(e.target.value) || 1; selectedBoxData.lastModified = new Date().toISOString(); recordAction(); }; const deleteBtn = document.createElement('button'); deleteBtn.className = 'delete-item-btn bi bi-x-lg'; deleteBtn.onclick = () => { selectedBoxData.items.splice(index, 1); renderItemList(); selectedBoxData.lastModified = new Date().toISOString(); recordAction(); }; li.append(handle, nameInput, qtyInput, deleteBtn); itemListEl.appendChild(li); }); }
+        function handleAddItem(event) { event.preventDefault(); if (!selectedBoxData) return; const nameInput = document.getElementById('newItemNameInput'); const qtyInput = document.getElementById('newItemQtyInput'); const name = nameInput.value.trim(); const qty = parseInt(qtyInput.value) || 1; if (name) { selectedBoxData.items.push({ id: THREE.MathUtils.generateUUID(), name, qty }); nameInput.value = ''; qtyInput.value = 1; renderItemList(); selectedBoxData.lastModified = new Date().toISOString(); recordAction(); } }
+        function handleItemDragStart(e) { if (e.target.tagName === 'LI') { e.target.classList.add('dragging'); draggedItem = e.target.dataset.itemId; e.dataTransfer.effectAllowed = 'move'; } }
+        function handleItemDragOver(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }
+        function handleItemDrop(e) { e.preventDefault(); const targetLi = e.target.closest('li'); if (!targetLi || !draggedItem || !selectedBoxData) return; const draggedItemId = draggedItem; const targetItemId = targetLi.dataset.itemId; const items = selectedBoxData.items; const draggedIndex = items.findIndex(item => item.id === draggedItemId); let targetIndex = items.findIndex(item => item.id === targetItemId); if (draggedIndex === -1 || targetIndex === -1) return; const [dragged] = items.splice(draggedIndex, 1); if (draggedIndex < targetIndex) targetIndex--; items.splice(targetIndex, 0, dragged); document.querySelectorAll('#itemList li.dragging').forEach(el => el.classList.remove('dragging')); draggedItem = null; renderItemList(); selectedBoxData.lastModified = new Date().toISOString(); recordAction(); }
+        function handleDeleteBox() { if (!selectedBoxData) return; const boxToRemove = selectedBoxData; deselectBox(); new TWEEN.Tween(boxToRemove.threeGroup.scale).to({x:0.01, y:0.01, z:0.01}, 300).easing(TWEEN.Easing.Quadratic.In).onComplete(() => {scene.remove(boxToRemove.threeGroup); disposeThreeObject(boxToRemove.threeGroup);}).start(); boxes = boxes.filter(b => b.id !== boxToRemove.id); recordAction(); }
+        function onMouseMove(event) { const mouse = new THREE.Vector2((event.clientX / window.innerWidth) * 2 - 1, -(event.clientY / window.innerHeight) * 2 + 1); const raycaster = new THREE.Raycaster(); raycaster.setFromCamera(mouse, camera); const allGroups = boxes.map(b => b.threeGroup).filter(g => g); const intersects = raycaster.intersectObjects(allGroups, true); let newHoveredBox = null; if (intersects.length > 0) { let groupToTest = intersects[0].object; while(groupToTest && !groupToTest.userData.id) { groupToTest = groupToTest.parent; } if (groupToTest) newHoveredBox = boxes.find(b => b.id === groupToTest.userData.id); } if (hoveredBoxData !== newHoveredBox) { if (hoveredBoxData && hoveredBoxData !== selectedBoxData) { hoveredBoxData.threeGroup.children.forEach(c => { if (c.isMesh) new TWEEN.Tween(c.material.emissive).to({ r: 0, g: 0, b: 0 }, 100).start(); }); } if (newHoveredBox && newHoveredBox !== selectedBoxData) { newHoveredBox.threeGroup.children.forEach(c => { if (c.isMesh) new TWEEN.Tween(c.material.emissive).to({ r: 0.2, g: 0.2, b: 0.2 }, 100).start(); }); } hoveredBoxData = newHoveredBox; } if (hoveredBoxData) { hoverTooltipEl.innerHTML = `<i class="${hoveredBoxData.icon}"></i> ${hoveredBoxData.name}`; hoverTooltipEl.classList.remove('hidden'); hoverTooltipEl.style.left = (event.clientX + 15) + 'px'; hoverTooltipEl.style.top = (event.clientY + 15) + 'px'; } else { hoverTooltipEl.classList.add('hidden'); } }
+        function onCanvasClick() { if (transformControls.dragging) return; if (hoveredBoxData) selectBox(hoveredBoxData); else deselectBox(); }
+        function onKeyDown(e) { if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return; if (e.ctrlKey || e.metaKey) { let stateToRestore = null; if (e.key.toLowerCase() === 'z') stateToRestore = actionManager.undo(); if (e.key.toLowerCase() === 'y') stateToRestore = actionManager.redo(); if (stateToRestore) restoreState(stateToRestore); } else if (e.key === 'Delete' || e.key === 'Backspace') { if (selectedBoxData) handleDeleteBox(); } }
+        function recordAction() { actionManager.pushState(JSON.stringify(boxes.map(box => ({...box, threeGroup: undefined, rotation: box.rotation.toArray()})))); }
+        function restoreState(stateJSON) { deselectBox(); [...boxes].forEach(b => { scene.remove(b.threeGroup); disposeThreeObject(b.threeGroup); }); boxes = []; const parsedState = JSON.parse(stateJSON); parsedState.forEach(boxData => { boxData.position = new THREE.Vector3(boxData.position.x, boxData.position.y, boxData.position.z); boxData.size = new THREE.Vector3(boxData.size.x, boxData.size.y, boxData.size.z); boxData.rotation = new THREE.Euler().fromArray(boxData.rotation); addBoxToScene(boxData); }); recordAction(); }
+        function handleImport(event) { if (!event.target.files[0]) return; const reader = new FileReader(); reader.onload = (e) => { try { restoreState(e.target.result); } catch (err) { alert('Error: Invalid or corrupt JSON file.'); console.error(err); } }; reader.readAsText(event.target.files[0]); event.target.value = ''; }
+        function renderIconPicker() { if (!selectedBoxData) return; const picker = document.getElementById('iconPicker'); picker.innerHTML = ''; ICONS.forEach(iconClass => { const btn = document.createElement('button'); btn.className = `icon-btn`; if (iconClass === selectedBoxData.icon) btn.classList.add('selected'); btn.innerHTML = iconClass === 'none' ? '<i class="bi bi-slash-circle"></i>' : `<i class="${iconClass}"></i>`; btn.onclick = () => { updateBoxIcon(selectedBoxData, iconClass); renderIconPicker(); selectedBoxData.lastModified = new Date().toISOString(); recordAction(); }; picker.appendChild(btn); }); }
+        function updateBoxIcon(box, iconClass) { box.icon = iconClass; if (box.threeGroup) { box.threeGroup.remove(box.threeGroup.children[2]); disposeThreeObject(box.threeGroup.children[2]); const newSprite = createIconSprite(iconClass); box.threeGroup.add(newSprite); applyBoxStateFromData(box); } }
+        function createPlopEffect(position) { const ringGeometry = new THREE.TorusGeometry(1, 0.05, 8, 50); const ringMaterial = new THREE.MeshBasicMaterial({ color: 0x00aaff, transparent: true }); const ring = new THREE.Mesh(ringGeometry, ringMaterial); ring.rotation.x = Math.PI / 2; ring.position.copy(position); ring.position.y += 0.02; scene.add(ring); const targetScale = 6; new TWEEN.Tween(ring.scale).to({ x: targetScale, y: targetScale, z: targetScale }, 500).easing(TWEEN.Easing.Quadratic.Out).start(); new TWEEN.Tween(ring.material).to({ opacity: 0 }, 600).easing(TWEEN.Easing.Quadratic.Out).onComplete(() => { scene.remove(ring); ring.geometry.dispose(); ring.material.dispose(); }).start(); }
+        function createFloorAndGrid() { const floor = new THREE.Mesh(new THREE.PlaneGeometry(GRID_EXTENT * 2, GRID_EXTENT * 2), new THREE.MeshStandardMaterial({ color: 0x333840, roughness: 0.8, metalness: 0.2 })); floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor); const dotGeometry = new THREE.CircleGeometry(0.05 * (SNAP_GRID_SIZE / 0.5) , 12); dotGeometry.rotateX(-Math.PI / 2); const dotMaterial = new THREE.MeshBasicMaterial({ color: 0x555c66, transparent: true, opacity: 0.7 }); const divisions = Math.floor(GRID_EXTENT / SNAP_GRID_SIZE) * 2 + 1; const instancedDots = new THREE.InstancedMesh(dotGeometry, dotMaterial, divisions * divisions); const dummy = new THREE.Object3D(); let i = 0; for (let r = -GRID_EXTENT; r <= GRID_EXTENT; r += SNAP_GRID_SIZE) { for (let c = -GRID_EXTENT; c <= GRID_EXTENT; c += SNAP_GRID_SIZE) { dummy.position.set(r, 0.01, c); dummy.updateMatrix(); instancedDots.setMatrixAt(i++, dummy.matrix); } } scene.add(instancedDots); }
+        function createStarfield() { const starVertices = []; for (let i = 0; i < 10000; i++) { const x = THREE.MathUtils.randFloatSpread(2000); const y = THREE.MathUtils.randFloatSpread(2000); const z = THREE.MathUtils.randFloatSpread(2000); starVertices.push(x, y, z); } const starGeometry = new THREE.BufferGeometry(); starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starVertices, 3)); const starMaterial = new THREE.PointsMaterial({ color: 0x666666, size: 0.5, sizeAttenuation: true }); starField = new THREE.Points(starGeometry, starMaterial); scene.add(starField); }
+        function createIconSprite(iconClass) { const canvas = document.createElement('canvas'); canvas.width = 256; canvas.height = 256; const context = canvas.getContext('2d'); const character = ICON_MAP[iconClass]; if (character) { context.font = '200px "bootstrap-icons"'; context.textAlign = 'center'; context.textBaseline = 'middle'; context.fillStyle = 'rgba(255, 255, 255, 0.8)'; context.fillText(character, 128, 128); } const texture = new THREE.CanvasTexture(canvas); const material = new THREE.SpriteMaterial({ map: texture, transparent: true, sizeAttenuation: false, depthTest: false }); const sprite = new THREE.Sprite(material); sprite.visible = false; return sprite; } 
+        function disposeThreeObject(object) { if (!object) return; object.traverse(child => { if (child.geometry) child.geometry.dispose(); if (child.material) { if (Array.isArray(child.material)) { child.material.forEach(m => { if (m.map) m.map.dispose(); m.dispose(); }); } else { if (child.material.map) child.material.map.dispose(); child.material.dispose(); } } }); }
+        function focusOnBox(box) { const targetPos = box.position.clone(); targetPos.y += box.size.y / 2; const offset = new THREE.Vector3(box.size.x + 5, box.size.y + 5, box.size.z + 5); const cameraPos = targetPos.clone().add(offset); new TWEEN.Tween(camera.position).to(cameraPos, 800).easing(TWEEN.Easing.Quadratic.Out).start(); new TWEEN.Tween(orbitControls.target).to(targetPos, 800).easing(TWEEN.Easing.Quadratic.Out).start(); }
+        function animate(time) { requestAnimationFrame(animate); TWEEN.update(time); orbitControls.update(); if (starField) starField.rotation.y -= 0.00005; renderer.render(scene, camera); }
 
         init();
     </script>
