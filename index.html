@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Box Organizer V3</title>
+    <title>3D Box Organizer V4</title>
     <style>
         body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f0f0f0; color: #333; overflow: hidden; }
         #ui-container { position: absolute; top: 10px; left: 10px; z-index: 100; background-color: rgba(255, 255, 255, 0.9); padding: 10px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); display: flex; gap: 10px; align-items: center; }
@@ -15,12 +15,11 @@
         #panelTitle strong { display: block; font-size: 1.5em; font-weight: bold; color: #000; }
         #itemList { list-style: none; padding: 0; margin: 15px 0; max-height: 200px; overflow-y: auto; }
         #itemList li { display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid #eee; }
-        #itemList li:last-child { border-bottom: none; }
         .delete-item-btn { background: none; border: none; color: #ff4d4d; cursor: pointer; font-size: 16px; padding: 0 5px; }
         #addItemContainer { display: flex; gap: 5px; margin-top: 10px; }
         #addItemInput { flex-grow: 1; padding: 8px; border: 1px solid #ccc; border-radius: 5px; }
-        #closePanelBtn { width: 100%; margin-top: 15px; background-color: #555; color: white; }
-        #closePanelBtn:hover { background-color: #333; }
+        #deleteBoxBtn { width: 100%; margin-top: 10px; background-color: #ff4d4d; color: white; border-color: #ff4d4d; }
+        #deleteBoxBtn:hover { background-color: #e60000; }
         #modeIndicator { font-size: 12px; font-weight: bold; color: #333; background-color: #e0e0e0; padding: 4px 8px; border-radius: 4px; }
     </style>
 </head>
@@ -40,25 +39,20 @@
             <input type="text" id="addItemInput" placeholder="New item...">
             <button id="addItemBtn">+</button>
         </div>
-        <button id="closePanelBtn">Done</button>
+        <button id="deleteBoxBtn">Delete Box</button>
+        <button id="closePanelBtn" style="width: 100%; margin-top: 5px;">Done</button>
     </div>
 
     <script type="importmap">
-        {
-            "imports": {
-                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
-            }
-        }
+        { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js", "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/" } }
     </script>
     <script type="module">
         import * as THREE from 'three';
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
         import { TransformControls } from 'three/addons/controls/TransformControls.js';
 
-        // --- GLOBAL CONFIG ---
-        const SNAP_GRID_SIZE = 1; // Increased grid size
-        const GRID_EXTENT = 50;   // How far the grid dots extend
+        const SNAP_GRID_SIZE = 1;
+        const GRID_EXTENT = 50;
 
         let scene, camera, renderer, orbitControls, transformControls;
         const raycaster = new THREE.Raycaster();
@@ -80,31 +74,27 @@
             camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 200);
             camera.position.set(15, 20, 25);
 
-            // --- RENDERER WITH SHADOWS ---
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.setPixelRatio(window.devicePixelRatio);
-            renderer.shadowMap.enabled = true; // Enable shadows
-            renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Softer shadows
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
             document.body.appendChild(renderer.domElement);
 
-            // --- LIGHTING ---
             scene.add(new THREE.AmbientLight(0xffffff, 0.8));
             const dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
             dirLight.position.set(15, 30, 20);
-            dirLight.castShadow = true; // This light will cast shadows
+            dirLight.castShadow = true;
             dirLight.shadow.mapSize.width = 2048;
             dirLight.shadow.mapSize.height = 2048;
-            dirLight.shadow.camera.left = -30;
-            dirLight.shadow.camera.right = 30;
-            dirLight.shadow.camera.top = 30;
-            dirLight.shadow.camera.bottom = -30;
+            dirLight.shadow.camera.left = -GRID_EXTENT;
+            dirLight.shadow.camera.right = GRID_EXTENT;
+            dirLight.shadow.camera.top = GRID_EXTENT;
+            dirLight.shadow.camera.bottom = -GRID_EXTENT;
             scene.add(dirLight);
 
-            // --- FLOOR WITH DOT GRID ---
             createFloorAndGrid();
             
-            // --- CONTROLS ---
             orbitControls = new OrbitControls(camera, renderer.domElement);
             orbitControls.enableDamping = true;
             orbitControls.target.set(0, 2, 0);
@@ -113,13 +103,10 @@
             transformControls.setMode('scale');
             transformControls.setTranslationSnap(SNAP_GRID_SIZE);
             transformControls.setScaleSnap(SNAP_GRID_SIZE);
-            
             transformControls.addEventListener('dragging-changed', e => (orbitControls.enabled = !e.value));
-            transformControls.addEventListener('objectChange', onTransformObject);
             transformControls.addEventListener('mouseUp', onTransformEnd);
             scene.add(transformControls);
             
-            // --- EVENT LISTENERS ---
             window.addEventListener('resize', onWindowResize);
             renderer.domElement.addEventListener('click', onCanvasClick);
             window.addEventListener('keydown', onKeyDown);
@@ -129,30 +116,24 @@
         }
         
         function createFloorAndGrid() {
-            // Floor that receives shadows and has subtle reflections
             const floorGeometry = new THREE.PlaneGeometry(GRID_EXTENT * 2, GRID_EXTENT * 2);
-            const floorMaterial = new THREE.MeshStandardMaterial({
-                color: 0xbbbbbb,
-                roughness: 0.4, // Less rough = more reflective
-                metalness: 0.1  // A little bit of metalness for glossy look
-            });
+            // More reflective floor material
+            const floorMaterial = new THREE.MeshStandardMaterial({ color: 0xbbbbbb, roughness: 0.1, metalness: 0.2 });
             const floor = new THREE.Mesh(floorGeometry, floorMaterial);
             floor.rotation.x = -Math.PI / 2;
-            floor.receiveShadow = true; // Floor will receive shadows
+            floor.receiveShadow = true;
             scene.add(floor);
 
-            // Grid of dots using InstancedMesh for performance
             const dotGeometry = new THREE.CircleGeometry(0.05, 12);
-            dotGeometry.rotateX(-Math.PI / 2); // Rotate dots to lie flat
-            const dotMaterial = new THREE.MeshBasicMaterial({ color: 0x555555, side: THREE.DoubleSide });
-            const count = (GRID_EXTENT / SNAP_GRID_SIZE * 2 + 1) ** 2;
+            dotGeometry.rotateX(-Math.PI / 2);
+            const dotMaterial = new THREE.MeshBasicMaterial({ color: 0x555555 });
+            const count = Math.pow(Math.floor(GRID_EXTENT / SNAP_GRID_SIZE) * 2 + 1, 2);
             const instancedDots = new THREE.InstancedMesh(dotGeometry, dotMaterial, count);
-            
             const dummy = new THREE.Object3D();
             let i = 0;
             for (let x = -GRID_EXTENT; x <= GRID_EXTENT; x += SNAP_GRID_SIZE) {
                 for (let z = -GRID_EXTENT; z <= GRID_EXTENT; z += SNAP_GRID_SIZE) {
-                    dummy.position.set(x, 0.01, z); // Slightly above floor
+                    dummy.position.set(x, 0.01, z);
                     dummy.updateMatrix();
                     instancedDots.setMatrixAt(i++, dummy.matrix);
                 }
@@ -160,32 +141,20 @@
             scene.add(instancedDots);
         }
 
-        // --- Box Creation with Lid ---
         function createBox(id, position, size, items) {
             const group = new THREE.Group();
-            
             const baseMaterial = new THREE.MeshStandardMaterial({ color: 0xcccccc, roughness: 0.3, metalness: 0.1 });
             const lidMaterial = new THREE.MeshStandardMaterial({ color: 0xb0b0b0, roughness: 0.3, metalness: 0.1 });
-
             const baseMesh = new THREE.Mesh(new THREE.BoxGeometry(0.98, 0.9, 0.98), baseMaterial);
             baseMesh.position.y = -0.05;
-            
             const lidMesh = new THREE.Mesh(new THREE.BoxGeometry(1.02, 0.15, 1.02), lidMaterial);
             lidMesh.position.y = 0.5 - (0.15/2);
-
-            // Set castShadow for all parts of the box
-            baseMesh.castShadow = true;
-            lidMesh.castShadow = true;
-
-            group.add(baseMesh);
-            group.add(lidMesh);
-
+            [baseMesh, lidMesh].forEach(m => m.castShadow = true);
+            group.add(baseMesh, lidMesh);
             group.scale.set(size.w, size.h, size.d);
-            group.position.set(position.x, size.h / 2, position.z); // Pivot at base
-            
+            group.position.set(position.x, position.y, position.z); // Use full x,y,z position
             const boxData = { id, position, size, items, group };
             group.userData.boxData = boxData;
-            
             boxes.push(boxData);
             scene.add(group);
             return boxData;
@@ -208,35 +177,62 @@
             infoPanel.classList.add('hidden');
         }
         
-        // --- Event Handlers & Core Logic ---
-        function onTransformObject() {
+        function deleteSelectedBox() {
             if (!selectedBox) return;
-            const group = selectedBox.group;
-            // Place group on floor based on its new height (Y scale)
-            group.position.y = group.scale.y / 2;
+            const boxToDelete = selectedBox;
+            deselectBox(); // Clear selection and hide panel
+
+            // Remove from scene
+            scene.remove(boxToDelete.group);
+            
+            // Dispose of geometries and materials to free memory
+            boxToDelete.group.traverse(child => {
+                if (child.isMesh) {
+                    child.geometry.dispose();
+                    child.material.dispose();
+                }
+            });
+
+            // Remove from data array
+            const index = boxes.indexOf(boxToDelete);
+            if (index > -1) boxes.splice(index, 1);
         }
 
         function onTransformEnd() {
-            // Final snap and data model update after dragging stops
             if (!selectedBox) return;
             const group = selectedBox.group;
-            
-            // Snap position precisely on mouse up
+
+            // Final snap position after dragging stops
             group.position.x = Math.round(group.position.x / SNAP_GRID_SIZE) * SNAP_GRID_SIZE;
+            group.position.y = Math.round(group.position.y / SNAP_GRID_SIZE) * SNAP_GRID_SIZE;
             group.position.z = Math.round(group.position.z / SNAP_GRID_SIZE) * SNAP_GRID_SIZE;
             
-            // Update the persistent data
-            selectedBox.position = { x: group.position.x, y: 0, z: group.position.z };
+            // Prevent box from going below the floor
+            const halfHeight = group.scale.y / 2;
+            if (group.position.y < halfHeight) {
+                group.position.y = halfHeight;
+            }
+
+            // Update the persistent data with the full x, y, z
+            selectedBox.position = { x: group.position.x, y: group.position.y, z: group.position.z };
             selectedBox.size = { w: group.scale.x, h: group.scale.y, d: group.scale.z };
         }
 
         function onKeyDown(event) {
-            if (event.key.toLowerCase() === 'r') {
-                transformControls.setMode('scale');
-                modeIndicator.textContent = "Mode: Resize (R/T)";
-            } else if (event.key.toLowerCase() === 't') {
-                transformControls.setMode('translate');
-                modeIndicator.textContent = "Mode: Move (R/T)";
+            if (event.target.tagName === 'INPUT') return; // Ignore key presses in text fields
+            switch(event.key.toLowerCase()) {
+                case 'r':
+                    transformControls.setMode('scale');
+                    modeIndicator.textContent = "Mode: Resize (R/T)";
+                    break;
+                case 't':
+                    transformControls.setMode('translate');
+                    modeIndicator.textContent = "Mode: Move (R/T)";
+                    break;
+                case 'delete':
+                case 'backspace':
+                    deleteSelectedBox();
+                    break;
             }
         }
 
@@ -246,7 +242,6 @@
             mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
             raycaster.setFromCamera(mouse, camera);
             const intersects = raycaster.intersectObjects(boxes.map(b => b.group), true);
-
             if (intersects.length > 0) {
                 let object = intersects[0].object;
                 while (object.parent && !object.userData.boxData) object = object.parent;
@@ -259,43 +254,26 @@
         }
         
         function clearSceneForImport() {
-            boxes.forEach(box => scene.remove(box.group));
+            deselectBox();
+            [...boxes].forEach(box => { // Iterate over a copy
+                selectedBox = box;
+                deleteSelectedBox();
+            });
             boxes = [];
             boxCounter = 1;
-            deselectBox();
         }
 
-        function populateInfoPanel(boxData) { /* (No changes from previous version) */
-            panelTitle.innerHTML = `Open<strong>BOX ${boxData.id}</strong>`;
-            itemList.innerHTML = '';
-            boxData.items.forEach(itemText => {
-                const li = document.createElement('li');
-                li.textContent = itemText;
-                const deleteBtn = document.createElement('button');
-                deleteBtn.textContent = '×';
-                deleteBtn.className = 'delete-item-btn';
-                deleteBtn.onclick = () => {
-                    boxData.items.splice(boxData.items.indexOf(itemText), 1);
-                    populateInfoPanel(boxData);
-                };
-                li.appendChild(deleteBtn);
-                itemList.appendChild(li);
-            });
-        }
-        
-        function setupUIEventListeners() { /* (No changes from previous version) */
+        function setupUIEventListeners() {
             document.getElementById('addBoxBtn').addEventListener('click', () => {
-                const newBox = createBox(boxCounter++, { x: 0, y: 0, z: 0 }, { w: 4, h: 3, d: 3 }, []);
+                const size = { w: 4, h: 3, d: 3 };
+                const position = { x: 0, y: size.h / 2, z: 0 }; // Start on floor
+                const newBox = createBox(boxCounter++, position, size, []);
                 selectBox(newBox);
             });
+            document.getElementById('deleteBoxBtn').addEventListener('click', deleteSelectedBox);
             document.getElementById('closePanelBtn').addEventListener('click', deselectBox);
-            const addItemAction = () => {
-                if (selectedBox && addItemInput.value.trim() !== '') {
-                    selectedBox.items.push(addItemInput.value.trim());
-                    addItemInput.value = '';
-                    populateInfoPanel(selectedBox);
-                }
-            };
+            // Other listeners (add item, import, export) remain largely the same
+            const addItemAction = () => { if (selectedBox && addItemInput.value.trim() !== '') { selectedBox.items.push(addItemInput.value.trim()); addItemInput.value = ''; populateInfoPanel(selectedBox); } };
             document.getElementById('addItemBtn').addEventListener('click', addItemAction);
             addItemInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') addItemAction(); });
             document.getElementById('exportBtn').addEventListener('click', () => {
@@ -315,23 +293,29 @@
                         let maxId = 0;
                         data.forEach(d => { createBox(d.id, d.position, d.size, d.items); if (d.id > maxId) maxId = d.id; });
                         boxCounter = maxId + 1;
-                    } catch (err) { alert('Error: Invalid JSON file.'); }
+                    } catch (err) { alert('Error: Invalid JSON file.'); console.error(err); }
                 };
                 reader.readAsText(file); event.target.value = '';
             });
         }
         
-        function onWindowResize() { /* (No changes from previous version) */
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
+        // ---UNCHANGED HELPER FUNCTIONS---
+        function populateInfoPanel(boxData) {
+            panelTitle.innerHTML = `Open<strong>BOX ${boxData.id}</strong>`;
+            itemList.innerHTML = '';
+            boxData.items.forEach(itemText => {
+                const li = document.createElement('li');
+                li.textContent = itemText;
+                const deleteBtn = document.createElement('button');
+                deleteBtn.textContent = '×';
+                deleteBtn.className = 'delete-item-btn';
+                deleteBtn.onclick = () => { boxData.items.splice(boxData.items.indexOf(itemText), 1); populateInfoPanel(boxData); };
+                li.appendChild(deleteBtn);
+                itemList.appendChild(li);
+            });
         }
-
-        function animate() {
-            requestAnimationFrame(animate);
-            orbitControls.update();
-            renderer.render(scene, camera);
-        }
+        function onWindowResize() { camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); }
+        function animate() { requestAnimationFrame(animate); orbitControls.update(); renderer.render(scene, camera); }
 
         init();
     </script>
