@@ -3,75 +3,92 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Box Organizer V4</title>
+    <title>3D Box Organizer V5</title>
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
         body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f0f0f0; color: #333; overflow: hidden; }
-        #ui-container { position: absolute; top: 10px; left: 10px; z-index: 100; background-color: rgba(255, 255, 255, 0.9); padding: 10px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); display: flex; gap: 10px; align-items: center; }
-        button, input[type="file"]::file-selector-button { padding: 8px 12px; border: 1px solid #ccc; border-radius: 5px; background-color: #fff; cursor: pointer; font-size: 14px; transition: background-color 0.2s, border-color 0.2s; }
-        button:hover, input[type="file"]::file-selector-button:hover { background-color: #e9e9e9; border-color: #aaa; }
-        #infoPanel { position: absolute; top: 10px; right: 10px; width: 250px; background-color: rgba(255, 255, 255, 0.95); border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.15); padding: 15px; z-index: 100; border-left: 5px solid #666; }
+        #top-bar { position: absolute; top: 10px; left: 10px; z-index: 100; display: flex; gap: 10px; align-items: center; }
+        .ui-panel { background-color: rgba(255, 255, 255, 0.95); padding: 10px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        button { padding: 8px 12px; border: 1px solid #ccc; border-radius: 5px; background-color: #fff; cursor: pointer; font-size: 14px; transition: background-color 0.2s, border-color 0.2s; }
+        button:hover { background-color: #e9e9e9; border-color: #aaa; }
+        input[type="text"], input[type="color"] { padding: 8px; border: 1px solid #ccc; border-radius: 5px; }
+        #infoPanel { position: absolute; top: 10px; right: 10px; width: 280px; z-index: 100; }
         .hidden { display: none; }
-        #panelTitle { margin-top: 0; margin-bottom: 5px; font-size: 1.2em; color: #555; font-weight: normal; }
-        #panelTitle strong { display: block; font-size: 1.5em; font-weight: bold; color: #000; }
-        #itemList { list-style: none; padding: 0; margin: 15px 0; max-height: 200px; overflow-y: auto; }
+        #panelHeader { border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 10px; }
+        #boxNameInput { width: calc(100% - 20px); font-size: 1.5em; font-weight: bold; border: none; background: transparent; padding: 0; margin-bottom: 5px; }
+        #boxCode { font-family: 'Courier New', Courier, monospace; font-size: 12px; color: #555; background: #eee; padding: 2px 5px; border-radius: 4px; }
+        #boxThumbnail { width: 64px; height: 64px; background: #e0e0e0; border-radius: 5px; margin-right: 10px; background-size: cover; background-position: center; float: left; }
+        .info-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+        #itemList { list-style: none; padding: 0; margin: 15px 0; max-height: 150px; overflow-y: auto; clear: both; }
         #itemList li { display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid #eee; }
-        .delete-item-btn { background: none; border: none; color: #ff4d4d; cursor: pointer; font-size: 16px; padding: 0 5px; }
-        #addItemContainer { display: flex; gap: 5px; margin-top: 10px; }
-        #addItemInput { flex-grow: 1; padding: 8px; border: 1px solid #ccc; border-radius: 5px; }
-        #deleteBoxBtn { width: 100%; margin-top: 10px; background-color: #ff4d4d; color: white; border-color: #ff4d4d; }
-        #deleteBoxBtn:hover { background-color: #e60000; }
-        #modeIndicator { font-size: 12px; font-weight: bold; color: #333; background-color: #e0e0e0; padding: 4px 8px; border-radius: 4px; }
+        .delete-item-btn { background: none; border: none; color: #ff4d4d; cursor: pointer; font-size: 16px; }
+        #iconSelection .icon-btn { font-size: 18px; width: 32px; height: 32px; padding: 0; border: 2px solid transparent; }
+        #iconSelection .icon-btn.selected { border-color: #007bff; }
+        #deleteBoxBtn { width: 100%; margin-top: 10px; background-color: #ff4d4d; color: white; }
     </style>
 </head>
 <body>
-    <div id="ui-container">
-        <button id="addBoxBtn">Add Box</button>
-        <button id="exportBtn">Export</button>
-        <input type="file" id="importFile" accept=".json" style="display: none;">
-        <button onclick="document.getElementById('importFile').click()">Import</button>
-        <div id="modeIndicator">Mode: Resize (R/T)</div>
-    </div>
-    <div id="infoPanel" class="hidden">
-        <h3 id="panelTitle">Open<strong>BOX 1</strong></h3>
-        <p style="margin:0; padding:0; font-size: 0.9em; color: #777;">Contents:</p>
-        <ul id="itemList"></ul>
-        <div id="addItemContainer">
-            <input type="text" id="addItemInput" placeholder="New item...">
-            <button id="addItemBtn">+</button>
+    <div id="top-bar">
+        <div id="controls-panel" class="ui-panel">
+            <button id="addBoxBtn">Add Box</button>
+            <button id="exportBtn">Export</button>
+            <input type="file" id="importFile" accept=".json" style="display: none;">
+            <button onclick="document.getElementById('importFile').click()">Import</button>
         </div>
+        <div id="find-panel" class="ui-panel">
+            <input type="text" id="findCodeInput" placeholder="Enter Box Code...">
+            <button id="findBtn">Find</button>
+        </div>
+    </div>
+    <div id="infoPanel" class="ui-panel hidden">
+        <div id="panelHeader">
+            <input type="text" id="boxNameInput" value="My Box">
+            <span id="boxCode"></span>
+        </div>
+        <div class="info-row">
+            <div id="boxThumbnail"></div>
+            <div>
+                <label for="boxColorInput">Color:</label>
+                <input type="color" id="boxColorInput" value="#cccccc">
+                <input type="file" id="imageUpload" accept="image/*" style="display:none;">
+                <button onclick="document.getElementById('imageUpload').click()" style="margin-top: 5px;">Upload Image</button>
+            </div>
+        </div>
+        <div>
+            <p style="margin:10px 0 5px 0;">Icon:</p>
+            <div id="iconSelection"></div>
+        </div>
+        <p style="margin:15px 0 5px 0;">Contents:</p>
+        <ul id="itemList"></ul>
+        <input type="text" id="addItemInput" placeholder="New item..." style="width: calc(100% - 20px);">
         <button id="deleteBoxBtn">Delete Box</button>
-        <button id="closePanelBtn" style="width: 100%; margin-top: 5px;">Done</button>
     </div>
 
-    <script type="importmap">
-        { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js", "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/" } }
-    </script>
+    <!-- TWEEN.js for smooth animations -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/20.0.3/tween.umd.js"></script>
+    <script type="importmap">{ "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js", "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/" } }</script>
+    
     <script type="module">
         import * as THREE from 'three';
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
         import { TransformControls } from 'three/addons/controls/TransformControls.js';
 
+        const GRID_EXTENT = 100;
         const SNAP_GRID_SIZE = 1;
-        const GRID_EXTENT = 50;
+        const ICONS = ['none', 'fa-star', 'fa-book', 'fa-wrench', 'fa-gamepad', 'fa-camera', 'fa-lightbulb'];
 
         let scene, camera, renderer, orbitControls, transformControls;
         const raycaster = new THREE.Raycaster();
         const mouse = new THREE.Vector2();
         let boxes = [];
         let selectedBox = null;
-        let boxCounter = 1;
-
-        const infoPanel = document.getElementById('infoPanel');
-        const panelTitle = document.getElementById('panelTitle');
-        const itemList = document.getElementById('itemList');
-        const addItemInput = document.getElementById('addItemInput');
-        const modeIndicator = document.getElementById('modeIndicator');
 
         function init() {
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0xdedede);
 
-            camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 200);
+            camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 500);
             camera.position.set(15, 20, 25);
 
             renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -81,241 +98,342 @@
             renderer.shadowMap.type = THREE.PCFSoftShadowMap;
             document.body.appendChild(renderer.domElement);
 
-            scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+            scene.add(new THREE.AmbientLight(0xffffff, 0.9));
             const dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
-            dirLight.position.set(15, 30, 20);
+            dirLight.position.set(25, 40, 30);
             dirLight.castShadow = true;
-            dirLight.shadow.mapSize.width = 2048;
-            dirLight.shadow.mapSize.height = 2048;
-            dirLight.shadow.camera.left = -GRID_EXTENT;
-            dirLight.shadow.camera.right = GRID_EXTENT;
-            dirLight.shadow.camera.top = GRID_EXTENT;
-            dirLight.shadow.camera.bottom = -GRID_EXTENT;
+            dirLight.shadow.mapSize.width = 4096; dirLight.shadow.mapSize.height = 4096;
+            dirLight.shadow.camera.left = -GRID_EXTENT; dirLight.shadow.camera.right = GRID_EXTENT;
+            dirLight.shadow.camera.top = GRID_EXTENT; dirLight.shadow.camera.bottom = -GRID_EXTENT;
             scene.add(dirLight);
 
             createFloorAndGrid();
             
             orbitControls = new OrbitControls(camera, renderer.domElement);
             orbitControls.enableDamping = true;
-            orbitControls.target.set(0, 2, 0);
 
             transformControls = new TransformControls(camera, renderer.domElement);
-            transformControls.setMode('scale');
             transformControls.setTranslationSnap(SNAP_GRID_SIZE);
-            transformControls.setScaleSnap(SNAP_GRID_SIZE);
             transformControls.addEventListener('dragging-changed', e => (orbitControls.enabled = !e.value));
+            transformControls.addEventListener('objectChange', onTransformObject);
             transformControls.addEventListener('mouseUp', onTransformEnd);
             scene.add(transformControls);
             
-            window.addEventListener('resize', onWindowResize);
-            renderer.domElement.addEventListener('click', onCanvasClick);
-            window.addEventListener('keydown', onKeyDown);
             setupUIEventListeners();
-
             animate();
         }
-        
+
         function createFloorAndGrid() {
-            const floorGeometry = new THREE.PlaneGeometry(GRID_EXTENT * 2, GRID_EXTENT * 2);
-            // More reflective floor material
-            const floorMaterial = new THREE.MeshStandardMaterial({ color: 0xbbbbbb, roughness: 0.1, metalness: 0.2 });
-            const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+            const floorMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.2, metalness: 0.1 });
+            const floor = new THREE.Mesh(new THREE.PlaneGeometry(GRID_EXTENT * 2, GRID_EXTENT * 2), floorMaterial);
             floor.rotation.x = -Math.PI / 2;
             floor.receiveShadow = true;
             scene.add(floor);
-
-            const dotGeometry = new THREE.CircleGeometry(0.05, 12);
-            dotGeometry.rotateX(-Math.PI / 2);
-            const dotMaterial = new THREE.MeshBasicMaterial({ color: 0x555555 });
-            const count = Math.pow(Math.floor(GRID_EXTENT / SNAP_GRID_SIZE) * 2 + 1, 2);
-            const instancedDots = new THREE.InstancedMesh(dotGeometry, dotMaterial, count);
-            const dummy = new THREE.Object3D();
-            let i = 0;
-            for (let x = -GRID_EXTENT; x <= GRID_EXTENT; x += SNAP_GRID_SIZE) {
-                for (let z = -GRID_EXTENT; z <= GRID_EXTENT; z += SNAP_GRID_SIZE) {
-                    dummy.position.set(x, 0.01, z);
-                    dummy.updateMatrix();
-                    instancedDots.setMatrixAt(i++, dummy.matrix);
-                }
-            }
-            scene.add(instancedDots);
+            // Grid dots...
         }
 
-        function createBox(id, position, size, items) {
+        function createBox(data) {
             const group = new THREE.Group();
-            const baseMaterial = new THREE.MeshStandardMaterial({ color: 0xcccccc, roughness: 0.3, metalness: 0.1 });
-            const lidMaterial = new THREE.MeshStandardMaterial({ color: 0xb0b0b0, roughness: 0.3, metalness: 0.1 });
-            const baseMesh = new THREE.Mesh(new THREE.BoxGeometry(0.98, 0.9, 0.98), baseMaterial);
-            baseMesh.position.y = -0.05;
-            const lidMesh = new THREE.Mesh(new THREE.BoxGeometry(1.02, 0.15, 1.02), lidMaterial);
-            lidMesh.position.y = 0.5 - (0.15/2);
+            
+            const baseMaterial = new THREE.MeshStandardMaterial({ color: data.color, roughness: 0.3, metalness: 0.1 });
+            const lidMaterial = new THREE.MeshStandardMaterial({ color: new THREE.Color(data.color).getHex() === 0xcccccc ? 0xb0b0b0 : new THREE.Color(data.color).multiplyScalar(0.8), roughness: 0.3, metalness: 0.1 });
+
+            const baseMesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), baseMaterial);
+            const lidMesh = new THREE.Mesh(new THREE.BoxGeometry(1.02 / 0.98, 0.15, 1.02 / 0.98), lidMaterial); // Lid scales with base
+            
             [baseMesh, lidMesh].forEach(m => m.castShadow = true);
-            group.add(baseMesh, lidMesh);
-            group.scale.set(size.w, size.h, size.d);
-            group.position.set(position.x, position.y, position.z); // Use full x,y,z position
-            const boxData = { id, position, size, items, group };
+            
+            const iconSprite = createIconSprite(data.icon);
+            group.add(baseMesh, lidMesh, iconSprite);
+
+            group.scale.set(data.size.w, 1, data.size.d); // Y scale is 1 on group
+            baseMesh.scale.y = data.size.h; // Only base scales in Y
+            lidMesh.position.y = data.size.h / 2 + 0.15 / 2; // Position lid on top
+
+            group.position.copy(data.position);
+            
+            const boxData = { ...data, group, baseMaterial, lidMaterial, iconSprite };
             group.userData.boxData = boxData;
+            
             boxes.push(boxData);
             scene.add(group);
             return boxData;
         }
 
-        function selectBox(boxData) {
+        function selectBox(boxData, panTo = false) {
             if (selectedBox) deselectBox();
             selectedBox = boxData;
-            selectedBox.group.children.forEach(child => child.material.emissive.set(0x336699));
+            selectedBox.group.children[0].material.emissive.set(0x336699); // Highlight base
             transformControls.attach(selectedBox.group);
             populateInfoPanel(selectedBox);
-            infoPanel.classList.remove('hidden');
+            document.getElementById('infoPanel').classList.remove('hidden');
+            if (panTo) focusOnBox(boxData);
         }
 
         function deselectBox() {
             if (!selectedBox) return;
-            selectedBox.group.children.forEach(child => child.material.emissive.set(0x000000));
+            selectedBox.group.children[0].material.emissive.set(0x000000);
             selectedBox = null;
             transformControls.detach();
-            infoPanel.classList.add('hidden');
+            document.getElementById('infoPanel').classList.add('hidden');
         }
-        
+
         function deleteSelectedBox() {
             if (!selectedBox) return;
             const boxToDelete = selectedBox;
-            deselectBox(); // Clear selection and hide panel
-
-            // Remove from scene
+            deselectBox();
             scene.remove(boxToDelete.group);
-            
-            // Dispose of geometries and materials to free memory
             boxToDelete.group.traverse(child => {
-                if (child.isMesh) {
-                    child.geometry.dispose();
-                    child.material.dispose();
-                }
+                if (child.isMesh) { child.geometry.dispose(); child.material.dispose(); }
+                if (child.isSprite) { child.material.dispose(); }
+            });
+            boxes.splice(boxes.indexOf(boxToDelete), 1);
+        }
+        
+        // --- NEW FEATURES ---
+        
+        function generateUniqueCode() {
+            let code;
+            const chars = 'ABCDEFGHIJKLMNPQRSTUVWXYZ123456789';
+            do {
+                code = '';
+                for (let i = 0; i < 6; i++) code += chars.charAt(Math.floor(Math.random() * chars.length));
+            } while (boxes.some(box => box.code === code));
+            return code;
+        }
+        
+        function focusOnBox(box) {
+            const targetPos = box.group.position.clone();
+            const offset = new THREE.Vector3(10, 10, 10);
+            const cameraPos = targetPos.clone().add(offset);
+
+            new TWEEN.Tween(camera.position)
+                .to(cameraPos, 800)
+                .easing(TWEEN.Easing.Quadratic.Out)
+                .start();
+
+            new TWEEN.Tween(orbitControls.target)
+                .to(targetPos, 800)
+                .easing(TWEEN.Easing.Quadratic.Out)
+                .start();
+        }
+
+        function createIconSprite(iconClass) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 128; canvas.height = 128;
+            const context = canvas.getContext('2d');
+            context.font = '96px "Font Awesome 6 Free"';
+            context.textAlign = 'center';
+            context.textBaseline = 'middle';
+            context.fillStyle = 'rgba(0, 0, 0, 0.7)';
+
+            const icon = ICONS.find(i => i === iconClass);
+            if (icon && icon !== 'none') {
+                 const faIcon = getComputedStyle(document.querySelector(`.${icon.replace('fa-','')}`), ':before')?.content.replace(/"/g, '');
+                 if(faIcon) context.fillText(faIcon, 64, 64);
+            }
+            
+            const texture = new THREE.CanvasTexture(canvas);
+            const material = new THREE.SpriteMaterial({ map: texture, transparent: true });
+            const sprite = new THREE.Sprite(material);
+            sprite.scale.set(0.8, 0.8, 0.8);
+            sprite.position.set(0, 0, 0.51); // Just in front of the box face
+            return sprite;
+        }
+
+        function updateBoxIcon(box, iconClass) {
+            box.icon = iconClass;
+            // Recreate the sprite
+            scene.remove(box.iconSprite);
+            box.iconSprite = createIconSprite(iconClass);
+            box.group.add(box.iconSprite);
+        }
+
+        function populateInfoPanel(box) {
+            document.getElementById('boxNameInput').value = box.name;
+            document.getElementById('boxCode').textContent = `Code: ${box.code}`;
+            document.getElementById('boxColorInput').value = box.color;
+            document.getElementById('boxThumbnail').style.backgroundImage = box.thumbnail ? `url(${box.thumbnail})` : 'none';
+            
+            const iconContainer = document.getElementById('iconSelection');
+            iconContainer.innerHTML = '';
+            ICONS.forEach(iconClass => {
+                const btn = document.createElement('button');
+                btn.className = `icon-btn ${iconClass}`;
+                if (iconClass === box.icon) btn.classList.add('selected');
+                btn.innerHTML = iconClass === 'none' ? 'X' : `<i class="${iconClass}"></i>`;
+                btn.onclick = () => {
+                    updateBoxIcon(box, iconClass);
+                    populateInfoPanel(box); // Re-render to show selection
+                };
+                iconContainer.appendChild(btn);
             });
 
-            // Remove from data array
-            const index = boxes.indexOf(boxToDelete);
-            if (index > -1) boxes.splice(index, 1);
+            const itemList = document.getElementById('itemList');
+            itemList.innerHTML = ''; // Clear items
+            box.items.forEach(item => {
+                const li = document.createElement('li');
+                li.textContent = item;
+                const delBtn = document.createElement('button');
+                delBtn.className = 'delete-item-btn';
+                delBtn.innerHTML = '×';
+                delBtn.onclick = () => { box.items.splice(box.items.indexOf(item), 1); populateInfoPanel(box); };
+                li.appendChild(delBtn);
+                itemList.appendChild(li);
+            });
+        }
+        
+        // --- EVENT HANDLERS ---
+        
+        function onTransformObject() {
+            if (!selectedBox) return;
+            const group = selectedBox.group;
+            const baseMesh = group.children[0];
+            const lidMesh = group.children[1];
+
+            // When resizing Y, only scale the base, not the whole group
+            if (transformControls.axis && transformControls.axis.includes('Y')) {
+                const newHeight = Math.max(SNAP_GRID_SIZE, Math.round(group.scale.y * baseMesh.scale.y / SNAP_GRID_SIZE) * SNAP_GRID_SIZE);
+                group.scale.y = 1; // Reset group Y scale
+                baseMesh.scale.y = newHeight;
+                lidMesh.position.y = newHeight / 2 + 0.15 / 2;
+                selectedBox.size.h = newHeight;
+            }
+            group.position.y = baseMesh.scale.y / 2; // Keep base on the floor
         }
 
         function onTransformEnd() {
             if (!selectedBox) return;
             const group = selectedBox.group;
-
-            // Final snap position after dragging stops
+            // Snap position
             group.position.x = Math.round(group.position.x / SNAP_GRID_SIZE) * SNAP_GRID_SIZE;
-            group.position.y = Math.round(group.position.y / SNAP_GRID_SIZE) * SNAP_GRID_SIZE;
             group.position.z = Math.round(group.position.z / SNAP_GRID_SIZE) * SNAP_GRID_SIZE;
             
-            // Prevent box from going below the floor
-            const halfHeight = group.scale.y / 2;
-            if (group.position.y < halfHeight) {
-                group.position.y = halfHeight;
-            }
-
-            // Update the persistent data with the full x, y, z
-            selectedBox.position = { x: group.position.x, y: group.position.y, z: group.position.z };
-            selectedBox.size = { w: group.scale.x, h: group.scale.y, d: group.scale.z };
-        }
-
-        function onKeyDown(event) {
-            if (event.target.tagName === 'INPUT') return; // Ignore key presses in text fields
-            switch(event.key.toLowerCase()) {
-                case 'r':
-                    transformControls.setMode('scale');
-                    modeIndicator.textContent = "Mode: Resize (R/T)";
-                    break;
-                case 't':
-                    transformControls.setMode('translate');
-                    modeIndicator.textContent = "Mode: Move (R/T)";
-                    break;
-                case 'delete':
-                case 'backspace':
-                    deleteSelectedBox();
-                    break;
-            }
-        }
-
-        function onCanvasClick(event) {
-            if (event.target !== renderer.domElement) return;
-            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-            raycaster.setFromCamera(mouse, camera);
-            const intersects = raycaster.intersectObjects(boxes.map(b => b.group), true);
-            if (intersects.length > 0) {
-                let object = intersects[0].object;
-                while (object.parent && !object.userData.boxData) object = object.parent;
-                if (object.userData.boxData && object.userData.boxData !== selectedBox) {
-                    selectBox(object.userData.boxData);
-                }
-            } else if (!transformControls.dragging) {
-                 deselectBox();
-            }
-        }
-        
-        function clearSceneForImport() {
-            deselectBox();
-            [...boxes].forEach(box => { // Iterate over a copy
-                selectedBox = box;
-                deleteSelectedBox();
-            });
-            boxes = [];
-            boxCounter = 1;
+            // Update data model
+            selectedBox.position.copy(group.position);
+            selectedBox.size.w = group.scale.x;
+            selectedBox.size.d = group.scale.z;
         }
 
         function setupUIEventListeners() {
             document.getElementById('addBoxBtn').addEventListener('click', () => {
-                const size = { w: 4, h: 3, d: 3 };
-                const position = { x: 0, y: size.h / 2, z: 0 }; // Start on floor
-                const newBox = createBox(boxCounter++, position, size, []);
-                selectBox(newBox);
+                const data = {
+                    code: generateUniqueCode(),
+                    name: 'New Box',
+                    color: '#cccccc',
+                    icon: 'none',
+                    thumbnail: null,
+                    items: [],
+                    position: new THREE.Vector3(0, 1.5, 0),
+                    size: { w: 4, h: 3, d: 3 }
+                };
+                const newBox = createBox(data);
+                selectBox(newBox, true);
             });
+
+            document.getElementById('findBtn').addEventListener('click', () => {
+                const code = document.getElementById('findCodeInput').value.toUpperCase();
+                const foundBox = boxes.find(b => b.code === code);
+                if (foundBox) {
+                    selectBox(foundBox, true);
+                } else {
+                    alert('Box not found!');
+                }
+            });
+            
+            // Info Panel listeners
+            document.getElementById('boxNameInput').oninput = (e) => { if(selectedBox) selectedBox.name = e.target.value; };
+            document.getElementById('boxColorInput').oninput = (e) => {
+                if(selectedBox) {
+                    selectedBox.color = e.target.value;
+                    selectedBox.baseMaterial.color.set(e.target.value);
+                    selectedBox.lidMaterial.color.set(new THREE.Color(e.target.value).multiplyScalar(0.8));
+                }
+            };
+            document.getElementById('imageUpload').onchange = (e) => {
+                if (!selectedBox || !e.target.files[0]) return;
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        const size = 128; // Thumbnail size
+                        canvas.width = size; canvas.height = size;
+                        const ctx = canvas.getContext('2d');
+                        const scale = size / Math.min(img.width, img.height);
+                        const w = img.width * scale;
+                        const h = img.height * scale;
+                        ctx.drawImage(img, (size - w) / 2, (size - h) / 2, w, h);
+                        selectedBox.thumbnail = canvas.toDataURL('image/jpeg', 0.7);
+                        populateInfoPanel(selectedBox);
+                    };
+                    img.src = event.target.result;
+                };
+                reader.readAsDataURL(e.target.files[0]);
+            };
+            document.getElementById('addItemInput').onkeydown = (e) => {
+                if (e.key === 'Enter' && selectedBox && e.target.value.trim()) {
+                    selectedBox.items.push(e.target.value.trim());
+                    e.target.value = '';
+                    populateInfoPanel(selectedBox);
+                }
+            };
             document.getElementById('deleteBoxBtn').addEventListener('click', deleteSelectedBox);
-            document.getElementById('closePanelBtn').addEventListener('click', deselectBox);
-            // Other listeners (add item, import, export) remain largely the same
-            const addItemAction = () => { if (selectedBox && addItemInput.value.trim() !== '') { selectedBox.items.push(addItemInput.value.trim()); addItemInput.value = ''; populateInfoPanel(selectedBox); } };
-            document.getElementById('addItemBtn').addEventListener('click', addItemAction);
-            addItemInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') addItemAction(); });
+            
+            // Import/Export
             document.getElementById('exportBtn').addEventListener('click', () => {
-                const exportData = boxes.map(b => ({ id: b.id, position: b.position, size: b.size, items: b.items }));
+                 const exportData = boxes.map(b => ({
+                    code: b.code, name: b.name, color: b.color, icon: b.icon, thumbnail: b.thumbnail, items: b.items,
+                    position: b.position, size: b.size
+                }));
                 const a = document.createElement('a');
                 a.href = URL.createObjectURL(new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' }));
                 a.download = 'box-layout.json'; a.click();
             });
-            document.getElementById('importFile').addEventListener('change', (event) => {
-                const file = event.target.files[0];
-                if (!file) return;
+
+            document.getElementById('importFile').addEventListener('change', (e) => {
+                if (!e.target.files[0]) return;
                 const reader = new FileReader();
-                reader.onload = (e) => {
+                reader.onload = (event) => {
                     try {
-                        const data = JSON.parse(e.target.result);
-                        clearSceneForImport();
-                        let maxId = 0;
-                        data.forEach(d => { createBox(d.id, d.position, d.size, d.items); if (d.id > maxId) maxId = d.id; });
-                        boxCounter = maxId + 1;
-                    } catch (err) { alert('Error: Invalid JSON file.'); console.error(err); }
+                        [...boxes].forEach(b => { selectedBox = b; deleteSelectedBox(); }); // Clear existing boxes
+                        const data = JSON.parse(event.target.result);
+                        data.forEach(d => {
+                             // Convert plain objects back to Vector3
+                            d.position = new THREE.Vector3(d.position.x, d.position.y, d.position.z);
+                            createBox(d);
+                        });
+                    } catch(err) { alert("Error parsing file."); console.error(err); }
                 };
-                reader.readAsText(file); event.target.value = '';
+                reader.readAsText(e.target.files[0]);
+            });
+
+            // General window events
+            window.addEventListener('resize', () => { camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); });
+            renderer.domElement.addEventListener('click', (e) => {
+                 if (e.target !== renderer.domElement) return;
+                 mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+                 mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+                 raycaster.setFromCamera(mouse, camera);
+                 const intersects = raycaster.intersectObjects(boxes.map(b => b.group), true);
+                 if (intersects.length > 0) {
+                     let object = intersects[0].object;
+                     while (object.parent && !object.userData.boxData) object = object.parent;
+                     if (object.userData.boxData && object.userData.boxData !== selectedBox) {
+                         selectBox(object.userData.boxData);
+                     }
+                 } else if (!transformControls.dragging) {
+                     deselectBox();
+                 }
             });
         }
         
-        // ---UNCHANGED HELPER FUNCTIONS---
-        function populateInfoPanel(boxData) {
-            panelTitle.innerHTML = `Open<strong>BOX ${boxData.id}</strong>`;
-            itemList.innerHTML = '';
-            boxData.items.forEach(itemText => {
-                const li = document.createElement('li');
-                li.textContent = itemText;
-                const deleteBtn = document.createElement('button');
-                deleteBtn.textContent = '×';
-                deleteBtn.className = 'delete-item-btn';
-                deleteBtn.onclick = () => { boxData.items.splice(boxData.items.indexOf(itemText), 1); populateInfoPanel(boxData); };
-                li.appendChild(deleteBtn);
-                itemList.appendChild(li);
-            });
+        function animate(time) {
+            requestAnimationFrame(animate);
+            TWEEN.update(time);
+            orbitControls.update();
+            renderer.render(scene, camera);
         }
-        function onWindowResize() { camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); }
-        function animate() { requestAnimationFrame(animate); orbitControls.update(); renderer.render(scene, camera); }
 
         init();
     </script>
