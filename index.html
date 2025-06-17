@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Box Organizer - Core Refactor</title>
+    <title>Box Organizer - Animated Core</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <style>
         :root { 
             --bg-color: #2a2d31; 
             --surface-color: #3c4045;
-            --primary-color: #0d6efd; /* Bootstrap Blue */
+            --primary-color: #0d6efd; 
             --text-color: #e8e8e8;
             --text-muted-color: #b0b0b0;
             --border-color: #50555c;
@@ -32,7 +32,6 @@
         .info-panel label { display: block; margin-bottom: 5px; font-size: 0.9em; color: var(--text-muted-color); }
         .info-panel input[type="text"], .info-panel input[type="color"] { width: 100%; margin-bottom: 15px; }
         
-        /* Item List Styling */
         #itemListContainer h4 { font-size: 1.1em; margin-top: 20px; margin-bottom: 10px; color: var(--text-muted-color); }
         #itemList { list-style: none; padding: 0; margin: 0 0 15px 0; max-height: 200px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 6px; background-color: var(--input-bg-color);}
         #itemList li { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-bottom: 1px solid var(--border-color); cursor: grab; }
@@ -50,35 +49,8 @@
     </style>
 </head>
 <body>
-    <div class="top-bar">
-        <div class="ui-panel">
-            <button id="addBoxBtn"><i class="bi bi-plus-lg"></i> Add Box</button>
-            <button id="toggleModeBtn"><i class="bi bi-arrows-move"></i> Switch to Resize</button>
-            <button id="exportBtn"><i class="bi bi-box-arrow-up"></i> Export</button>
-            <input type="file" id="importFile" accept=".json" style="display: none;">
-            <button onclick="document.getElementById('importFile').click()"><i class="bi bi-box-arrow-down"></i> Import</button>
-        </div>
-        <div class="ui-panel">
-            <input type="text" id="findCodeInput" placeholder="Enter Box Code...">
-            <button id="findBtn"><i class="bi bi-search"></i> Find</button>
-        </div>
-    </div>
-    <div id="infoPanel" class="info-panel hidden">
-        <h3 id="infoPanelTitleArea"><span id="infoPanelTitle">Box Properties</span> <span id="infoPanelIdChip" class="box-id-chip"></span></h3>
-        <div><label for="boxNameInput">Name:</label><input type="text" id="boxNameInput" placeholder="Enter box name"></div>
-        <div><label for="boxColorInput">Color:</label><input type="color" id="boxColorInput"></div>
-        
-        <div id="itemListContainer">
-            <h4>Items</h4>
-            <ul id="itemList"></ul>
-            <form id="addItemForm" onsubmit="return false;">
-                <input type="text" id="newItemNameInput" placeholder="Item name..." required>
-                <input type="number" id="newItemQtyInput" value="1" min="1" style="width: 60px;">
-                <button type="submit" id="addItemBtn"><i class="bi bi-plus-lg"></i> Add</button>
-            </form>
-        </div>
-        <button id="deleteBoxBtn"><i class="bi bi-trash"></i> Delete Box</button>
-    </div>
+    <div class="top-bar"><div class="ui-panel"><button id="addBoxBtn"><i class="bi bi-plus-lg"></i> Add Box</button><button id="toggleModeBtn"><i class="bi bi-arrows-move"></i> Switch to Resize</button><button id="exportBtn"><i class="bi bi-box-arrow-up"></i> Export</button><input type="file" id="importFile" accept=".json" style="display: none;"><button onclick="document.getElementById('importFile').click()"><i class="bi bi-box-arrow-down"></i> Import</button></div><div class="ui-panel"><input type="text" id="findCodeInput" placeholder="Enter Box Code..."><button id="findBtn"><i class="bi bi-search"></i> Find</button></div></div>
+    <div id="infoPanel" class="info-panel hidden"></div>
     <div id="hoverTooltip" class="hover-tooltip hidden"></div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/20.0.3/tween.umd.js"></script>
@@ -89,16 +61,17 @@
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
         import { TransformControls } from 'three/addons/controls/TransformControls.js';
 
-        const GRID_EXTENT = 100, SNAP_GRID_SIZE = 1;
+        const GRID_EXTENT = 100, SNAP_GRID_SIZE = 0.5; // Grid size halved
         const DEFAULT_BOX_COLOR = '#777777';
         const LID_THICKNESS = 0.15; 
+        const ANIMATION_DURATION = 300; // ms for snap animations
 
         let scene, camera, renderer, orbitControls, transformControls;
         let boxes = []; 
         let selectedBoxData = null;
         let hoveredBoxData = null;
         let infoPanelEl, hoverTooltipEl, starField;
-        let draggedItem = null; // For item reordering
+        let draggedItem = null; 
 
         class ActionManager { /* Unchanged */ constructor() { this.undoStack = []; this.redoStack = []; } pushState(state) { this.undoStack.push(state); this.redoStack = []; if (this.undoStack.length > 50) this.undoStack.shift(); } undo() { if (this.undoStack.length <= 1) return null; const currentState = this.undoStack.pop(); this.redoStack.push(currentState); return JSON.parse(JSON.stringify(this.undoStack[this.undoStack.length - 1])); } redo() { if (this.redoStack.length === 0) return null; const nextState = this.redoStack.pop(); this.undoStack.push(nextState); return JSON.parse(JSON.stringify(nextState)); } }
         const actionManager = new ActionManager();
@@ -126,8 +99,14 @@
             orbitControls = new OrbitControls(camera, renderer.domElement); orbitControls.enableDamping = true;
             transformControls = new TransformControls(camera, renderer.domElement);
             transformControls.setMode('scale');
-            transformControls.addEventListener('dragging-changed', e => { orbitControls.enabled = !e.value; if(!e.value) recordAction(); });
-            transformControls.addEventListener('objectChange', onTransformObject);
+            transformControls.addEventListener('dragging-changed', e => { 
+                orbitControls.enabled = !e.value; 
+                if(!e.value && selectedBoxData) { // On drag end
+                    animateTransformToSnap(selectedBoxData); 
+                    recordAction();
+                }
+            });
+            // No 'objectChange' listener needed for live snapping with TWEEN
             scene.add(transformControls);
             
             setupUIEventListeners();
@@ -141,10 +120,10 @@
                 name: "New Box",
                 color: DEFAULT_BOX_COLOR,
                 position: new THREE.Vector3(0, 0, 0), 
-                size: new THREE.Vector3(4, 3, 3),    
-                items: [], // Now: {id: string, name: string, qty: number}
-                icon: 'none', // Add later
-                thumbnail: null, // Add later
+                size: new THREE.Vector3(4, 3, 4),    // Default size
+                items: [], 
+                icon: 'none', 
+                thumbnail: null, 
                 ...overrideData,
             };
         }
@@ -152,18 +131,14 @@
         function addBoxToScene(boxData, isNew = false) {
             const group = new THREE.Group();
             group.userData.id = boxData.id; 
-
             const baseMaterial = new THREE.MeshStandardMaterial({ color: boxData.color });
             const lidMaterial = new THREE.MeshStandardMaterial({ color: new THREE.Color(boxData.color).multiplyScalar(0.8) });
-
-            const baseGeometry = new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0); // Pivot at base center
-            const lidGeometry = new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0); // Unit geometry for lid too
-
+            const baseGeometry = new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0);
+            const lidGeometry = new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0); 
             const baseMesh = new THREE.Mesh(baseGeometry, baseMaterial);
             const lidMesh = new THREE.Mesh(lidGeometry, lidMaterial);
-            
             [baseMesh, lidMesh].forEach(m => { m.castShadow = true; m.receiveShadow = true; });
-            group.add(baseMesh, lidMesh); // Icon sprite will be added here later
+            group.add(baseMesh, lidMesh); 
             
             boxData.threeGroup = group; 
             applyBoxStateFromData(boxData); 
@@ -172,11 +147,18 @@
             scene.add(group);
 
             if (isNew) { 
-                const initialScale = baseMesh.scale.clone();
+                const finalSize = boxData.size.clone();
+                const finalPos = boxData.position.clone();
+                
+                // Start small and above
                 baseMesh.scale.set(0.01,0.01,0.01);
-                 new TWEEN.Tween(baseMesh.scale).to(initialScale, 600).easing(TWEEN.Easing.Back.Out)
+                group.position.set(finalPos.x, finalPos.y + 10, finalPos.z);
+                applyBoxStateFromData(boxData); // Apply initial small scale to lid etc.
+
+                 new TWEEN.Tween(baseMesh.scale).to(finalScale, 600).easing(TWEEN.Easing.Back.Out)
                     .onUpdate(() => applyBoxStateFromData(boxData)) 
                     .start();
+                 new TWEEN.Tween(group.position).to(finalPos, 800).easing(TWEEN.Easing.Bounce.Out).start();
             }
             return boxData;
         }
@@ -188,37 +170,67 @@
             const lidMesh = group.children[1];
 
             group.position.copy(boxData.position);
-            baseMesh.scale.copy(boxData.size);
+            baseMesh.scale.copy(boxData.size); // Base mesh takes the full size
             baseMesh.material.color.set(boxData.color);
 
-            lidMesh.scale.set(boxData.size.x * 1.02, LID_THICKNESS, boxData.size.z * 1.02); // Lid fixed thickness
+            lidMesh.scale.set(boxData.size.x * 1.02, LID_THICKNESS, boxData.size.z * 1.02);
             lidMesh.position.y = boxData.size.y; 
             lidMesh.material.color.set(new THREE.Color(boxData.color).multiplyScalar(0.8));
         }
 
         function onTransformObject() { 
+            // This function is now primarily for reading the current state during drag.
+            // The actual snapping and data update happens in animateTransformToSnap.
             if (!selectedBoxData || !selectedBoxData.threeGroup) return;
-            const group = selectedBoxData.threeGroup;
-            
-            if (transformControls.mode === 'scale') {
-                selectedBoxData.size.x = Math.max(SNAP_GRID_SIZE, Math.round(group.scale.x / SNAP_GRID_SIZE) * SNAP_GRID_SIZE);
-                selectedBoxData.size.y = Math.max(SNAP_GRID_SIZE, Math.round(group.scale.y / SNAP_GRID_SIZE) * SNAP_GRID_SIZE);
-                selectedBoxData.size.z = Math.max(SNAP_GRID_SIZE, Math.round(group.scale.z / SNAP_GRID_SIZE) * SNAP_GRID_SIZE);
-                // Group scale IS the size, apply it directly to the data
-                group.scale.copy(selectedBoxData.size); // Snap the group's scale
-            }
-            selectedBoxData.position.x = Math.round(group.position.x / SNAP_GRID_SIZE) * SNAP_GRID_SIZE;
-            selectedBoxData.position.y = Math.round(group.position.y / SNAP_GRID_SIZE) * SNAP_GRID_SIZE; 
-            selectedBoxData.position.z = Math.round(group.position.z / SNAP_GRID_SIZE) * SNAP_GRID_SIZE;
-            group.position.copy(selectedBoxData.position); // Snap the group's position
-
-            applyBoxStateFromData(selectedBoxData); // Update internal meshes based on group's transform
+            // No immediate data update here; just let TransformControls do its thing.
         }
 
+        function animateTransformToSnap(boxData) {
+            if (!boxData || !boxData.threeGroup) return;
+            const group = boxData.threeGroup;
+            const baseMesh = group.children[0]; // Base mesh is what TC scales internally
+
+            const currentRawSize = baseMesh.scale.clone(); // TC scales the base mesh
+            const currentRawPos = group.position.clone();
+
+            // Calculate snapped target values
+            const targetSize = new THREE.Vector3(
+                Math.max(SNAP_GRID_SIZE, Math.round(currentRawSize.x / SNAP_GRID_SIZE) * SNAP_GRID_SIZE),
+                Math.max(SNAP_GRID_SIZE, Math.round(currentRawSize.y / SNAP_GRID_SIZE) * SNAP_GRID_SIZE),
+                Math.max(SNAP_GRID_SIZE, Math.round(currentRawSize.z / SNAP_GRID_SIZE) * SNAP_GRID_SIZE)
+            );
+            const targetPos = new THREE.Vector3(
+                Math.round(currentRawPos.x / SNAP_GRID_SIZE) * SNAP_GRID_SIZE,
+                Math.round(currentRawPos.y / SNAP_GRID_SIZE) * SNAP_GRID_SIZE,
+                Math.round(currentRawPos.z / SNAP_GRID_SIZE) * SNAP_GRID_SIZE
+            );
+
+            // Animate baseMesh scale
+            new TWEEN.Tween(baseMesh.scale)
+                .to(targetSize, ANIMATION_DURATION)
+                .easing(TWEEN.Easing.Quadratic.Out)
+                .onUpdate(() => {
+                    boxData.size.copy(baseMesh.scale); // Update data model live during animation
+                    applyBoxStateFromData(boxData);     // Update visuals (lid position etc.)
+                })
+                .start();
+
+            // Animate group position
+            new TWEEN.Tween(group.position)
+                .to(targetPos, ANIMATION_DURATION)
+                .easing(TWEEN.Easing.Quadratic.Out)
+                .onUpdate(() => {
+                    boxData.position.copy(group.position); // Update data model
+                })
+                .start();
+        }
+        
         function selectBox(boxData) { deselectBox(); selectedBoxData = boxData; if (selectedBoxData.threeGroup) { transformControls.attach(selectedBoxData.threeGroup); selectedBoxData.threeGroup.children.forEach(c => { if (c.isMesh) new TWEEN.Tween(c.material.emissive).to({ r: 0.1, g: 0.3, b: 0.5 }, 200).start(); }); } updateInfoPanel(); infoPanelEl.classList.remove('hidden'); }
         function deselectBox() { if (selectedBoxData && selectedBoxData.threeGroup) { selectedBoxData.threeGroup.children.forEach(c => { if (c.isMesh) new TWEEN.Tween(c.material.emissive).to({ r: 0, g: 0, b: 0 }, 200).start(); }); } transformControls.detach(); selectedBoxData = null; infoPanelEl.classList.add('hidden'); }
         
+        // --- UI, Items, and other Listeners (mostly unchanged but check for new recordAction calls) ---
         function setupUIEventListeners() {
+            infoPanelEl.innerHTML = `<h3 id="infoPanelTitleArea"><span id="infoPanelTitle">Box Properties</span> <span id="infoPanelIdChip" class="box-id-chip"></span></h3><div><label for="boxNameInput">Name:</label><input type="text" id="boxNameInput" placeholder="Enter box name"></div><div><label for="boxColorInput">Color:</label><input type="color" id="boxColorInput"></div><div id="itemListContainer"><h4>Items</h4><ul id="itemList"></ul><form id="addItemForm" onsubmit="return false;"><input type="text" id="newItemNameInput" placeholder="Item name..." required><input type="number" id="newItemQtyInput" value="1" min="1" style="width: 60px;"><button type="submit" id="addItemBtn"><i class="bi bi-plus-lg"></i> Add</button></form></div><button id="deleteBoxBtn"><i class="bi bi-trash"></i> Delete Box</button>`;
             document.getElementById('addBoxBtn').addEventListener('click', () => { const newBoxData = createBoxData(); addBoxToScene(newBoxData, true); selectBox(newBoxData); recordAction(); });
             document.getElementById('toggleModeBtn').addEventListener('click', (e) => { const currentMode = transformControls.getMode(); if (currentMode === 'scale') { transformControls.setMode('translate'); e.target.innerHTML = '<i class="bi bi-arrows-fullscreen"></i> Switch to Resize'; } else { transformControls.setMode('scale'); e.target.innerHTML = '<i class="bi bi-arrows-move"></i> Switch to Move';} });
             document.getElementById('deleteBoxBtn').addEventListener('click', handleDeleteBox);
@@ -233,88 +245,19 @@
             renderer.domElement.addEventListener('click', onCanvasClick);
             window.addEventListener('keydown', onKeyDown); 
         }
-
-        function updateInfoPanel() {
-            if (!selectedBoxData) { infoPanelEl.classList.add('hidden'); return; }
-            document.getElementById('infoPanelTitle').textContent = selectedBoxData.name || "Box Properties";
-            document.getElementById('infoPanelIdChip').textContent = selectedBoxData.id.substring(0,8);
-            document.getElementById('boxNameInput').value = selectedBoxData.name;
-            document.getElementById('boxColorInput').value = selectedBoxData.color;
-            renderItemList();
-        }
-
-        function renderItemList() {
-            if (!selectedBoxData) return;
-            const itemListEl = document.getElementById('itemList');
-            itemListEl.innerHTML = '';
-            selectedBoxData.items.forEach((item, index) => {
-                const li = document.createElement('li');
-                li.dataset.itemId = item.id;
-                li.draggable = true;
-
-                const handle = document.createElement('span');
-                handle.className = 'drag-handle bi bi-grip-vertical';
-                
-                const nameInput = document.createElement('input');
-                nameInput.type = 'text'; nameInput.className = 'item-name-input'; nameInput.value = item.name;
-                nameInput.onchange = (e) => { item.name = e.target.value; recordAction(); };
-
-                const qtyInput = document.createElement('input');
-                qtyInput.type = 'number'; qtyInput.className = 'item-qty-input'; qtyInput.value = item.qty; qtyInput.min = 1;
-                qtyInput.onchange = (e) => { item.qty = parseInt(e.target.value) || 1; recordAction(); };
-                
-                const deleteBtn = document.createElement('button');
-                deleteBtn.className = 'delete-item-btn bi bi-x-lg';
-                deleteBtn.onclick = () => { selectedBoxData.items.splice(index, 1); renderItemList(); recordAction(); };
-                
-                li.append(handle, nameInput, qtyInput, deleteBtn);
-                itemListEl.appendChild(li);
-            });
-        }
-
-        function handleAddItem(event) {
-            event.preventDefault();
-            if (!selectedBoxData) return;
-            const nameInput = document.getElementById('newItemNameInput');
-            const qtyInput = document.getElementById('newItemQtyInput');
-            const name = nameInput.value.trim();
-            const qty = parseInt(qtyInput.value) || 1;
-            if (name) {
-                selectedBoxData.items.push({ id: THREE.MathUtils.generateUUID(), name, qty });
-                nameInput.value = '';
-                qtyInput.value = 1;
-                renderItemList();
-                recordAction();
-            }
-        }
+        function updateInfoPanel() { if (!selectedBoxData) { infoPanelEl.classList.add('hidden'); return; } document.getElementById('infoPanelTitle').textContent = selectedBoxData.name || "Box Properties"; document.getElementById('infoPanelIdChip').textContent = selectedBoxData.id.substring(0,8); document.getElementById('boxNameInput').value = selectedBoxData.name; document.getElementById('boxColorInput').value = selectedBoxData.color; renderItemList(); }
+        function renderItemList() { if (!selectedBoxData) return; const itemListEl = document.getElementById('itemList'); itemListEl.innerHTML = ''; selectedBoxData.items.forEach((item, index) => { const li = document.createElement('li'); li.dataset.itemId = item.id; li.draggable = true; const handle = document.createElement('span'); handle.className = 'drag-handle bi bi-grip-vertical'; const nameInput = document.createElement('input'); nameInput.type = 'text'; nameInput.className = 'item-name-input'; nameInput.value = item.name; nameInput.onchange = (e) => { item.name = e.target.value; recordAction(); }; const qtyInput = document.createElement('input'); qtyInput.type = 'number'; qtyInput.className = 'item-qty-input'; qtyInput.value = item.qty; qtyInput.min = 1; qtyInput.onchange = (e) => { item.qty = parseInt(e.target.value) || 1; recordAction(); }; const deleteBtn = document.createElement('button'); deleteBtn.className = 'delete-item-btn bi bi-x-lg'; deleteBtn.onclick = () => { selectedBoxData.items.splice(index, 1); renderItemList(); recordAction(); }; li.append(handle, nameInput, qtyInput, deleteBtn); itemListEl.appendChild(li); }); }
+        function handleAddItem(event) { event.preventDefault(); if (!selectedBoxData) return; const nameInput = document.getElementById('newItemNameInput'); const qtyInput = document.getElementById('newItemQtyInput'); const name = nameInput.value.trim(); const qty = parseInt(qtyInput.value) || 1; if (name) { selectedBoxData.items.push({ id: THREE.MathUtils.generateUUID(), name, qty }); nameInput.value = ''; qtyInput.value = 1; renderItemList(); recordAction(); } }
         function handleItemDragStart(e) { if (e.target.tagName === 'LI') { e.target.classList.add('dragging'); draggedItem = e.target.dataset.itemId; e.dataTransfer.effectAllowed = 'move'; } }
         function handleItemDragOver(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }
-        function handleItemDrop(e) {
-            e.preventDefault();
-            const targetLi = e.target.closest('li');
-            if (!targetLi || !draggedItem || !selectedBoxData) return;
-            const draggedItemId = draggedItem;
-            const targetItemId = targetLi.dataset.itemId;
-            const items = selectedBoxData.items;
-            const draggedIndex = items.findIndex(item => item.id === draggedItemId);
-            let targetIndex = items.findIndex(item => item.id === targetItemId);
-            if (draggedIndex === -1 || targetIndex === -1) return;
-            const [dragged] = items.splice(draggedIndex, 1);
-            if (draggedIndex < targetIndex) targetIndex--; // Adjust if moving down
-            items.splice(targetIndex, 0, dragged);
-            document.querySelectorAll('#itemList li.dragging').forEach(el => el.classList.remove('dragging'));
-            draggedItem = null;
-            renderItemList();
-            recordAction();
-        }
-        
+        function handleItemDrop(e) { e.preventDefault(); const targetLi = e.target.closest('li'); if (!targetLi || !draggedItem || !selectedBoxData) return; const draggedItemId = draggedItem; const targetItemId = targetLi.dataset.itemId; const items = selectedBoxData.items; const draggedIndex = items.findIndex(item => item.id === draggedItemId); let targetIndex = items.findIndex(item => item.id === targetItemId); if (draggedIndex === -1 || targetIndex === -1) return; const [dragged] = items.splice(draggedIndex, 1); if (draggedIndex < targetIndex) targetIndex--; items.splice(targetIndex, 0, dragged); document.querySelectorAll('#itemList li.dragging').forEach(el => el.classList.remove('dragging')); draggedItem = null; renderItemList(); recordAction(); }
         function handleDeleteBox() { if (!selectedBoxData) return; const boxToRemove = selectedBoxData; deselectBox(); scene.remove(boxToRemove.threeGroup); disposeThreeObject(boxToRemove.threeGroup); boxes = boxes.filter(b => b.id !== boxToRemove.id); recordAction(); }
         function onMouseMove(event) { const mouse = new THREE.Vector2((event.clientX / window.innerWidth) * 2 - 1, -(event.clientY / window.innerHeight) * 2 + 1); const raycaster = new THREE.Raycaster(); raycaster.setFromCamera(mouse, camera); const allGroups = boxes.map(b => b.threeGroup).filter(g => g); const intersects = raycaster.intersectObjects(allGroups, true); if (hoveredBoxData && (!intersects.length || hoveredBoxData.threeGroup !== intersects[0].object.closest('[user_data]').parent)) { if (hoveredBoxData !== selectedBoxData && hoveredBoxData.threeGroup) { hoveredBoxData.threeGroup.children.forEach(c => { if (c.isMesh) new TWEEN.Tween(c.material.emissive).to({ r: 0, g: 0, b: 0 }, 100).start(); }); } hoveredBoxData = null; hoverTooltipEl.classList.add('hidden'); } if (intersects.length > 0) { let groupToTest = intersects[0].object; while(groupToTest && !groupToTest.userData.id) { groupToTest = groupToTest.parent; } if (groupToTest && groupToTest.userData.id) { const boxData = boxes.find(b => b.id === groupToTest.userData.id); if (boxData) { hoveredBoxData = boxData; if (hoveredBoxData !== selectedBoxData) { hoveredBoxData.threeGroup.children.forEach(c => { if (c.isMesh) new TWEEN.Tween(c.material.emissive).to({ r: 0.2, g: 0.2, b: 0.2 }, 100).start(); }); } hoverTooltipEl.textContent = boxData.name; hoverTooltipEl.classList.remove('hidden'); hoverTooltipEl.style.left = (event.clientX + 15) + 'px'; hoverTooltipEl.style.top = (event.clientY + 15) + 'px'; } } } }
         function onCanvasClick() { if (transformControls.dragging) return; if (hoveredBoxData) selectBox(hoveredBoxData); else deselectBox(); }
         function recordAction() { actionManager.pushState(JSON.stringify(boxes.map(box => ({...box, threeGroup: undefined})))); }
         function onKeyDown(e) { if (e.target.tagName === 'INPUT') return; if (e.ctrlKey || e.metaKey) { let stateToRestore = null; if (e.key.toLowerCase() === 'z') stateToRestore = actionManager.undo(); if (e.key.toLowerCase() === 'y') stateToRestore = actionManager.redo(); if (stateToRestore) { deselectBox(); boxes.forEach(b => { scene.remove(b.threeGroup); disposeThreeObject(b.threeGroup); }); boxes = []; const parsedState = JSON.parse(stateToRestore); parsedState.forEach(boxData => { boxData.position = new THREE.Vector3(boxData.position.x, boxData.position.y, boxData.position.z); boxData.size = new THREE.Vector3(boxData.size.x, boxData.size.y, boxData.size.z); addBoxToScene(boxData); }); } } }
         
-        function createFloorAndGrid() { const floor = new THREE.Mesh(new THREE.PlaneGeometry(GRID_EXTENT * 2, GRID_EXTENT * 2), new THREE.MeshStandardMaterial({ color: 0x333840, roughness: 0.8, metalness: 0.2 })); floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor); const dotGeometry = new THREE.CircleGeometry(0.05, 12); dotGeometry.rotateX(-Math.PI / 2); const dotMaterial = new THREE.MeshBasicMaterial({ color: 0x555c66, transparent: true, opacity: 0.7 }); const instancedDots = new THREE.InstancedMesh(dotGeometry, dotMaterial, Math.pow(Math.floor(GRID_EXTENT / SNAP_GRID_SIZE) * 2 + 1, 2)); const dummy = new THREE.Object3D(); let i = 0; for (let x = -GRID_EXTENT; x <= GRID_EXTENT; x += SNAP_GRID_SIZE) { for (let z = -GRID_EXTENT; z <= GRID_EXTENT; z += SNAP_GRID_SIZE) { dummy.position.set(x, 0.01, z); dummy.updateMatrix(); instancedDots.setMatrixAt(i++, dummy.matrix); } } scene.add(instancedDots); }
+        function createFloorAndGrid() { const floor = new THREE.Mesh(new THREE.PlaneGeometry(GRID_EXTENT * 2, GRID_EXTENT * 2), new THREE.MeshStandardMaterial({ color: 0x333840, roughness: 0.8, metalness: 0.2 })); floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor); const dotGeometry = new THREE.CircleGeometry(0.05 * (SNAP_GRID_SIZE / 0.5) , 12); dotGeometry.rotateX(-Math.PI / 2); const dotMaterial = new THREE.MeshBasicMaterial({ color: 0x555c66, transparent: true, opacity: 0.7 }); const divisions = Math.floor(GRID_EXTENT / SNAP_GRID_SIZE) * 2 + 1; const instancedDots = new THREE.InstancedMesh(dotGeometry, dotMaterial, divisions * divisions); const dummy = new THREE.Object3D(); let i = 0; for (let r = -GRID_EXTENT; r <= GRID_EXTENT; r += SNAP_GRID_SIZE) { for (let c = -GRID_EXTENT; c <= GRID_EXTENT; c += SNAP_GRID_SIZE) { dummy.position.set(r, 0.01, c); dummy.updateMatrix(); instancedDots.setMatrixAt(i++, dummy.matrix); } } scene.add(instancedDots); }
         function createStarfield() { const starVertices = []; for (let i = 0; i < 10000; i++) { const x = THREE.MathUtils.randFloatSpread(2000); const y = THREE.MathUtils.randFloatSpread(2000); const z = THREE.MathUtils.randFloatSpread(2000); starVertices.push(x, y, z); } const starGeometry = new THREE.BufferGeometry(); starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starVertices, 3)); const starMaterial = new THREE.PointsMaterial({ color: 0x666666, size: 0.5, sizeAttenuation: true }); starField = new THREE.Points(starGeometry, starMaterial); scene.add(starField); }
         function createIconSprite(iconClass) { return new THREE.Sprite(); }
         function disposeThreeObject(object) { if (!object) return; object.traverse(child => { if (child.geometry) child.geometry.dispose(); if (child.material) { if (Array.isArray(child.material)) { child.material.forEach(m => { if (m.map) m.map.dispose(); m.dispose(); }); } else { if (child.material.map) child.material.map.dispose(); child.material.dispose(); } } }); }
