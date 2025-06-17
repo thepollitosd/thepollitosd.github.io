@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Box Organizer - Final Polish + Animations</title>
+    <title>Box Organizer - Final Polish + Tags</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <style>
         :root { 
@@ -65,14 +65,14 @@
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
         import { TransformControls } from 'three/addons/controls/TransformControls.js';
 
-        const GRID_EXTENT = 100, SNAP_GRID_SIZE = 0.5; 
+        // --- CONFIG & STATE ---
+        const GRID_EXTENT = 100, SNAP_GRID_SIZE = 0.5, LID_THICKNESS = 0.15;
         const DEFAULT_BOX_COLOR = '#777777';
-        const LID_THICKNESS = 0.15;
         const ICONS = ['none', 'bi-star-fill', 'bi-book-fill', 'bi-tools', 'bi-controller', 'bi-camera-fill', 'bi-lightbulb-fill', 'bi-box-seam', 'bi-archive-fill', 'bi-pc-display', 'bi-music-note-beamed', 'bi-paint-bucket', 'bi-puzzle-fill', 'bi-gift-fill', 'bi-heart-fill'];
         const ICON_MAP = {'bi-star-fill': '\uF586', 'bi-book-fill': '\uF190', 'bi-tools': '\uF5F2', 'bi-controller': '\uF2BB', 'bi-camera-fill': '\uF1F0', 'bi-lightbulb-fill': '\uF436', 'bi-box-seam': '\uF19D', 'bi-archive-fill': '\uF109', 'bi-pc-display': '\uF4E0', 'bi-music-note-beamed': '\uF49C', 'bi-paint-bucket': '\uF4AF', 'bi-puzzle-fill': '\uF524', 'bi-gift-fill': '🎁', 'bi-heart-fill': '❤️'};
         
         let scene, camera, renderer, orbitControls, transformControls;
-        let boxes = [], selectedBoxData = null, hoveredBoxData = null, clipboard = null;
+        let boxes = [], selectedBoxData = null, hoveredBoxData = null;
         let infoPanelEl, hoverTooltipEl, starField, draggedItem = null; 
 
         class ActionManager { constructor() { this.undoStack = []; this.redoStack = []; } pushState(state) { this.undoStack.push(state); this.redoStack = []; if (this.undoStack.length > 50) this.undoStack.shift(); } undo() { if (this.undoStack.length <= 1) return null; const currentState = this.undoStack.pop(); this.redoStack.push(currentState); return JSON.parse(JSON.stringify(this.undoStack[this.undoStack.length - 1])); } redo() { if (this.redoStack.length === 0) return null; const nextState = this.redoStack.pop(); this.undoStack.push(nextState); return JSON.parse(JSON.stringify(nextState)); } }
@@ -110,6 +110,7 @@
             animate();
         }
 
+        // --- DATA & 3D OBJECT MANAGEMENT ---
         function createBoxData(overrideData = {}) {
             return {
                 id: THREE.MathUtils.generateUUID(),
@@ -120,7 +121,7 @@
                 items: [], 
                 icon: 'none', 
                 thumbnail: null, 
-                description: '', tags: [], weight: 0, weightUnit: 'kg', lastModified: new Date().toISOString(),
+                description: '', tags: [], lastModified: new Date().toISOString(), // Weight removed
                 ...overrideData,
             };
         }
@@ -134,8 +135,8 @@
             const lidGeometry = new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0); 
             const baseMesh = new THREE.Mesh(baseGeometry, baseMaterial);
             const lidMesh = new THREE.Mesh(lidGeometry, lidMaterial);
-            const iconSprite = createIconSprite(boxData.icon); // Icon sprite created
-            iconSprite.visible = false; // FIXED: Icon is invisible in 3D scene
+            const iconSprite = createIconSprite(boxData.icon); 
+            iconSprite.visible = false; // Icon is invisible in 3D scene
 
             [baseMesh, lidMesh].forEach(m => { m.castShadow = true; m.receiveShadow = true; });
             group.add(baseMesh, lidMesh, iconSprite); 
@@ -191,9 +192,10 @@
             applyBoxStateFromData(selectedBoxData);
         }
 
+        // --- UI & EVENT HANDLING ---
         function setupUI() {
             document.querySelector('.top-bar').innerHTML = `<div class="ui-panel"><button id="addBoxBtn"><i class="bi bi-plus-lg"></i> Add Box</button><button id="toggleModeBtn"><i class="bi bi-arrows-move"></i> Switch to Resize</button><button id="exportBtn"><i class="bi bi-box-arrow-up"></i> Export</button><input type="file" id="importFile" accept=".json" style="display: none;"><button onclick="document.getElementById('importFile').click()"><i class="bi bi-box-arrow-down"></i> Import</button></div><div class="ui-panel"><input type="text" id="findCodeInput" placeholder="Enter Box Code..."><button id="findBtn"><i class="bi bi-search"></i> Find</button></div>`;
-            infoPanelEl.innerHTML = `<h3 id="infoPanelTitleArea"><span id="infoPanelTitle"></span> <span id="infoPanelIdChip" class="box-id-chip"></span></h3><div><label for="boxNameInput">Name</label><input type="text" id="boxNameInput"></div><div><label for="boxColorInput">Color</label><input type="color" id="boxColorInput"></div><div><label for="descriptionInput">Description</label><textarea id="descriptionInput" rows="3"></textarea></div><div id="tagsContainer"><h4 class="section-header">Tags</h4><div class="tag-container"><input type="text" id="tagInput" placeholder="Add a tag..."></div></div><div id="weightContainer"><h4 class="section-header">Weight</h4><div style="display: flex; gap: 8px;"><input type="number" id="weightInput" min="0" step="0.1" style="flex-grow: 1;"><select id="weightUnitSelect"><option value="kg">kg</option><option value="lbs">lbs</option></select></div></div><div id="iconContainer"><h4 class="section-header">Icon</h4><div id="iconPicker"></div></div><div id="itemListContainer"><h4 class="section-header">Items</h4><ul id="itemList"></ul><form id="addItemForm" onsubmit="return false;"><input type="text" id="newItemNameInput" placeholder="Item name..." required><input type="number" id="newItemQtyInput" value="1" min="1" style="width: 60px;"><button type="submit" id="addItemBtn"><i class="bi bi-plus-lg"></i> Add</button></form></div><p id="lastModifiedText" style="font-size: 0.8em; color: var(--text-muted-color); text-align: center; margin-top: 20px;"></p><button id="deleteBoxBtn"><i class="bi bi-trash"></i> Delete Box</button>`;
+            infoPanelEl.innerHTML = `<h3 id="infoPanelTitleArea"><span id="infoPanelTitle"></span> <span id="infoPanelIdChip" class="box-id-chip"></span></h3><div><label for="boxNameInput">Name</label><input type="text" id="boxNameInput"></div><div><label for="boxColorInput">Color</label><input type="color" id="boxColorInput"></div><div><label for="descriptionInput">Description</label><textarea id="descriptionInput" rows="3"></textarea></div><div id="tagsContainer"><h4 class="section-header">Tags</h4><div class="tag-container"><select id="tagSelect"></select></div></div><div id="iconContainer"><h4 class="section-header">Icon</h4><div id="iconPicker"></div></div><div id="itemListContainer"><h4 class="section-header">Items</h4><ul id="itemList"></ul><form id="addItemForm" onsubmit="return false;"><input type="text" id="newItemNameInput" placeholder="Item name..." required><input type="number" id="newItemQtyInput" value="1" min="1" style="width: 60px;"><button type="submit" id="addItemBtn"><i class="bi bi-plus-lg"></i> Add</button></form></div><p id="lastModifiedText" style="font-size: 0.8em; color: var(--text-muted-color); text-align: center; margin-top: 20px;"></p><button id="deleteBoxBtn"><i class="bi bi-trash"></i> Delete Box</button>`;
             
             document.getElementById('addBoxBtn').addEventListener('click', () => { const newBoxData = createBoxData(); addBoxToScene(newBoxData, true); selectBox(newBoxData); recordAction(); });
             document.getElementById('toggleModeBtn').addEventListener('click', (e) => { const currentMode = transformControls.getMode(); if (currentMode === 'scale') { transformControls.setMode('translate'); e.target.innerHTML = '<i class="bi bi-arrows-fullscreen"></i> Switch to Resize'; } else { transformControls.setMode('scale'); e.target.innerHTML = '<i class="bi bi-arrows-move"></i> Switch to Move';} });
@@ -206,9 +208,8 @@
             document.getElementById('boxNameInput').addEventListener('change', (e) => { if(selectedBoxData) {selectedBoxData.name = e.target.value; recordAndTimestamp();}});
             document.getElementById('boxColorInput').addEventListener('change', (e) => { if(selectedBoxData) {selectedBoxData.color = e.target.value; applyBoxStateFromData(selectedBoxData); recordAndTimestamp();}});
             document.getElementById('descriptionInput').addEventListener('change', (e) => { if(selectedBoxData) {selectedBoxData.description = e.target.value; recordAndTimestamp();}});
-            document.getElementById('weightInput').addEventListener('change', (e) => { if(selectedBoxData) {selectedBoxData.weight = parseFloat(e.target.value) || 0; recordAndTimestamp();}});
-            document.getElementById('weightUnitSelect').addEventListener('change', (e) => { if(selectedBoxData) {selectedBoxData.weightUnit = e.target.value; recordAndTimestamp();}});
-            document.getElementById('tagInput').addEventListener('keydown', handleTagInput);
+            
+            document.getElementById('tagSelect').addEventListener('change', handleTagSelect);
 
             document.getElementById('addItemForm').addEventListener('submit', (e) => { handleAddItem(e); recordAndTimestamp(); });
             document.getElementById('itemList').addEventListener('dragstart', handleItemDragStart);
@@ -227,18 +228,40 @@
             document.getElementById('boxNameInput').value = selectedBoxData.name;
             document.getElementById('boxColorInput').value = selectedBoxData.color;
             document.getElementById('descriptionInput').value = selectedBoxData.description || '';
-            document.getElementById('weightInput').value = selectedBoxData.weight || 0;
-            document.getElementById('weightUnitSelect').value = selectedBoxData.weightUnit || 'kg';
             document.getElementById('lastModifiedText').textContent = `Last Modified: ${new Date(selectedBoxData.lastModified).toLocaleString()}`;
             renderTags(); renderItemList(); renderIconPicker();
+        }
+
+        function handleTagSelect(e) {
+            if (!selectedBoxData) return;
+            const tag = e.target.value;
+            e.target.value = ''; // Reset dropdown
+            if (tag === 'ADD_NEW_TAG') {
+                const newTag = prompt("Enter new tag name:");
+                if (newTag && newTag.trim() !== '') {
+                    if (!selectedBoxData.tags.includes(newTag.trim())) {
+                        selectedBoxData.tags.push(newTag.trim());
+                        selectedBoxData.lastModified = new Date().toISOString();
+                        recordAction();
+                    }
+                }
+            } else if (tag && !selectedBoxData.tags.includes(tag)) {
+                selectedBoxData.tags.push(tag);
+                selectedBoxData.lastModified = new Date().toISOString();
+                recordAction();
+            }
+            renderTags(); // Re-render dropdown and tags
         }
 
         function renderTags() {
             if (!selectedBoxData) return;
             const tagContainer = document.querySelector('#tagsContainer .tag-container');
-            const tagInput = document.getElementById('tagInput');
-            [...tagContainer.children].filter(child => child !== tagInput).forEach(child => child.remove());
+            const tagSelect = document.getElementById('tagSelect');
             
+            // Clear existing tags (keeping the select element)
+            [...tagContainer.children].filter(child => child !== tagSelect).forEach(child => child.remove());
+
+            // Render current box's tags
             selectedBoxData.tags.forEach(tagText => {
                 const tagEl = document.createElement('span');
                 tagEl.className = 'tag';
@@ -252,22 +275,24 @@
                     renderTags();
                 };
                 tagEl.appendChild(removeEl);
-                tagContainer.insertBefore(tagEl, tagInput);
+                tagContainer.insertBefore(tagEl, tagSelect); // Insert before the select
             });
-        }
-        
-        function handleTagInput(e) {
-            if (e.key === 'Enter' && selectedBoxData) {
-                e.preventDefault();
-                const tagValue = e.target.value.trim();
-                if (tagValue && !selectedBoxData.tags.includes(tagValue)) {
-                    selectedBoxData.tags.push(tagValue);
-                    selectedBoxData.lastModified = new Date().toISOString();
-                    recordAction();
-                    renderTags();
+
+            // Populate tag dropdown
+            const allUniqueTags = new Set();
+            boxes.forEach(box => box.tags.forEach(tag => allUniqueTags.add(tag)));
+            
+            tagSelect.innerHTML = '<option value="">Select a tag...</option>';
+            tagSelect.innerHTML += '<option value="ADD_NEW_TAG">Add New Tag...</option>';
+            
+            [...allUniqueTags].sort().forEach(tag => {
+                if (!selectedBoxData.tags.includes(tag)) { // Don't show tags already on the box
+                    const option = document.createElement('option');
+                    option.value = tag;
+                    option.textContent = tag;
+                    tagSelect.appendChild(option);
                 }
-                e.target.value = '';
-            }
+            });
         }
         
         function selectBox(boxData, panTo = false) { deselectBox(); selectedBoxData = boxData; if (selectedBoxData.threeGroup) { transformControls.attach(selectedBoxData.threeGroup); selectedBoxData.threeGroup.children.forEach(c => { if (c.isMesh) new TWEEN.Tween(c.material.emissive).to({ r: 0.1, g: 0.3, b: 0.5 }, 200).start(); }); } updateInfoPanel(); infoPanelEl.classList.remove('hidden'); if (panTo) focusOnBox(boxData); }
@@ -304,7 +329,7 @@
             }
 
             if (hoveredBoxData) {
-                hoverTooltipEl.innerHTML = `<i class="${hoveredBoxData.icon}"></i> ${hoveredBoxData.name}`;
+                hoverTooltipEl.innerHTML = `<i class="${hoveredBoxData.icon === 'none' ? 'bi bi-box' : hoveredBoxData.icon}"></i> ${hoveredBoxData.name}`;
                 hoverTooltipEl.classList.remove('hidden');
                 hoverTooltipEl.style.left = (event.clientX + 15) + 'px';
                 hoverTooltipEl.style.top = (event.clientY + 15) + 'px';
@@ -326,10 +351,6 @@
         function recordAction() { actionManager.pushState(JSON.stringify(boxes.map(box => ({...box, threeGroup: undefined})))); }
         function restoreState(stateJSON) { deselectBox(); [...boxes].forEach(b => { scene.remove(b.threeGroup); disposeThreeObject(b.threeGroup); }); boxes = []; const parsedState = JSON.parse(stateJSON); parsedState.forEach(boxData => { boxData.position = new THREE.Vector3(boxData.position.x, boxData.position.y, boxData.position.z); boxData.size = new THREE.Vector3(boxData.size.x, boxData.size.y, boxData.size.z); addBoxToScene(boxData); }); recordAction(); }
         function handleImport(event) { if (!event.target.files[0]) return; const reader = new FileReader(); reader.onload = (e) => { try { restoreState(e.target.result); } catch (err) { alert('Error: Invalid or corrupt JSON file.'); console.error(err); } }; reader.readAsText(event.target.files[0]); event.target.value = ''; }
-        
-        function renderIconPicker() { if (!selectedBoxData) return; const picker = document.getElementById('iconPicker'); picker.innerHTML = ''; ICONS.forEach(iconClass => { const btn = document.createElement('button'); btn.className = `icon-btn`; if (iconClass === selectedBoxData.icon) btn.classList.add('selected'); btn.innerHTML = iconClass === 'none' ? '<i class="bi bi-slash-circle"></i>' : `<i class="${iconClass}"></i>`; btn.onclick = () => { updateBoxIcon(selectedBoxData, iconClass); renderIconPicker(); selectedBoxData.lastModified = new Date().toISOString(); recordAction(); }; picker.appendChild(btn); }); }
-        function updateBoxIcon(box, iconClass) { box.icon = iconClass; if (box.threeGroup) { box.threeGroup.remove(box.threeGroup.children[2]); disposeThreeObject(box.threeGroup.children[2]); const newSprite = createIconSprite(iconClass); box.threeGroup.add(newSprite); applyBoxStateFromData(box); } }
-        function animate(time) { requestAnimationFrame(animate); TWEEN.update(time); orbitControls.update(); if (starField) starField.rotation.y -= 0.00005; renderer.render(scene, camera); }
         
         init();
     </script>
