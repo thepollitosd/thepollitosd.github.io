@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Box Organizer - Final Polish</title>
+    <title>Box Organizer - Final Polish + Animations</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <style>
         :root { 
@@ -53,7 +53,7 @@
     </style>
 </head>
 <body>
-    <div class="top-bar"><div class="ui-panel"><button id="addBoxBtn"><i class="bi bi-plus-lg"></i> Add Box</button><button id="toggleModeBtn"><i class="bi bi-arrows-move"></i> Switch to Move</button><button id="exportBtn"><i class="bi bi-box-arrow-up"></i> Export</button><input type="file" id="importFile" accept=".json" style="display: none;"><button onclick="document.getElementById('importFile').click()"><i class="bi bi-box-arrow-down"></i> Import</button></div><div class="ui-panel"><input type="text" id="findCodeInput" placeholder="Enter Box Code..."><button id="findBtn"><i class="bi bi-search"></i> Find</button></div></div>
+    <div class="top-bar"><div class="ui-panel"><button id="addBoxBtn"><i class="bi bi-plus-lg"></i> Add Box</button><button id="toggleModeBtn"><i class="bi bi-arrows-move"></i> Switch to Resize</button><button id="exportBtn"><i class="bi bi-box-arrow-up"></i> Export</button><input type="file" id="importFile" accept=".json" style="display: none;"><button onclick="document.getElementById('importFile').click()"><i class="bi bi-box-arrow-down"></i> Import</button></div><div class="ui-panel"><input type="text" id="findCodeInput" placeholder="Enter Box Code..."><button id="findBtn"><i class="bi bi-search"></i> Find</button></div></div>
     <div id="infoPanel" class="info-panel hidden"></div>
     <div id="hoverTooltip" class="hover-tooltip hidden"></div>
 
@@ -134,8 +134,8 @@
             const lidGeometry = new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0); 
             const baseMesh = new THREE.Mesh(baseGeometry, baseMaterial);
             const lidMesh = new THREE.Mesh(lidGeometry, lidMaterial);
-            const iconSprite = createIconSprite(boxData.icon); // Icon sprite added
-            iconSprite.visible = false; // Make 3D icon invisible
+            const iconSprite = createIconSprite(boxData.icon); // Icon sprite created
+            iconSprite.visible = false; // FIXED: Icon is invisible in 3D scene
 
             [baseMesh, lidMesh].forEach(m => { m.castShadow = true; m.receiveShadow = true; });
             group.add(baseMesh, lidMesh, iconSprite); 
@@ -169,8 +169,8 @@
             lidMesh.material.color.set(new THREE.Color(boxData.color).multiplyScalar(0.8));
             if (iconSprite) { 
                 iconSprite.position.y = boxData.size.y + 0.075; 
-                iconSprite.position.z = boxData.size.z * 0.5 + 0.01; // Front face
-                iconSprite.scale.set(0.3, 0.3, 1); // Fixed icon scale
+                iconSprite.position.z = boxData.size.z * 0.5 + 0.01; 
+                iconSprite.scale.set(0.3, 0.3, 1); 
             }
         }
 
@@ -237,7 +237,6 @@
             if (!selectedBoxData) return;
             const tagContainer = document.querySelector('#tagsContainer .tag-container');
             const tagInput = document.getElementById('tagInput');
-            // Remove all children except the input field
             [...tagContainer.children].filter(child => child !== tagInput).forEach(child => child.remove());
             
             selectedBoxData.tags.forEach(tagText => {
@@ -253,7 +252,7 @@
                     renderTags();
                 };
                 tagEl.appendChild(removeEl);
-                tagContainer.insertBefore(tagEl, tagInput); // Insert tags before the input field
+                tagContainer.insertBefore(tagEl, tagInput);
             });
         }
         
@@ -273,11 +272,11 @@
         
         function selectBox(boxData, panTo = false) { deselectBox(); selectedBoxData = boxData; if (selectedBoxData.threeGroup) { transformControls.attach(selectedBoxData.threeGroup); selectedBoxData.threeGroup.children.forEach(c => { if (c.isMesh) new TWEEN.Tween(c.material.emissive).to({ r: 0.1, g: 0.3, b: 0.5 }, 200).start(); }); } updateInfoPanel(); infoPanelEl.classList.remove('hidden'); if (panTo) focusOnBox(boxData); }
         function deselectBox() { if (selectedBoxData && selectedBoxData.threeGroup) { selectedBoxData.threeGroup.children.forEach(c => { if (c.isMesh) new TWEEN.Tween(c.material.emissive).to({ r: 0, g: 0, b: 0 }, 200).start(); }); } transformControls.detach(); selectedBoxData = null; infoPanelEl.classList.add('hidden'); }
-        function renderItemList() { /* ... unchanged ... */ }
-        function handleAddItem(event) { /* ... unchanged ... */ }
-        function handleItemDragStart(e) { /* ... unchanged ... */ }
-        function handleItemDragOver(e) { /* ... unchanged ... */ }
-        function handleItemDrop(e) { /* ... unchanged ... */ }
+        function renderItemList() { if (!selectedBoxData) return; const itemListEl = document.getElementById('itemList'); itemListEl.innerHTML = ''; selectedBoxData.items.forEach((item, index) => { const li = document.createElement('li'); li.dataset.itemId = item.id; li.draggable = true; const handle = document.createElement('span'); handle.className = 'drag-handle bi bi-grip-vertical'; const nameInput = document.createElement('input'); nameInput.type = 'text'; nameInput.className = 'item-name-input'; nameInput.value = item.name; nameInput.onchange = (e) => { item.name = e.target.value; selectedBoxData.lastModified = new Date().toISOString(); recordAction(); }; const qtyInput = document.createElement('input'); qtyInput.type = 'number'; qtyInput.className = 'item-qty-input'; qtyInput.value = item.qty; qtyInput.min = 1; qtyInput.onchange = (e) => { item.qty = parseInt(e.target.value) || 1; selectedBoxData.lastModified = new Date().toISOString(); recordAction(); }; const deleteBtn = document.createElement('button'); deleteBtn.className = 'delete-item-btn bi bi-x-lg'; deleteBtn.onclick = () => { selectedBoxData.items.splice(index, 1); renderItemList(); selectedBoxData.lastModified = new Date().toISOString(); recordAction(); }; li.append(handle, nameInput, qtyInput, deleteBtn); itemListEl.appendChild(li); }); }
+        function handleAddItem(event) { event.preventDefault(); if (!selectedBoxData) return; const nameInput = document.getElementById('newItemNameInput'); const qtyInput = document.getElementById('newItemQtyInput'); const name = nameInput.value.trim(); const qty = parseInt(qtyInput.value) || 1; if (name) { selectedBoxData.items.push({ id: THREE.MathUtils.generateUUID(), name, qty }); nameInput.value = ''; qtyInput.value = 1; renderItemList(); selectedBoxData.lastModified = new Date().toISOString(); recordAction(); } }
+        function handleItemDragStart(e) { if (e.target.tagName === 'LI') { e.target.classList.add('dragging'); draggedItem = e.target.dataset.itemId; e.dataTransfer.effectAllowed = 'move'; } }
+        function handleItemDragOver(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }
+        function handleItemDrop(e) { e.preventDefault(); const targetLi = e.target.closest('li'); if (!targetLi || !draggedItem || !selectedBoxData) return; const draggedItemId = draggedItem; const targetItemId = targetLi.dataset.itemId; const items = selectedBoxData.items; const draggedIndex = items.findIndex(item => item.id === draggedItemId); let targetIndex = items.findIndex(item => item.id === targetItemId); if (draggedIndex === -1 || targetIndex === -1) return; const [dragged] = items.splice(draggedIndex, 1); if (draggedIndex < targetIndex) targetIndex--; items.splice(targetIndex, 0, dragged); document.querySelectorAll('#itemList li.dragging').forEach(el => el.classList.remove('dragging')); draggedItem = null; renderItemList(); selectedBoxData.lastModified = new Date().toISOString(); recordAction(); }
         function handleDeleteBox() { if (!selectedBoxData) return; const boxToRemove = selectedBoxData; deselectBox(); new TWEEN.Tween(boxToRemove.threeGroup.scale).to({x:0.01, y:0.01, z:0.01}, 300).easing(TWEEN.Easing.Quadratic.In).onComplete(() => {scene.remove(boxToRemove.threeGroup); disposeThreeObject(boxToRemove.threeGroup);}).start(); boxes = boxes.filter(b => b.id !== boxToRemove.id); recordAction(); }
         
         function onMouseMove(event) {
@@ -307,7 +306,6 @@
             if (hoveredBoxData) {
                 hoverTooltipEl.innerHTML = `<i class="${hoveredBoxData.icon}"></i> ${hoveredBoxData.name}`;
                 hoverTooltipEl.classList.remove('hidden');
-                // FIXED: Tooltip now follows mouse accurately
                 hoverTooltipEl.style.left = (event.clientX + 15) + 'px';
                 hoverTooltipEl.style.top = (event.clientY + 15) + 'px';
             } else {
@@ -318,9 +316,10 @@
         function onCanvasClick() { if (transformControls.dragging) return; if (hoveredBoxData) selectBox(hoveredBoxData); else deselectBox(); }
         function onKeyDown(e) { if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return; if (e.ctrlKey || e.metaKey) { let stateToRestore = null; if (e.key.toLowerCase() === 'z') stateToRestore = actionManager.undo(); if (e.key.toLowerCase() === 'y') stateToRestore = actionManager.redo(); if (stateToRestore) restoreState(stateToRestore); } else if (e.key === 'Delete' || e.key === 'Backspace') { if (selectedBoxData) handleDeleteBox(); } }
         
+        function createPlopEffect(position) { const ringGeometry = new THREE.TorusGeometry(1, 0.05, 8, 50); const ringMaterial = new THREE.MeshBasicMaterial({ color: 0x00aaff, transparent: true }); const ring = new THREE.Mesh(ringGeometry, ringMaterial); ring.rotation.x = Math.PI / 2; ring.position.copy(position); ring.position.y += 0.02; scene.add(ring); const targetScale = 6; new TWEEN.Tween(ring.scale).to({ x: targetScale, y: targetScale, z: targetScale }, 500).easing(TWEEN.Easing.Quadratic.Out).start(); new TWEEN.Tween(ring.material).to({ opacity: 0 }, 600).easing(TWEEN.Easing.Quadratic.Out).onComplete(() => { scene.remove(ring); ring.geometry.dispose(); ring.material.dispose(); }).start(); }
         function createFloorAndGrid() { const floor = new THREE.Mesh(new THREE.PlaneGeometry(GRID_EXTENT * 2, GRID_EXTENT * 2), new THREE.MeshStandardMaterial({ color: 0x333840, roughness: 0.8, metalness: 0.2 })); floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor); const dotGeometry = new THREE.CircleGeometry(0.05 * (SNAP_GRID_SIZE / 0.5) , 12); dotGeometry.rotateX(-Math.PI / 2); const dotMaterial = new THREE.MeshBasicMaterial({ color: 0x555c66, transparent: true, opacity: 0.7 }); const divisions = Math.floor(GRID_EXTENT / SNAP_GRID_SIZE) * 2 + 1; const instancedDots = new THREE.InstancedMesh(dotGeometry, dotMaterial, divisions * divisions); const dummy = new THREE.Object3D(); let i = 0; for (let r = -GRID_EXTENT; r <= GRID_EXTENT; r += SNAP_GRID_SIZE) { for (let c = -GRID_EXTENT; c <= GRID_EXTENT; c += SNAP_GRID_SIZE) { dummy.position.set(r, 0.01, c); dummy.updateMatrix(); instancedDots.setMatrixAt(i++, dummy.matrix); } } scene.add(instancedDots); }
         function createStarfield() { const starVertices = []; for (let i = 0; i < 10000; i++) { const x = THREE.MathUtils.randFloatSpread(2000); const y = THREE.MathUtils.randFloatSpread(2000); const z = THREE.MathUtils.randFloatSpread(2000); starVertices.push(x, y, z); } const starGeometry = new THREE.BufferGeometry(); starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starVertices, 3)); const starMaterial = new THREE.PointsMaterial({ color: 0x666666, size: 0.5, sizeAttenuation: true }); starField = new THREE.Points(starGeometry, starMaterial); scene.add(starField); }
-        function createIconSprite(iconClass) { const canvas = document.createElement('canvas'); canvas.width = 256; canvas.height = 256; const context = canvas.getContext('2d'); const character = ICON_MAP[iconClass]; if (character) { context.font = '200px "bootstrap-icons"'; context.textAlign = 'center'; context.textBaseline = 'middle'; context.fillStyle = 'rgba(255, 255, 255, 0.8)'; context.fillText(character, 128, 128); } const texture = new THREE.CanvasTexture(canvas); const material = new THREE.SpriteMaterial({ map: texture, transparent: true, sizeAttenuation: false, depthTest: false }); const sprite = new THREE.Sprite(material); sprite.visible = false; return sprite; } // FIXED: Set sprite visible to false
+        function createIconSprite(iconClass) { const canvas = document.createElement('canvas'); canvas.width = 256; canvas.height = 256; const context = canvas.getContext('2d'); const character = ICON_MAP[iconClass]; if (character) { context.font = '200px "bootstrap-icons"'; context.textAlign = 'center'; context.textBaseline = 'middle'; context.fillStyle = 'rgba(255, 255, 255, 0.8)'; context.fillText(character, 128, 128); } const texture = new THREE.CanvasTexture(canvas); const material = new THREE.SpriteMaterial({ map: texture, transparent: true, sizeAttenuation: false, depthTest: false }); const sprite = new THREE.Sprite(material); sprite.visible = false; return sprite; } 
         function disposeThreeObject(object) { if (!object) return; object.traverse(child => { if (child.geometry) child.geometry.dispose(); if (child.material) { if (Array.isArray(child.material)) { child.material.forEach(m => { if (m.map) m.map.dispose(); m.dispose(); }); } else { if (child.material.map) child.material.map.dispose(); child.material.dispose(); } } }); }
         function focusOnBox(box) { const targetPos = box.position.clone(); targetPos.y += box.size.y / 2; const offset = new THREE.Vector3(box.size.x + 5, box.size.y + 5, box.size.z + 5); const cameraPos = targetPos.clone().add(offset); new TWEEN.Tween(camera.position).to(cameraPos, 800).easing(TWEEN.Easing.Quadratic.Out).start(); new TWEEN.Tween(orbitControls.target).to(targetPos, 800).easing(TWEEN.Easing.Quadratic.Out).start(); }
         
