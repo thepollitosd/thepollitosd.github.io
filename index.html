@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Box Organizer V11</title>
+    <title>3D Box Organizer V12</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <style>
         body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #111; color: #eee; overflow: hidden; cursor: default; }
@@ -61,6 +61,7 @@
         let scene, camera, renderer, orbitControls, transformControls, composer;
         let boxes = [], selectedBox = null, hoveredBox = null, clipboard = null;
         let infoPanel, hoverTooltip;
+        let starField;
 
         class ActionManager { /* Unchanged */ constructor() { this.undoStack = []; this.redoStack = []; } pushState(state) { this.undoStack.push(state); this.redoStack = []; if (this.undoStack.length > 50) this.undoStack.shift(); } undo() { if (this.undoStack.length <= 1) return null; const currentState = this.undoStack.pop(); this.redoStack.push(currentState); return JSON.parse(JSON.stringify(this.undoStack[this.undoStack.length - 1])); } redo() { if (this.redoStack.length === 0) return null; const nextState = this.redoStack.pop(); this.undoStack.push(nextState); return JSON.parse(JSON.stringify(nextState)); } }
         const actionManager = new ActionManager();
@@ -70,22 +71,24 @@
             hoverTooltip = document.getElementById('hoverTooltip');
             
             scene = new THREE.Scene();
-            camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 500);
+            camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
             camera.position.set(15, 20, 25);
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.setPixelRatio(window.devicePixelRatio);
             renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-            renderer.toneMapping = THREE.ReinhardToneMapping;
+            renderer.toneMapping = THREE.ACESFilmicToneMapping; // Better tone mapping
             document.body.appendChild(renderer.domElement);
             
-            scene.add(new THREE.AmbientLight(0xffffff, 0.5));
-            const dirLight = new THREE.DirectionalLight(0xffffff, 1.0);
+            // Re-balanced lighting
+            scene.add(new THREE.AmbientLight(0xffffff, 1.0)); // Increased ambient light
+            const dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
             dirLight.position.set(25, 40, 30); dirLight.castShadow = true;
             dirLight.shadow.mapSize.width = 2048; dirLight.shadow.mapSize.height = 2048;
             scene.add(dirLight);
 
             createFloorAndGrid();
+            createStarfield();
             
             orbitControls = new OrbitControls(camera, renderer.domElement);
             orbitControls.enableDamping = true;
@@ -96,9 +99,9 @@
             transformControls.addEventListener('objectChange', onTransformObject);
             scene.add(transformControls);
             
-            // Post-processing
+            // Re-balanced post-processing
             const renderPass = new RenderPass(scene, camera);
-            const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.7, 0.4, 0.2);
+            const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.5, 0.5, 0.0); // Lowered threshold to 0
             composer = new EffectComposer(renderer);
             composer.addPass(renderPass);
             composer.addPass(bloomPass);
@@ -106,6 +109,21 @@
             setupUIEventListeners();
             actionManager.pushState(getCurrentState());
             animate();
+        }
+        
+        function createStarfield() {
+            const starVertices = [];
+            for (let i = 0; i < 10000; i++) {
+                const x = THREE.MathUtils.randFloatSpread(2000);
+                const y = THREE.MathUtils.randFloatSpread(2000);
+                const z = THREE.MathUtils.randFloatSpread(2000);
+                starVertices.push(x, y, z);
+            }
+            const starGeometry = new THREE.BufferGeometry();
+            starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starVertices, 3));
+            const starMaterial = new THREE.PointsMaterial({ color: 0x888888, size: 0.7 });
+            starField = new THREE.Points(starGeometry, starMaterial);
+            scene.add(starField);
         }
 
         function createBox(data, isNew = false) {
@@ -118,9 +136,8 @@
             const iconSprite = createIconSprite(data.icon);
             group.add(baseMesh, lidMesh, iconSprite);
             
-            // Apply scales directly to meshes, not group
             baseMesh.scale.set(data.size.w, data.size.h, data.size.d);
-            lidMesh.scale.set(data.size.w * 1.02, 1, data.size.d * 1.02); // Lid is slightly larger, but Y scale is fixed
+            lidMesh.scale.set(data.size.w * 1.02, 1, data.size.d * 1.02);
             
             baseMesh.position.y = data.size.h / 2;
             lidMesh.position.y = data.size.h + (0.15 / 2);
@@ -134,7 +151,7 @@
             
             if (isNew) {
                 const finalY = group.position.y;
-                group.position.y += 30; // Start high up
+                group.position.y += 30;
                 group.scale.set(0.01, 0.01, 0.01);
                 new TWEEN.Tween(group.position).to({y: finalY}, 800).easing(TWEEN.Easing.Bounce.Out).start();
                 new TWEEN.Tween(group.scale).to({x: 1, y: 1, z: 1}, 500).easing(TWEEN.Easing.Quadratic.Out).start();
@@ -150,24 +167,22 @@
             const iconSprite = selectedBox.iconSprite;
             
             if (transformControls.mode === 'scale') {
-                const yPos = group.position.y; // Keep track of base position
+                const yPos = group.position.y;
                 const newSize = {
                     w: Math.max(SNAP_GRID_SIZE, Math.round(baseMesh.scale.x * group.scale.x / SNAP_GRID_SIZE) * SNAP_GRID_SIZE),
                     h: Math.max(SNAP_GRID_SIZE, Math.round(baseMesh.scale.y * group.scale.y / SNAP_GRID_SIZE) * SNAP_GRID_SIZE),
                     d: Math.max(SNAP_GRID_SIZE, Math.round(baseMesh.scale.z * group.scale.z / SNAP_GRID_SIZE) * SNAP_GRID_SIZE)
                 };
-                group.scale.set(1, 1, 1); // Reset group scale
+                group.scale.set(1, 1, 1);
                 
-                // Apply new size
                 baseMesh.scale.set(newSize.w, newSize.h, newSize.d);
                 lidMesh.scale.set(newSize.w * 1.02, 1, newSize.d * 1.02);
                 
-                // Reposition elements relative to group origin (0,0,0)
                 baseMesh.position.y = newSize.h / 2;
                 lidMesh.position.y = newSize.h + (0.15 / 2);
                 iconSprite.position.y = lidMesh.position.y;
                 
-                group.position.y = yPos; // Restore base position
+                group.position.y = yPos;
                 selectedBox.size = newSize;
             } else { // translate
                 group.position.x = Math.round(group.position.x / SNAP_GRID_SIZE) * SNAP_GRID_SIZE;
@@ -175,41 +190,6 @@
                 group.position.z = Math.round(group.position.z / SNAP_GRID_SIZE) * SNAP_GRID_SIZE;
             }
             selectedBox.position.copy(group.position);
-        }
-
-        function selectBox(boxData, panTo = false) {
-            deselectBox();
-            selectedBox = boxData;
-            const targetColor = new THREE.Color(0x00aaff);
-            selectedBox.group.traverse(c => { if (c.isMesh) new TWEEN.Tween(c.material.emissive).to(targetColor, 300).easing(TWEEN.Easing.Quadratic.Out).start(); });
-            transformControls.attach(selectedBox.group);
-            populateInfoPanel(selectedBox);
-            infoPanel.classList.remove('hidden');
-            if (panTo) focusOnBox(boxData);
-        }
-
-        function deselectBox() {
-            if (!selectedBox) return;
-            const targetColor = new THREE.Color(0x000000);
-            selectedBox.group.traverse(c => { if (c.isMesh) new TWEEN.Tween(c.material.emissive).to(targetColor, 300).easing(TWEEN.Easing.Quadratic.Out).start(); });
-            selectedBox = null;
-            transformControls.detach();
-            infoPanel.classList.add('hidden');
-        }
-
-        function deleteSelectedBox() {
-            if (!selectedBox) return;
-            const boxToDelete = selectedBox;
-            deselectBox();
-            new TWEEN.Tween(boxToDelete.group.scale)
-                .to({x: 0.01, y: 0.01, z: 0.01}, 300)
-                .easing(TWEEN.Easing.Quadratic.In)
-                .onComplete(() => {
-                    scene.remove(boxToDelete.group);
-                    disposeOfBox(boxToDelete);
-                })
-                .start();
-            boxes.splice(boxes.findIndex(b => b.code === boxToDelete.code), 1);
         }
         
         // ---UNCHANGED & HELPER FUNCTIONS---
@@ -226,12 +206,16 @@
         function onCanvasClick() { if (transformControls.dragging) return; if (hoveredBox) { if (hoveredBox !== selectedBox) selectBox(hoveredBox); } else { deselectBox(); } }
         function populateInfoPanel(box) { document.getElementById('boxNameInput').value = box.name; document.getElementById('boxNameInput').onchange = (e) => { box.name = e.target.value; actionManager.pushState(getCurrentState()); }; document.getElementById('boxCode').textContent = `Code: ${box.code}`; document.getElementById('boxColorInput').value = box.color; document.getElementById('boxColorInput').onchange = (e) => { box.color = e.target.value; box.baseMaterial.color.set(e.target.value); box.lidMaterial.color.set(new THREE.Color(e.target.value).multiplyScalar(0.8)); actionManager.pushState(getCurrentState()); }; document.getElementById('imageUpload').onchange = (e) => { if (!e.target.files[0]) return; const reader = new FileReader(); reader.onload = (event) => { const img = new Image(); img.onload = () => { const canvas = document.createElement('canvas'); const size = 128; canvas.width = size; canvas.height = size; const ctx = canvas.getContext('2d'); const scale = size / Math.min(img.width, img.height); const w = img.width * scale; const h = img.height * scale; ctx.drawImage(img, (size - w) / 2, (size - h) / 2, w, h); box.thumbnail = canvas.toDataURL('image/jpeg', 0.7); populateInfoPanel(box); actionManager.pushState(getCurrentState()); }; img.src = event.target.result; }; reader.readAsDataURL(e.target.files[0]); }; document.getElementById('boxThumbnail').style.backgroundImage = box.thumbnail ? `url(${box.thumbnail})` : 'none'; const iconContainer = document.getElementById('iconSelection'); iconContainer.innerHTML = ''; ICONS.forEach(iconClass => { const btn = document.createElement('button'); btn.className = `icon-btn`; if (iconClass === box.icon) btn.classList.add('selected'); btn.innerHTML = iconClass === 'none' ? 'X' : `<i class="${iconClass}"></i>`; btn.onclick = () => { updateBoxIcon(box, iconClass); populateInfoPanel(box); actionManager.pushState(getCurrentState()); }; iconContainer.appendChild(btn); }); const itemList = document.getElementById('itemList'); itemList.innerHTML = ''; box.items.forEach((item, index) => { const li = document.createElement('li'); const nameInput = document.createElement('input'); nameInput.type = 'text'; nameInput.value = item.name; nameInput.className = 'item-name-input'; nameInput.onchange = (e) => { item.name = e.target.value; actionManager.pushState(getCurrentState()); }; const qtyInput = document.createElement('input'); qtyInput.type = 'number'; qtyInput.value = item.qty; qtyInput.min = 1; qtyInput.className = 'item-qty-input'; qtyInput.onchange = (e) => { item.qty = parseInt(e.target.value) || 1; actionManager.pushState(getCurrentState()); }; const delBtn = document.createElement('button'); delBtn.className = 'delete-item-btn'; delBtn.innerHTML = '×'; delBtn.onclick = () => { box.items.splice(index, 1); populateInfoPanel(box); actionManager.pushState(getCurrentState()); }; li.append(nameInput, qtyInput, delBtn); itemList.appendChild(li); }); document.getElementById('addItemInput').onkeydown = (e) => { if (e.key === 'Enter' && e.target.value.trim()) { box.items.push({ name: e.target.value.trim(), qty: 1 }); e.target.value = ''; populateInfoPanel(box); actionManager.pushState(getCurrentState()); } }; document.getElementById('deleteBoxBtn').onclick = () => { deleteSelectedBox(); actionManager.pushState(getCurrentState()); };}
         function createFloorAndGrid() { const floor = new THREE.Mesh(new THREE.PlaneGeometry(GRID_EXTENT * 2, GRID_EXTENT * 2), new THREE.MeshStandardMaterial({ color: 0x888888, roughness: 0.5, metalness: 0.1 })); floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor); const dotGeometry = new THREE.CircleGeometry(0.05, 12); dotGeometry.rotateX(-Math.PI / 2); const dotMaterial = new THREE.MeshBasicMaterial({ color: 0xcccccc, transparent: true, opacity: 0.5 }); const instancedDots = new THREE.InstancedMesh(dotGeometry, dotMaterial, Math.pow(Math.floor(GRID_EXTENT / SNAP_GRID_SIZE) * 2 + 1, 2)); const dummy = new THREE.Object3D(); let i = 0; for (let x = -GRID_EXTENT; x <= GRID_EXTENT; x += SNAP_GRID_SIZE) { for (let z = -GRID_EXTENT; z <= GRID_EXTENT; z += SNAP_GRID_SIZE) { dummy.position.set(x, 0.01, z); dummy.updateMatrix(); instancedDots.setMatrixAt(i++, dummy.matrix); } } scene.add(instancedDots); }
-        function createIconSprite(iconClass) { const canvas = document.createElement('canvas'); canvas.width = 256; canvas.height = 256; const context = canvas.getContext('2d'); const character = ICON_MAP[iconClass]; if (character) { context.font = '200px "bootstrap-icons"'; context.textAlign = 'center'; context.textBaseline = 'middle'; context.fillStyle = 'rgba(255, 255, 255, 0.8)'; context.fillText(character, 128, 128); } const texture = new THREE.CanvasTexture(canvas); const material = new THREE.SpriteMaterial({ map: texture, transparent: true, sizeAttenuation: false, depthTest: false }); const sprite = new THREE.Sprite(material); sprite.scale.set(0.1, 0.1, 0.1); sprite.position.z = 0.51 * 1.02; return sprite; }
+        function createIconSprite(iconClass) { const canvas = document.createElement('canvas'); canvas.width = 256; canvas.height = 256; const context = canvas.getContext('2d'); const character = ICON_MAP[iconClass]; if (character) { context.font = '200px "bootstrap-icons"'; context.textAlign = 'center'; context.textBaseline = 'middle'; context.fillStyle = 'rgba(255, 255, 255, 0.8)'; context.fillText(character, 128, 128); } const texture = new THREE.CanvasTexture(canvas); const material = new THREE.SpriteMaterial({ map: texture, transparent: true, sizeAttenuation: false, depthTest: false }); const sprite = new THREE.Sprite(material); sprite.scale.set(0.1, 0.1, 0.1); sprite.position.z = 0.51; return sprite; }
         function disposeOfBox(box) { box.group.traverse(child => { if (child.geometry) child.geometry.dispose(); if (child.material) { if (child.material.map) child.material.map.dispose(); child.material.dispose(); } }); }
         function updateBoxIcon(box, iconClass) { box.icon = iconClass; box.group.remove(box.iconSprite); disposeOfBox({ group: { children: [box.iconSprite] } }); box.iconSprite = createIconSprite(iconClass); box.iconSprite.position.y = box.group.children[0].scale.y + (0.15/2); box.group.add(box.iconSprite); }
+        function selectBox(boxData, panTo = false) { deselectBox(); selectedBox = boxData; const targetColor = new THREE.Color(0x00aaff); selectedBox.group.traverse(c => { if (c.isMesh) new TWEEN.Tween(c.material.emissive).to(targetColor, 300).easing(TWEEN.Easing.Quadratic.Out).start(); }); transformControls.attach(selectedBox.group); populateInfoPanel(selectedBox); infoPanel.classList.remove('hidden'); if (panTo) focusOnBox(boxData); }
+        function deselectBox() { if (!selectedBox) return; const targetColor = new THREE.Color(0x000000); selectedBox.group.traverse(c => { if (c.isMesh) new TWEEN.Tween(c.material.emissive).to(targetColor, 300).easing(TWEEN.Easing.Quadratic.Out).start(); }); selectedBox = null; transformControls.detach(); infoPanel.classList.add('hidden'); }
+        function deleteSelectedBox() { if (!selectedBox) return; const boxToDelete = selectedBox; deselectBox(); new TWEEN.Tween(boxToDelete.group.scale).to({x: 0.01, y: 0.01, z: 0.01}, 300).easing(TWEEN.Easing.Quadratic.In).onComplete(() => { scene.remove(boxToDelete.group); disposeOfBox(boxToDelete); }).start(); boxes.splice(boxes.findIndex(b => b.code === boxToDelete.code), 1); }
         function focusOnBox(box) { const targetPos = box.group.position.clone(); targetPos.y += box.size.h / 2; const offset = new THREE.Vector3(box.size.w + 5, box.size.h + 5, box.size.d + 5); const cameraPos = targetPos.clone().add(offset); new TWEEN.Tween(camera.position).to(cameraPos, 800).easing(TWEEN.Easing.Quadratic.Out).start(); new TWEEN.Tween(orbitControls.target).to(targetPos, 800).easing(TWEEN.Easing.Quadratic.Out).start(); }
-        function animate(time) { requestAnimationFrame(animate); TWEEN.update(time); orbitControls.update(); composer.render(); }
+        function animate(time) { requestAnimationFrame(animate); TWEEN.update(time); orbitControls.update(); starField.rotation.y -= 0.0001; composer.render(); }
         function restoreState(stateJSON) { deselectBox(); [...boxes].forEach(b => { scene.remove(b.group); disposeOfBox(b); }); boxes = []; const state = JSON.parse(stateJSON); state.forEach(d => { d.position = new THREE.Vector3(d.position.x, d.position.y, d.position.z); createBox(d); }); }
+        function getCurrentState() { return JSON.stringify(boxes.map(b => ({...b, group: undefined, baseMaterial: undefined, lidMaterial: undefined, iconSprite: undefined }))); }
         init();
     </script>
 </body>
