@@ -3,145 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Box Organizer</title>
+    <title>3D Box Organizer V2</title>
     <style>
-        /* Basic Styles */
-        body {
-            margin: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: #f0f0f0;
-            color: #333;
-            overflow: hidden; /* Prevent scrollbars from 3D canvas */
-        }
-
-        /* UI Panel on top */
-        #ui-container {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            z-index: 100;
-            background-color: rgba(255, 255, 255, 0.9);
-            padding: 10px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            display: flex;
-            gap: 10px;
-            align-items: center;
-        }
-
-        button, input[type="file"]::file-selector-button {
-            padding: 8px 12px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            background-color: #fff;
-            cursor: pointer;
-            font-size: 14px;
-            transition: background-color 0.2s, border-color 0.2s;
-        }
-        
-        button:hover, input[type="file"]::file-selector-button:hover {
-            background-color: #e9e9e9;
-            border-color: #aaa;
-        }
-
-        /* The Info Panel (Menu for a selected box) */
-        #infoPanel {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            width: 250px;
-            background-color: rgba(255, 255, 255, 0.95);
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.15);
-            padding: 15px;
-            z-index: 100;
-            border-left: 5px solid #666; /* Simulates the line from the image */
-        }
-        
-        .hidden {
-            display: none;
-        }
-        
-        #panelTitle {
-            margin-top: 0;
-            margin-bottom: 5px;
-            font-size: 1.2em;
-            color: #555;
-            font-weight: normal;
-        }
-
-        #panelTitle strong {
-            display: block;
-            font-size: 1.5em;
-            font-weight: bold;
-            color: #000;
-        }
-        
-        #itemList {
-            list-style: none;
-            padding: 0;
-            margin: 15px 0;
-            max-height: 200px;
-            overflow-y: auto;
-        }
-
-        #itemList li {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 8px;
-            border-bottom: 1px solid #eee;
-        }
-
-        #itemList li:last-child {
-            border-bottom: none;
-        }
-
-        .delete-item-btn {
-            background: none;
-            border: none;
-            color: #ff4d4d;
-            cursor: pointer;
-            font-size: 16px;
-            padding: 0 5px;
-        }
-
-        #addItemContainer {
-            display: flex;
-            gap: 5px;
-            margin-top: 10px;
-        }
-
-        #addItemInput {
-            flex-grow: 1;
-            padding: 8px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-        }
-
-        #closePanelBtn {
-            width: 100%;
-            margin-top: 15px;
-            background-color: #555;
-            color: white;
-        }
-
-        #closePanelBtn:hover {
-            background-color: #333;
-        }
+        body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f0f0f0; color: #333; overflow: hidden; }
+        #ui-container { position: absolute; top: 10px; left: 10px; z-index: 100; background-color: rgba(255, 255, 255, 0.9); padding: 10px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); display: flex; gap: 10px; align-items: center; }
+        button, input[type="file"]::file-selector-button { padding: 8px 12px; border: 1px solid #ccc; border-radius: 5px; background-color: #fff; cursor: pointer; font-size: 14px; transition: background-color 0.2s, border-color 0.2s; }
+        button:hover, input[type="file"]::file-selector-button:hover { background-color: #e9e9e9; border-color: #aaa; }
+        #infoPanel { position: absolute; top: 10px; right: 10px; width: 250px; background-color: rgba(255, 255, 255, 0.95); border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.15); padding: 15px; z-index: 100; border-left: 5px solid #666; }
+        .hidden { display: none; }
+        #panelTitle { margin-top: 0; margin-bottom: 5px; font-size: 1.2em; color: #555; font-weight: normal; }
+        #panelTitle strong { display: block; font-size: 1.5em; font-weight: bold; color: #000; }
+        #itemList { list-style: none; padding: 0; margin: 15px 0; max-height: 200px; overflow-y: auto; }
+        #itemList li { display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid #eee; }
+        #itemList li:last-child { border-bottom: none; }
+        .delete-item-btn { background: none; border: none; color: #ff4d4d; cursor: pointer; font-size: 16px; padding: 0 5px; }
+        #addItemContainer { display: flex; gap: 5px; margin-top: 10px; }
+        #addItemInput { flex-grow: 1; padding: 8px; border: 1px solid #ccc; border-radius: 5px; }
+        #closePanelBtn { width: 100%; margin-top: 15px; background-color: #555; color: white; }
+        #closePanelBtn:hover { background-color: #333; }
+        #modeIndicator { font-size: 12px; font-weight: bold; color: #333; background-color: #e0e0e0; padding: 4px 8px; border-radius: 4px; }
     </style>
 </head>
 <body>
-
-    <!-- Top-level UI for global actions -->
     <div id="ui-container">
-        <button id="addBoxBtn">Add New Box</button>
-        <button id="exportBtn">Export Layout</button>
+        <button id="addBoxBtn">Add Box</button>
+        <button id="exportBtn">Export</button>
         <input type="file" id="importFile" accept=".json" style="display: none;">
-        <button onclick="document.getElementById('importFile').click()">Import Layout</button>
+        <button onclick="document.getElementById('importFile').click()">Import</button>
+        <div id="modeIndicator">Mode: Resize (R/T)</div>
     </div>
-
-    <!-- The panel that appears when a box is selected. This is our "menu" -->
     <div id="infoPanel" class="hidden">
         <h3 id="panelTitle">Open<strong>BOX 1</strong></h3>
         <p style="margin:0; padding:0; font-size: 0.9em; color: #777;">Contents:</p>
@@ -153,7 +43,6 @@
         <button id="closePanelBtn">Done</button>
     </div>
 
-    <!-- Importmap to load Three.js modules from a CDN -->
     <script type="importmap">
         {
             "imports": {
@@ -162,96 +51,114 @@
             }
         }
     </script>
-
-    <!-- The main application script -->
     <script type="module">
         import * as THREE from 'three';
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
         import { TransformControls } from 'three/addons/controls/TransformControls.js';
+        import { Reflector } from 'three/addons/objects/Reflector.js';
 
-        // --- GLOBAL VARIABLES ---
         let scene, camera, renderer, orbitControls, transformControls;
         const raycaster = new THREE.Raycaster();
         const mouse = new THREE.Vector2();
-        
         let boxes = [];
         let selectedBox = null;
         let boxCounter = 1;
+        const SNAP_GRID_SIZE = 0.5;
 
-        // --- DOM ELEMENTS ---
         const infoPanel = document.getElementById('infoPanel');
         const panelTitle = document.getElementById('panelTitle');
         const itemList = document.getElementById('itemList');
         const addItemInput = document.getElementById('addItemInput');
-        
-        // --- INITIALIZATION ---
+        const modeIndicator = document.getElementById('modeIndicator');
+
         function init() {
-            // Scene
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0xffffff);
+            scene.background = new THREE.Color(0xeeeeee);
 
-            // Camera
             camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.set(15, 15, 15);
-            camera.lookAt(0, 0, 0);
+            camera.position.set(10, 10, 10);
 
-            // Renderer
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.setPixelRatio(window.devicePixelRatio);
             document.body.appendChild(renderer.domElement);
 
-            // Lighting
             const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
             scene.add(ambientLight);
             const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
             directionalLight.position.set(10, 20, 5);
             scene.add(directionalLight);
 
-            // Grid Helper
-            const gridHelper = new THREE.GridHelper(100, 100, 0xcccccc, 0xdddddd);
-            scene.add(gridHelper);
-
-            // Controls
+            // --- Reflective Floor ---
+            const floorGeometry = new THREE.PlaneGeometry(100, 100);
+            const groundMirror = new Reflector(floorGeometry, {
+                clipBias: 0.003,
+                textureWidth: window.innerWidth * window.devicePixelRatio,
+                textureHeight: window.innerHeight * window.devicePixelRatio,
+                color: 0x889999
+            });
+            groundMirror.position.y = -0.01;
+            groundMirror.rotateX(-Math.PI / 2);
+            scene.add(groundMirror);
+            
+            // --- Controls ---
             orbitControls = new OrbitControls(camera, renderer.domElement);
             orbitControls.enableDamping = true;
-            orbitControls.dampingFactor = 0.05;
 
             transformControls = new TransformControls(camera, renderer.domElement);
-            transformControls.setMode('scale');
-            transformControls.addEventListener('dragging-changed', event => {
-                orbitControls.enabled = !event.value;
-            });
+            transformControls.setMode('scale'); // Start in scale mode
+            transformControls.setTranslationSnap(SNAP_GRID_SIZE); // Snap for moving
+            transformControls.setScaleSnap(SNAP_GRID_SIZE);     // Snap for resizing
+            
+            transformControls.addEventListener('dragging-changed', e => (orbitControls.enabled = !e.value));
             transformControls.addEventListener('objectChange', () => {
-                if (selectedBox) {
-                    const mesh = selectedBox.mesh;
-                    selectedBox.size = { w: mesh.scale.x, h: mesh.scale.y, d: mesh.scale.z };
-                }
+                if (!selectedBox) return;
+                const group = selectedBox.group;
+                // Update data based on new transform
+                selectedBox.position = { x: group.position.x, y: 0, z: group.position.z };
+                selectedBox.size = { w: group.scale.x, h: group.scale.y, d: group.scale.z };
+                // Ensure base stays on the floor
+                group.position.y = (selectedBox.size.h / 2);
             });
             scene.add(transformControls);
             
-            // Event Listeners
             window.addEventListener('resize', onWindowResize);
             renderer.domElement.addEventListener('click', onCanvasClick);
+            window.addEventListener('keydown', onKeyDown);
             setupUIEventListeners();
 
             animate();
         }
 
-        // --- CORE FUNCTIONS ---
+        // --- Box Creation with Lid ---
         function createBox(id, position, size, items) {
-            const geometry = new THREE.BoxGeometry(1, 1, 1);
-            const material = new THREE.MeshStandardMaterial({ color: 0x888888, transparent: true, opacity: 0.9 });
-            const mesh = new THREE.Mesh(geometry, material);
+            const group = new THREE.Group();
             
-            mesh.scale.set(size.w, size.h, size.d);
-            mesh.position.set(position.x, position.y + size.h / 2, position.z); // Place on grid floor
+            const baseMaterial = new THREE.MeshStandardMaterial({ color: 0xcccccc, roughness: 0.3, metalness: 0.1 });
+            const lidMaterial = new THREE.MeshStandardMaterial({ color: 0xb0b0b0, roughness: 0.3, metalness: 0.1 });
+
+            // Box base
+            const baseGeometry = new THREE.BoxGeometry(1, 1, 1);
+            const baseMesh = new THREE.Mesh(baseGeometry, baseMaterial);
+            baseMesh.scale.set(0.98, 0.9, 0.98); // Slightly smaller base
+            baseMesh.position.y = -0.05; // Shift down
             
-            const boxData = { id, position, size, items, mesh };
-            mesh.userData.boxData = boxData; // Link mesh back to its data
+            // Box lid
+            const lidGeometry = new THREE.BoxGeometry(1.02, 0.15, 1.02); // Lid is slightly larger and shorter
+            const lidMesh = new THREE.Mesh(lidGeometry, lidMaterial);
+            lidMesh.position.y = 0.5 - (0.15/2); // Position on top
+
+            group.add(baseMesh);
+            group.add(lidMesh);
+
+            group.scale.set(size.w, size.h, size.d);
+            group.position.set(position.x, size.h / 2, position.z); // Center pivot at base
+            
+            const boxData = { id, position, size, items, group };
+            group.userData.boxData = boxData;
             
             boxes.push(boxData);
-            scene.add(mesh);
+            scene.add(group);
             return boxData;
         }
 
@@ -259,15 +166,19 @@
             if (selectedBox) deselectBox();
 
             selectedBox = boxData;
-            selectedBox.mesh.material.color.set(0x5a9dec); // Highlight color
-            transformControls.attach(selectedBox.mesh);
+            const materials = [selectedBox.group.children[0].material, selectedBox.group.children[1].material];
+            materials.forEach(m => m.emissive.set(0x336699)); // Highlight with emissive color
+            
+            transformControls.attach(selectedBox.group);
             populateInfoPanel(selectedBox);
             infoPanel.classList.remove('hidden');
         }
 
         function deselectBox() {
             if (!selectedBox) return;
-            selectedBox.mesh.material.color.set(0x888888); // Original color
+            const materials = [selectedBox.group.children[0].material, selectedBox.group.children[1].material];
+            materials.forEach(m => m.emissive.set(0x000000)); // Remove highlight
+            
             selectedBox = null;
             transformControls.detach();
             infoPanel.classList.add('hidden');
@@ -283,10 +194,7 @@
                 deleteBtn.textContent = '×';
                 deleteBtn.className = 'delete-item-btn';
                 deleteBtn.onclick = () => {
-                    // Remove from data
-                    const index = boxData.items.indexOf(itemText);
-                    if (index > -1) boxData.items.splice(index, 1);
-                    // Re-render panel
+                    boxData.items.splice(boxData.items.indexOf(itemText), 1);
                     populateInfoPanel(boxData);
                 };
                 li.appendChild(deleteBtn);
@@ -295,13 +203,13 @@
         }
         
         function clearSceneForImport() {
-            boxes.forEach(box => scene.remove(box.mesh));
+            boxes.forEach(box => scene.remove(box.group));
             boxes = [];
             boxCounter = 1;
             deselectBox();
         }
         
-        // --- EVENT HANDLERS ---
+        // --- Event Handlers ---
         function onWindowResize() {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
@@ -309,41 +217,56 @@
         }
 
         function onCanvasClick(event) {
-            // Prevent clicks on UI from affecting the 3D scene
             if (event.target !== renderer.domElement) return;
 
             mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
             mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
             raycaster.setFromCamera(mouse, camera);
 
-            const intersects = raycaster.intersectObjects(boxes.map(b => b.mesh));
+            // We intersect with the group, not individual meshes
+            const intersects = raycaster.intersectObjects(boxes.map(b => b.group), true);
 
             if (intersects.length > 0) {
-                const clickedBoxData = intersects[0].object.userData.boxData;
-                if (clickedBoxData !== selectedBox) {
+                // Find the parent group and its data
+                let object = intersects[0].object;
+                while (object.parent && !object.userData.boxData) {
+                    object = object.parent;
+                }
+                const clickedBoxData = object.userData.boxData;
+                if (clickedBoxData && clickedBoxData !== selectedBox) {
                     selectBox(clickedBoxData);
                 }
             } else {
-                deselectBox();
+                if (!transformControls.dragging) {
+                     deselectBox();
+                }
             }
         }
         
+        function onKeyDown(event) {
+            switch(event.key.toLowerCase()) {
+                case 'r': // Resize
+                    transformControls.setMode('scale');
+                    modeIndicator.textContent = "Mode: Resize (R/T)";
+                    break;
+                case 't': // Translate (Move)
+                    transformControls.setMode('translate');
+                    modeIndicator.textContent = "Mode: Move (R/T)";
+                    break;
+            }
+        }
+
         function setupUIEventListeners() {
-            // Add Box Button
             document.getElementById('addBoxBtn').addEventListener('click', () => {
                 const newBox = createBox(
                     boxCounter++,
-                    { x: (Math.random() - 0.5) * 20, y: 0, z: (Math.random() - 0.5) * 20 },
-                    { w: 5, h: 5, d: 5 },
+                    { x: 0, y: 0, z: 0 },
+                    { w: 4, h: 3, d: 3.5 },
                     []
                 );
                 selectBox(newBox);
             });
-
-            // Info Panel: Close Button
             document.getElementById('closePanelBtn').addEventListener('click', deselectBox);
-
-            // Info Panel: Add Item
             const addItemAction = () => {
                 if (selectedBox && addItemInput.value.trim() !== '') {
                     selectedBox.items.push(addItemInput.value.trim());
@@ -352,66 +275,46 @@
                 }
             };
             document.getElementById('addItemBtn').addEventListener('click', addItemAction);
-            addItemInput.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') addItemAction();
-            });
+            addItemInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') addItemAction(); });
 
-            // Export Button
             document.getElementById('exportBtn').addEventListener('click', () => {
-                // Create a clean version of the data without the Three.js mesh object
                 const exportData = boxes.map(box => ({
-                    id: box.id,
-                    position: box.position,
-                    size: box.size,
-                    items: box.items
+                    id: box.id, position: box.position, size: box.size, items: box.items
                 }));
-
-                const dataStr = JSON.stringify(exportData, null, 2);
-                const blob = new Blob([dataStr], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
-                a.href = url;
+                a.href = URL.createObjectURL(new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' }));
                 a.download = 'box-layout.json';
                 a.click();
-                URL.revokeObjectURL(url);
             });
 
-            // Import Button
             document.getElementById('importFile').addEventListener('change', (event) => {
                 const file = event.target.files[0];
                 if (!file) return;
-
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     try {
-                        const importedData = JSON.parse(e.target.result);
+                        const data = JSON.parse(e.target.result);
                         clearSceneForImport();
                         let maxId = 0;
-                        importedData.forEach(boxData => {
-                            createBox(boxData.id, boxData.position, boxData.size, boxData.items);
-                            if (boxData.id > maxId) maxId = boxData.id;
+                        data.forEach(d => {
+                            createBox(d.id, d.position, d.size, d.items);
+                            if (d.id > maxId) maxId = d.id;
                         });
                         boxCounter = maxId + 1;
-                    } catch (err) {
-                        alert('Error: Invalid or corrupt JSON file.');
-                        console.error(err);
-                    }
+                    } catch (err) { alert('Error: Invalid JSON file.'); }
                 };
                 reader.readAsText(file);
-                event.target.value = ''; // Reset input so same file can be loaded again
+                event.target.value = '';
             });
         }
 
-        // --- ANIMATION LOOP ---
         function animate() {
             requestAnimationFrame(animate);
             orbitControls.update();
             renderer.render(scene, camera);
         }
 
-        // --- START THE APP ---
         init();
-
     </script>
 </body>
 </html>
