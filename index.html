@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Box Organizer - Final Build</title>
+    <title>Box Organizer Pro - Final Polish</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <style>
         :root { 
@@ -33,12 +33,10 @@
         
         .section-header { font-size: 1.1em; margin-top: 20px; margin-bottom: 10px; color: var(--text-muted-color); }
         
-        /* Icon Picker */
         #iconPicker { display: grid; grid-template-columns: repeat(auto-fill, minmax(32px, 1fr)); gap: 5px; max-height: 108px; overflow-y: auto; background-color: var(--input-bg-color); padding: 5px; border-radius: 6px; border: 1px solid var(--border-color); margin-bottom: 15px; }
         .icon-btn { font-size: 18px; width: 32px; height: 32px; padding: 0; border: 2px solid transparent; justify-content: center; }
         .icon-btn.selected { border-color: var(--primary-color); }
 
-        /* Item List */
         #itemList { list-style: none; padding: 0; margin: 0 0 15px 0; max-height: 200px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 6px; background-color: var(--input-bg-color);}
         #itemList li { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-bottom: 1px solid var(--border-color); cursor: grab; }
         #itemList li:last-child { border-bottom: none; }
@@ -168,9 +166,9 @@
             lidMesh.material.color.set(new THREE.Color(boxData.color).multiplyScalar(0.8));
             if (iconSprite) { 
                 iconSprite.position.y = boxData.size.y + 0.075; 
-                const iconScale = Math.min(boxData.size.x, boxData.size.y) * 0.15;
-                iconSprite.scale.set(iconScale, iconScale, 1);
-                iconSprite.position.z = boxData.size.z * 0.5 + 0.01; // Position on front face
+                iconSprite.position.z = boxData.size.z * 0.51; // On front face
+                // FIXED: Icon scale is now fixed and does not grow with the box
+                iconSprite.scale.set(0.3, 0.3, 1);
             }
         }
 
@@ -191,13 +189,11 @@
             applyBoxStateFromData(selectedBoxData);
         }
 
-        function createPlopEffect(position) { const ringGeometry = new THREE.TorusGeometry(1, 0.05, 8, 50); const ringMaterial = new THREE.MeshBasicMaterial({ color: 0x00aaff, transparent: true }); const ring = new THREE.Mesh(ringGeometry, ringMaterial); ring.rotation.x = Math.PI / 2; ring.position.copy(position); ring.position.y += 0.02; scene.add(ring); const targetScale = 6; new TWEEN.Tween(ring.scale).to({ x: targetScale, y: targetScale, z: targetScale }, 500).easing(TWEEN.Easing.Quadratic.Out).start(); new TWEEN.Tween(ring.material).to({ opacity: 0 }, 600).easing(TWEEN.Easing.Quadratic.Out).onComplete(() => { scene.remove(ring); ring.geometry.dispose(); ring.material.dispose(); }).start(); }
-        
         function setupUIEventListeners() {
             infoPanelEl.innerHTML = `<h3 id="infoPanelTitleArea"><span id="infoPanelTitle"></span> <span id="infoPanelIdChip" class="box-id-chip"></span></h3><div><label for="boxNameInput">Name:</label><input type="text" id="boxNameInput"></div><div><label for="boxColorInput">Color:</label><input type="color" id="boxColorInput"></div><div><h4 class="section-header">Icon</h4><div id="iconPicker"></div></div><div id="itemListContainer"><h4 class="section-header">Items</h4><ul id="itemList"></ul><form id="addItemForm" onsubmit="return false;"><input type="text" id="newItemNameInput" placeholder="Item name..." required><input type="number" id="newItemQtyInput" value="1" min="1" style="width: 60px;"><button type="submit" id="addItemBtn"><i class="bi bi-plus-lg"></i> Add</button></form></div><button id="deleteBoxBtn"><i class="bi bi-trash"></i> Delete Box</button>`;
             document.getElementById('addBoxBtn').addEventListener('click', () => { const newBoxData = createBoxData(); addBoxToScene(newBoxData, true); selectBox(newBoxData); recordAction(); });
             document.getElementById('toggleModeBtn').addEventListener('click', (e) => { const currentMode = transformControls.getMode(); if (currentMode === 'scale') { transformControls.setMode('translate'); e.target.innerHTML = '<i class="bi bi-arrows-fullscreen"></i> Switch to Resize'; } else { transformControls.setMode('scale'); e.target.innerHTML = '<i class="bi bi-arrows-move"></i> Switch to Move';} });
-            document.getElementById('findBtn').addEventListener('click', () => { const code = document.getElementById('findCodeInput').value.toUpperCase(); const foundBox = boxes.find(b => b.id.substring(0,6).toUpperCase() === code); if (foundBox) selectBox(foundBox, true); else alert('Box not found! Make sure to use the first 6 characters.'); });
+            document.getElementById('findBtn').addEventListener('click', () => { const code = document.getElementById('findCodeInput').value.trim().toUpperCase(); const foundBox = boxes.find(b => b.id.substring(0,6).toUpperCase() === code); if (foundBox) { selectBox(foundBox, true); } else { alert('Box not found! Make sure to use the first 6 characters of the ID.'); } });
             document.getElementById('deleteBoxBtn').addEventListener('click', handleDeleteBox);
             document.getElementById('boxNameInput').addEventListener('change', (e) => { if(selectedBoxData) {selectedBoxData.name = e.target.value; updateInfoPanel(); recordAction();}});
             document.getElementById('boxColorInput').addEventListener('change', (e) => { if(selectedBoxData) {selectedBoxData.color = e.target.value; applyBoxStateFromData(selectedBoxData); recordAction();}});
@@ -212,33 +208,65 @@
             window.addEventListener('keydown', onKeyDown); 
         }
 
-        function updateInfoPanel() { if (!selectedBoxData) { infoPanelEl.classList.add('hidden'); return; } document.getElementById('infoPanelTitle').textContent = selectedBoxData.name || "Box Properties"; document.getElementById('infoPanelIdChip').textContent = selectedBoxData.id.substring(0,6).toUpperCase(); document.getElementById('boxNameInput').value = selectedBoxData.name; document.getElementById('boxColorInput').value = selectedBoxData.color; renderItemList(); renderIconPicker(); }
+        function onMouseMove(event) {
+            const mouse = new THREE.Vector2((event.clientX / window.innerWidth) * 2 - 1, -(event.clientY / window.innerHeight) * 2 + 1);
+            const raycaster = new THREE.Raycaster();
+            raycaster.setFromCamera(mouse, camera);
+            const allGroups = boxes.map(b => b.threeGroup).filter(g => g);
+            const intersects = raycaster.intersectObjects(allGroups, true);
+
+            let newHoveredBox = null;
+            if (intersects.length > 0) {
+                let groupToTest = intersects[0].object;
+                while (groupToTest && !groupToTest.userData.id) { groupToTest = groupToTest.parent; }
+                if (groupToTest) newHoveredBox = boxes.find(b => b.id === groupToTest.userData.id);
+            }
+            
+            if (hoveredBoxData !== newHoveredBox) {
+                if (hoveredBoxData && hoveredBoxData !== selectedBoxData) {
+                    hoveredBoxData.threeGroup.children.forEach(c => { if (c.isMesh) new TWEEN.Tween(c.material.emissive).to({ r: 0, g: 0, b: 0 }, 100).start(); });
+                }
+                if (newHoveredBox && newHoveredBox !== selectedBoxData) {
+                    newHoveredBox.threeGroup.children.forEach(c => { if (c.isMesh) new TWEEN.Tween(c.material.emissive).to({ r: 0.2, g: 0.2, b: 0.2 }, 100).start(); });
+                }
+                hoveredBoxData = newHoveredBox;
+            }
+
+            if (hoveredBoxData) {
+                hoverTooltipEl.innerHTML = `<i class="${hoveredBoxData.icon}"></i> ${hoveredBoxData.name}`;
+                hoverTooltipEl.classList.remove('hidden');
+                hoverTooltipEl.style.left = (event.clientX + 15) + 'px';
+                hoverTooltipEl.style.top = (event.clientY + 15) + 'px';
+            } else {
+                hoverTooltipEl.classList.add('hidden');
+            }
+        }
+        
+        function onKeyDown(e) { if (e.target.tagName === 'INPUT') return; if (e.ctrlKey || e.metaKey) { let stateToRestore = null; if (e.key.toLowerCase() === 'z') stateToRestore = actionManager.undo(); if (e.key.toLowerCase() === 'y') stateToRestore = actionManager.redo(); if (stateToRestore) restoreState(stateToRestore); } else if (e.key === 'Delete' || e.key === 'Backspace') { if (selectedBoxData) handleDeleteBox(); } }
+        
+        function updateBoxIcon(box, iconClass) { box.icon = iconClass; if (box.threeGroup) { box.threeGroup.remove(box.threeGroup.children[2]); disposeThreeObject(box.threeGroup.children[2]); const newSprite = createIconSprite(iconClass); box.threeGroup.add(newSprite); applyBoxStateFromData(box); } }
+        function renderIconPicker() { if (!selectedBoxData) return; const picker = document.getElementById('iconPicker'); picker.innerHTML = ''; ICONS.forEach(iconClass => { const btn = document.createElement('button'); btn.className = `icon-btn`; if (iconClass === selectedBoxData.icon) btn.classList.add('selected'); btn.innerHTML = iconClass === 'none' ? '<i class="bi bi-slash-circle"></i>' : `<i class="${iconClass}"></i>`; btn.onclick = () => { updateBoxIcon(selectedBoxData, iconClass); renderIconPicker(); recordAction(); }; picker.appendChild(btn); }); }
+        
+        function createPlopEffect(position) { const ringGeometry = new THREE.TorusGeometry(1, 0.05, 8, 50); const ringMaterial = new THREE.MeshBasicMaterial({ color: 0x00aaff, transparent: true }); const ring = new THREE.Mesh(ringGeometry, ringMaterial); ring.rotation.x = Math.PI / 2; ring.position.copy(position); ring.position.y += 0.02; scene.add(ring); const targetScale = 6; new TWEEN.Tween(ring.scale).to({ x: targetScale, y: targetScale, z: targetScale }, 500).easing(TWEEN.Easing.Quadratic.Out).start(); new TWEEN.Tween(ring.material).to({ opacity: 0 }, 600).easing(TWEEN.Easing.Quadratic.Out).onComplete(() => { scene.remove(ring); ring.geometry.dispose(); ring.material.dispose(); }).start(); }
+        function createFloorAndGrid() { const floor = new THREE.Mesh(new THREE.PlaneGeometry(GRID_EXTENT * 2, GRID_EXTENT * 2), new THREE.MeshStandardMaterial({ color: 0x333840, roughness: 0.8, metalness: 0.2 })); floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor); const dotGeometry = new THREE.CircleGeometry(0.05 * (SNAP_GRID_SIZE / 0.5) , 12); dotGeometry.rotateX(-Math.PI / 2); const dotMaterial = new THREE.MeshBasicMaterial({ color: 0x555c66, transparent: true, opacity: 0.7 }); const divisions = Math.floor(GRID_EXTENT / SNAP_GRID_SIZE) * 2 + 1; const instancedDots = new THREE.InstancedMesh(dotGeometry, dotMaterial, divisions * divisions); const dummy = new THREE.Object3D(); let i = 0; for (let r = -GRID_EXTENT; r <= GRID_EXTENT; r += SNAP_GRID_SIZE) { for (let c = -GRID_EXTENT; c <= GRID_EXTENT; c += SNAP_GRID_SIZE) { dummy.position.set(r, 0.01, c); dummy.updateMatrix(); instancedDots.setMatrixAt(i++, dummy.matrix); } } scene.add(instancedDots); }
+        function createStarfield() { const starVertices = []; for (let i = 0; i < 10000; i++) { const x = THREE.MathUtils.randFloatSpread(2000); const y = THREE.MathUtils.randFloatSpread(2000); const z = THREE.MathUtils.randFloatSpread(2000); starVertices.push(x, y, z); } const starGeometry = new THREE.BufferGeometry(); starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starVertices, 3)); const starMaterial = new THREE.PointsMaterial({ color: 0x666666, size: 0.5, sizeAttenuation: true }); starField = new THREE.Points(starGeometry, starMaterial); scene.add(starField); }
+        function createIconSprite(iconClass) { const canvas = document.createElement('canvas'); canvas.width = 256; canvas.height = 256; const context = canvas.getContext('2d'); const character = ICON_MAP[iconClass]; if (character) { context.font = '200px "bootstrap-icons"'; context.textAlign = 'center'; context.textBaseline = 'middle'; context.fillStyle = 'rgba(255, 255, 255, 0.8)'; context.fillText(character, 128, 128); } const texture = new THREE.CanvasTexture(canvas); const material = new THREE.SpriteMaterial({ map: texture, transparent: true, sizeAttenuation: false, depthTest: false }); const sprite = new THREE.Sprite(material); return sprite; }
+        function disposeThreeObject(object) { if (!object) return; object.traverse(child => { if (child.geometry) child.geometry.dispose(); if (child.material) { if (Array.isArray(child.material)) { child.material.forEach(m => { if (m.map) m.map.dispose(); m.dispose(); }); } else { if (child.material.map) child.material.map.dispose(); child.material.dispose(); } } }); }
+        function selectBox(boxData, panTo = false) { deselectBox(); selectedBoxData = boxData; if (selectedBoxData.threeGroup) { transformControls.attach(selectedBoxData.threeGroup); selectedBoxData.threeGroup.children.forEach(c => { if (c.isMesh) new TWEEN.Tween(c.material.emissive).to({ r: 0.1, g: 0.3, b: 0.5 }, 200).start(); }); } updateInfoPanel(); infoPanelEl.classList.remove('hidden'); if (panTo) focusOnBox(boxData); }
+        function deselectBox() { if (selectedBoxData && selectedBoxData.threeGroup) { selectedBoxData.threeGroup.children.forEach(c => { if (c.isMesh) new TWEEN.Tween(c.material.emissive).to({ r: 0, g: 0, b: 0 }, 200).start(); }); } transformControls.detach(); selectedBoxData = null; infoPanelEl.classList.add('hidden'); }
+        function handleDeleteBox() { if (!selectedBoxData) return; const boxToRemove = selectedBoxData; deselectBox(); new TWEEN.Tween(boxToRemove.threeGroup.scale).to({x:0.01, y:0.01, z:0.01}, 300).easing(TWEEN.Easing.Quadratic.In).onComplete(() => {scene.remove(boxToRemove.threeGroup); disposeThreeObject(boxToRemove.threeGroup);}).start(); boxes = boxes.filter(b => b.id !== boxToRemove.id); recordAction(); }
+        function focusOnBox(box) { const targetPos = box.position.clone(); targetPos.y += box.size.y / 2; const offset = new THREE.Vector3(box.size.x + 5, box.size.y + 5, box.size.z + 5); const cameraPos = targetPos.clone().add(offset); new TWEEN.Tween(camera.position).to(cameraPos, 800).easing(TWEEN.Easing.Quadratic.Out).start(); new TWEEN.Tween(orbitControls.target).to(targetPos, 800).easing(TWEEN.Easing.Quadratic.Out).start(); }
+        function animate(time) { requestAnimationFrame(animate); TWEEN.update(time); orbitControls.update(); if (starField) starField.rotation.y -= 0.00005; renderer.render(scene, camera); }
+        function recordAction() { actionManager.pushState(JSON.stringify(boxes.map(box => ({...box, threeGroup: undefined})))); }
+        function restoreState(stateJSON) { deselectBox(); [...boxes].forEach(b => { scene.remove(b.threeGroup); disposeThreeObject(b.threeGroup); }); boxes = []; const parsedState = JSON.parse(stateJSON); parsedState.forEach(boxData => { boxData.position = new THREE.Vector3(boxData.position.x, boxData.position.y, boxData.position.z); boxData.size = new THREE.Vector3(boxData.size.x, boxData.size.y, boxData.size.z); addBoxToScene(boxData); }); recordAction(); }
+        function handleImport(event) { if (!event.target.files[0]) return; const reader = new FileReader(); reader.onload = (e) => { try { restoreState(e.target.result); } catch (err) { alert('Error: Invalid or corrupt JSON file.'); console.error(err); } }; reader.readAsText(event.target.files[0]); event.target.value = ''; }
+        function onCanvasClick() { if (transformControls.dragging) return; if (hoveredBoxData) selectBox(hoveredBoxData); else deselectBox(); }
         function renderItemList() { if (!selectedBoxData) return; const itemListEl = document.getElementById('itemList'); itemListEl.innerHTML = ''; selectedBoxData.items.forEach((item, index) => { const li = document.createElement('li'); li.dataset.itemId = item.id; li.draggable = true; const handle = document.createElement('span'); handle.className = 'drag-handle bi bi-grip-vertical'; const nameInput = document.createElement('input'); nameInput.type = 'text'; nameInput.className = 'item-name-input'; nameInput.value = item.name; nameInput.onchange = (e) => { item.name = e.target.value; recordAction(); }; const qtyInput = document.createElement('input'); qtyInput.type = 'number'; qtyInput.className = 'item-qty-input'; qtyInput.value = item.qty; qtyInput.min = 1; qtyInput.onchange = (e) => { item.qty = parseInt(e.target.value) || 1; recordAction(); }; const deleteBtn = document.createElement('button'); deleteBtn.className = 'delete-item-btn bi bi-x-lg'; deleteBtn.onclick = () => { selectedBoxData.items.splice(index, 1); renderItemList(); recordAction(); }; li.append(handle, nameInput, qtyInput, deleteBtn); itemListEl.appendChild(li); }); }
         function handleAddItem(event) { event.preventDefault(); if (!selectedBoxData) return; const nameInput = document.getElementById('newItemNameInput'); const qtyInput = document.getElementById('newItemQtyInput'); const name = nameInput.value.trim(); const qty = parseInt(qtyInput.value) || 1; if (name) { selectedBoxData.items.push({ id: THREE.MathUtils.generateUUID(), name, qty }); nameInput.value = ''; qtyInput.value = 1; renderItemList(); recordAction(); } }
         function handleItemDragStart(e) { if (e.target.tagName === 'LI') { e.target.classList.add('dragging'); draggedItem = e.target.dataset.itemId; e.dataTransfer.effectAllowed = 'move'; } }
         function handleItemDragOver(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }
         function handleItemDrop(e) { e.preventDefault(); const targetLi = e.target.closest('li'); if (!targetLi || !draggedItem || !selectedBoxData) return; const draggedItemId = draggedItem; const targetItemId = targetLi.dataset.itemId; const items = selectedBoxData.items; const draggedIndex = items.findIndex(item => item.id === draggedItemId); let targetIndex = items.findIndex(item => item.id === targetItemId); if (draggedIndex === -1 || targetIndex === -1) return; const [dragged] = items.splice(draggedIndex, 1); if (draggedIndex < targetIndex) targetIndex--; items.splice(targetIndex, 0, dragged); document.querySelectorAll('#itemList li.dragging').forEach(el => el.classList.remove('dragging')); draggedItem = null; renderItemList(); recordAction(); }
-        function handleDeleteBox() { if (!selectedBoxData) return; const boxToRemove = selectedBoxData; deselectBox(); new TWEEN.Tween(boxToRemove.threeGroup.scale).to({x:0.01, y:0.01, z:0.01}, 300).easing(TWEEN.Easing.Quadratic.In).onComplete(() => {scene.remove(boxToRemove.threeGroup); disposeThreeObject(boxToRemove.threeGroup);}).start(); boxes = boxes.filter(b => b.id !== boxToRemove.id); recordAction(); }
-        function onMouseMove(event) { const mouse = new THREE.Vector2((event.clientX / window.innerWidth) * 2 - 1, -(event.clientY / window.innerHeight) * 2 + 1); const raycaster = new THREE.Raycaster(); raycaster.setFromCamera(mouse, camera); const allGroups = boxes.map(b => b.threeGroup).filter(g => g); const intersects = raycaster.intersectObjects(allGroups, true); if (hoveredBoxData && (!intersects.length || hoveredBoxData.threeGroup !== intersects[0].object.closest('[user_data]').parent)) { if (hoveredBoxData !== selectedBoxData && hoveredBoxData.threeGroup) { hoveredBoxData.threeGroup.children.forEach(c => { if (c.isMesh) new TWEEN.Tween(c.material.emissive).to({ r: 0, g: 0, b: 0 }, 100).start(); }); } hoveredBoxData = null; hoverTooltipEl.classList.add('hidden'); } if (intersects.length > 0) { let groupToTest = intersects[0].object; while(groupToTest && !groupToTest.userData.id) { groupToTest = groupToTest.parent; } if (groupToTest && groupToTest.userData.id) { const boxData = boxes.find(b => b.id === groupToTest.userData.id); if (boxData) { hoveredBoxData = boxData; if (hoveredBoxData !== selectedBoxData) { hoveredBoxData.threeGroup.children.forEach(c => { if (c.isMesh) new TWEEN.Tween(c.material.emissive).to({ r: 0.2, g: 0.2, b: 0.2 }, 100).start(); }); } hoverTooltipEl.innerHTML = `<i class="${boxData.icon}"></i> ${boxData.name}`; hoverTooltipEl.classList.remove('hidden'); hoverTooltipEl.style.left = (event.clientX + 15) + 'px'; hoverTooltipEl.style.top = (event.clientY + 15) + 'px'; } } } }
-        function onCanvasClick() { if (transformControls.dragging) return; if (hoveredBoxData) selectBox(hoveredBoxData); else deselectBox(); }
-        function onKeyDown(e) { if (e.target.tagName === 'INPUT') return; if (e.ctrlKey || e.metaKey) { let stateToRestore = null; if (e.key.toLowerCase() === 'z') stateToRestore = actionManager.undo(); if (e.key.toLowerCase() === 'y') stateToRestore = actionManager.redo(); if (stateToRestore) restoreState(stateToRestore); } else if (e.key === 'Delete' || e.key === 'Backspace') { if (selectedBoxData) handleDeleteBox(); } }
-        
-        function selectBox(boxData, panTo = false) { deselectBox(); selectedBoxData = boxData; if (selectedBoxData.threeGroup) { transformControls.attach(selectedBoxData.threeGroup); selectedBoxData.threeGroup.children.forEach(c => { if (c.isMesh) new TWEEN.Tween(c.material.emissive).to({ r: 0.1, g: 0.3, b: 0.5 }, 200).start(); }); } updateInfoPanel(); infoPanelEl.classList.remove('hidden'); if (panTo) focusOnBox(boxData); }
-        function deselectBox() { if (selectedBoxData && selectedBoxData.threeGroup) { selectedBoxData.threeGroup.children.forEach(c => { if (c.isMesh) new TWEEN.Tween(c.material.emissive).to({ r: 0, g: 0, b: 0 }, 200).start(); }); } transformControls.detach(); selectedBoxData = null; infoPanelEl.classList.add('hidden'); }
-        function createFloorAndGrid() { const floor = new THREE.Mesh(new THREE.PlaneGeometry(GRID_EXTENT * 2, GRID_EXTENT * 2), new THREE.MeshStandardMaterial({ color: 0x333840, roughness: 0.8, metalness: 0.2 })); floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor); const dotGeometry = new THREE.CircleGeometry(0.05 * (SNAP_GRID_SIZE / 0.5) , 12); dotGeometry.rotateX(-Math.PI / 2); const dotMaterial = new THREE.MeshBasicMaterial({ color: 0x555c66, transparent: true, opacity: 0.7 }); const divisions = Math.floor(GRID_EXTENT / SNAP_GRID_SIZE) * 2 + 1; const instancedDots = new THREE.InstancedMesh(dotGeometry, dotMaterial, divisions * divisions); const dummy = new THREE.Object3D(); let i = 0; for (let r = -GRID_EXTENT; r <= GRID_EXTENT; r += SNAP_GRID_SIZE) { for (let c = -GRID_EXTENT; c <= GRID_EXTENT; c += SNAP_GRID_SIZE) { dummy.position.set(r, 0.01, c); dummy.updateMatrix(); instancedDots.setMatrixAt(i++, dummy.matrix); } } scene.add(instancedDots); }
-        function createStarfield() { const starVertices = []; for (let i = 0; i < 10000; i++) { const x = THREE.MathUtils.randFloatSpread(2000); const y = THREE.MathUtils.randFloatSpread(2000); const z = THREE.MathUtils.randFloatSpread(2000); starVertices.push(x, y, z); } const starGeometry = new THREE.BufferGeometry(); starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starVertices, 3)); const starMaterial = new THREE.PointsMaterial({ color: 0x666666, size: 0.5, sizeAttenuation: true }); starField = new THREE.Points(starGeometry, starMaterial); scene.add(starField); }
-        function createIconSprite(iconClass) { const canvas = document.createElement('canvas'); canvas.width = 256; canvas.height = 256; const context = canvas.getContext('2d'); const character = ICON_MAP[iconClass]; if (character) { context.font = '200px "bootstrap-icons"'; context.textAlign = 'center'; context.textBaseline = 'middle'; context.fillStyle = 'rgba(255, 255, 255, 0.8)'; context.fillText(character, 128, 128); } const texture = new THREE.CanvasTexture(canvas); const material = new THREE.SpriteMaterial({ map: texture, transparent: true, sizeAttenuation: false, depthTest: false }); const sprite = new THREE.Sprite(material); return sprite; }
-        function disposeThreeObject(object) { if (!object) return; object.traverse(child => { if (child.geometry) child.geometry.dispose(); if (child.material) { if (Array.isArray(child.material)) { child.material.forEach(m => { if (m.map) m.map.dispose(); m.dispose(); }); } else { if (child.material.map) child.material.map.dispose(); child.material.dispose(); } } }); }
-        function focusOnBox(box) { const targetPos = box.position.clone(); targetPos.y += box.size.y / 2; const offset = new THREE.Vector3(box.size.x + 5, box.size.y + 5, box.size.z + 5); const cameraPos = targetPos.clone().add(offset); new TWEEN.Tween(camera.position).to(cameraPos, 800).easing(TWEEN.Easing.Quadratic.Out).start(); new TWEEN.Tween(orbitControls.target).to(targetPos, 800).easing(TWEEN.Easing.Quadratic.Out).start(); }
-        
-        function recordAction() { actionManager.pushState(JSON.stringify(boxes.map(box => ({...box, threeGroup: undefined})))); }
-        function restoreState(stateJSON) { deselectBox(); [...boxes].forEach(b => { scene.remove(b.threeGroup); disposeThreeObject(b.threeGroup); }); boxes = []; const parsedState = JSON.parse(stateJSON); parsedState.forEach(boxData => { boxData.position = new THREE.Vector3(boxData.position.x, boxData.position.y, boxData.position.z); boxData.size = new THREE.Vector3(boxData.size.x, boxData.size.y, boxData.size.z); addBoxToScene(boxData); }); recordAction(); }
-        function handleImport(event) { if (!event.target.files[0]) return; const reader = new FileReader(); reader.onload = (e) => { try { restoreState(e.target.result); } catch (err) { alert('Error: Invalid or corrupt JSON file.'); console.error(err); } }; reader.readAsText(event.target.files[0]); event.target.value = ''; }
-        
-        function renderIconPicker() { if (!selectedBoxData) return; const picker = document.getElementById('iconPicker'); picker.innerHTML = ''; ICONS.forEach(iconClass => { const btn = document.createElement('button'); btn.className = `icon-btn`; if (iconClass === selectedBoxData.icon) btn.classList.add('selected'); btn.innerHTML = iconClass === 'none' ? '<i class="bi bi-slash-circle"></i>' : `<i class="${iconClass}"></i>`; btn.onclick = () => { updateBoxIcon(selectedBoxData, iconClass); renderIconPicker(); recordAction(); }; picker.appendChild(btn); }); }
-        function updateBoxIcon(box, iconClass) { box.icon = iconClass; if (box.threeGroup) { box.threeGroup.remove(box.threeGroup.children[2]); disposeThreeObject(box.threeGroup.children[2]); const newSprite = createIconSprite(iconClass); box.threeGroup.add(newSprite); applyBoxStateFromData(box); } }
-        function animate(time) { requestAnimationFrame(animate); TWEEN.update(time); orbitControls.update(); if (starField) starField.rotation.y -= 0.00005; renderer.render(scene, camera); }
-        
+
         init();
     </script>
 </body>
