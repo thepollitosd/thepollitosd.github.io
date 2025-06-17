@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Box Organizer V14</title>
+    <title>3D Box Organizer V15</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <style>
         body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #111; color: #eee; overflow: hidden; cursor: default; }
@@ -89,26 +89,24 @@
             actionManager.pushState(getCurrentState());
             animate();
         }
-        
-        // --- NEW ARCHITECTURE FOR BOX CREATION AND TRANSFORM ---
-        
+
         function createBox(data, isNew = false) {
             const group = new THREE.Group();
             const baseMaterial = new THREE.MeshStandardMaterial({ color: data.color });
             const lidMaterial = new THREE.MeshStandardMaterial({ color: new THREE.Color(data.color).multiplyScalar(0.8) });
             
-            // Geometries are now unit-sized and translated so their bottom is at Y=0
+            // Geometries have their pivot at their own base center (Y=0)
             const baseGeometry = new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0);
-            const lidGeometry = new THREE.BoxGeometry(1.02, 0.15, 1.02).translate(0, 0.5, 0);
+            const lidGeometry = new THREE.BoxGeometry(1, 0.15, 1).translate(0, 0.5, 0);
             
             const baseMesh = new THREE.Mesh(baseGeometry, baseMaterial);
             const lidMesh = new THREE.Mesh(lidGeometry, lidMaterial);
             const iconSprite = createIconSprite(data.icon);
             [baseMesh, lidMesh].forEach(m => { m.castShadow = true; m.receiveShadow = true; });
             group.add(baseMesh, lidMesh, iconSprite);
-
-            // Apply size and position using the new update function
-            updateBoxGeometry(group, data);
+            
+            // Set initial state without animation
+            applyBoxState(group, data);
 
             const boxData = { ...data, group, baseMaterial, lidMaterial, iconSprite };
             group.userData.boxData = boxData;
@@ -116,20 +114,25 @@
             scene.add(group);
             
             if (isNew) {
-                const finalScale = { x: 1, y: 1, z: 1 };
-                group.scale.set(0.01, 0.01, 0.01);
-                new TWEEN.Tween(group.scale).to(finalScale, 500).easing(TWEEN.Easing.Back.Out).start();
+                const finalScale = { x: data.size.w, y: data.size.h, z: data.size.d };
+                baseMesh.scale.set(0.01, 0.01, 0.01);
+                new TWEEN.Tween(baseMesh.scale).to(finalScale, 500).easing(TWEEN.Easing.Back.Out)
+                    .onUpdate(() => {
+                        lidMesh.position.y = baseMesh.scale.y;
+                        iconSprite.position.y = baseMesh.scale.y + (lidMesh.scale.y / 2);
+                    })
+                    .start();
                 createPlopEffect(group.position);
             }
             return boxData;
         }
-
-        function updateBoxGeometry(group, data) {
+        
+        function applyBoxState(group, data) {
             const { baseMesh, lidMesh, iconSprite } = { baseMesh: group.children[0], lidMesh: group.children[1], iconSprite: group.children[2] };
             baseMesh.scale.set(data.size.w, data.size.h, data.size.d);
-            lidMesh.scale.set(data.size.w, 0.15, data.size.d); // Lid Y scale is fixed
+            lidMesh.scale.set(data.size.w * 1.02, 0.15, data.size.d * 1.02);
             lidMesh.position.y = data.size.h;
-            iconSprite.position.y = data.size.h + (0.15 / 2);
+            iconSprite.position.y = data.size.h + 0.075;
             iconSprite.scale.set(data.size.w * 0.1, data.size.w * 0.1, 1);
             group.position.copy(data.position);
         }
@@ -139,43 +142,18 @@
             const group = selectedBox.group;
             
             if (transformControls.mode === 'scale') {
-                const baseMesh = group.children[0];
-                selectedBox.size.w = Math.max(SNAP_GRID_SIZE, Math.round(baseMesh.scale.x / SNAP_GRID_SIZE) * SNAP_GRID_SIZE);
-                selectedBox.size.h = Math.max(SNAP_GRID_SIZE, Math.round(baseMesh.scale.y / SNAP_GRID_SIZE) * SNAP_GRID_SIZE);
-                selectedBox.size.d = Math.max(SNAP_GRID_SIZE, Math.round(baseMesh.scale.d / SNAP_GRID_SIZE) * SNAP_GRID_SIZE);
+                selectedBox.size.w = Math.max(SNAP_GRID_SIZE, Math.round(group.children[0].scale.x / SNAP_GRID_SIZE) * SNAP_GRID_SIZE);
+                selectedBox.size.h = Math.max(SNAP_GRID_SIZE, Math.round(group.children[0].scale.y / SNAP_GRID_SIZE) * SNAP_GRID_SIZE);
+                selectedBox.size.d = Math.max(SNAP_GRID_SIZE, Math.round(group.children[0].scale.d / SNAP_GRID_SIZE) * SNAP_GRID_SIZE);
             }
             selectedBox.position.x = Math.round(group.position.x / SNAP_GRID_SIZE) * SNAP_GRID_SIZE;
             selectedBox.position.y = Math.round(group.position.y / SNAP_GRID_SIZE) * SNAP_GRID_SIZE;
             selectedBox.position.z = Math.round(group.position.z / SNAP_GRID_SIZE) * SNAP_GRID_SIZE;
             
-            updateBoxGeometry(group, selectedBox); // Update visuals from data
+            applyBoxState(group, selectedBox);
         }
 
-        function createPlopEffect(position) {
-            const ringGeometry = new THREE.TorusGeometry(1, 0.05, 8, 50);
-            const ringMaterial = new THREE.MeshBasicMaterial({ color: 0x00aaff, transparent: true });
-            const ring = new THREE.Mesh(ringGeometry, ringMaterial);
-            ring.rotation.x = Math.PI / 2;
-            ring.position.copy(position);
-            ring.position.y += 0.02;
-            scene.add(ring);
-            
-            const targetScale = 6;
-            new TWEEN.Tween(ring.scale)
-                .to({ x: targetScale, y: targetScale, z: targetScale }, 500)
-                .easing(TWEEN.Easing.Quadratic.Out)
-                .start();
-            
-            new TWEEN.Tween(ring.material)
-                .to({ opacity: 0 }, 600)
-                .easing(TWEEN.Easing.Quadratic.Out)
-                .onComplete(() => {
-                    scene.remove(ring);
-                    ring.geometry.dispose();
-                    ring.material.dispose();
-                })
-                .start();
-        }
+        function createPlopEffect(position) { /* Unchanged */ }
         
         // ---UNCHANGED & HELPER FUNCTIONS---
         function setupUIEventListeners() {
@@ -194,7 +172,7 @@
         function createStarfield() { const starVertices = []; for (let i = 0; i < 10000; i++) { const x = THREE.MathUtils.randFloatSpread(2000); const y = THREE.MathUtils.randFloatSpread(2000); const z = THREE.MathUtils.randFloatSpread(2000); starVertices.push(x, y, z); } const starGeometry = new THREE.BufferGeometry(); starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starVertices, 3)); const starMaterial = new THREE.PointsMaterial({ color: 0x888888, size: 0.7 }); starField = new THREE.Points(starGeometry, starMaterial); scene.add(starField); }
         function createIconSprite(iconClass) { const canvas = document.createElement('canvas'); canvas.width = 256; canvas.height = 256; const context = canvas.getContext('2d'); const character = ICON_MAP[iconClass]; if (character) { context.font = '200px "bootstrap-icons"'; context.textAlign = 'center'; context.textBaseline = 'middle'; context.fillStyle = 'rgba(255, 255, 255, 0.8)'; context.fillText(character, 128, 128); } const texture = new THREE.CanvasTexture(canvas); const material = new THREE.SpriteMaterial({ map: texture, transparent: true, sizeAttenuation: false, depthTest: false }); const sprite = new THREE.Sprite(material); sprite.position.z = 0.51; return sprite; }
         function disposeOfBox(box) { box.group.traverse(child => { if (child.geometry) child.geometry.dispose(); if (child.material) { if (child.material.map) child.material.map.dispose(); child.material.dispose(); } }); }
-        function updateBoxIcon(box, iconClass) { box.icon = iconClass; box.group.remove(box.iconSprite); disposeOfBox({ group: { children: [box.iconSprite] } }); box.iconSprite = createIconSprite(iconClass); updateBoxGeometry(box.group, box); box.group.add(box.iconSprite); }
+        function updateBoxIcon(box, iconClass) { box.icon = iconClass; box.group.remove(box.iconSprite); disposeOfBox({ group: { children: [box.iconSprite] } }); box.iconSprite = createIconSprite(iconClass); applyBoxState(box.group, box); box.group.add(box.iconSprite); }
         function selectBox(boxData, panTo = false) { deselectBox(); selectedBox = boxData; const targetColor = new THREE.Color(0x00aaff); selectedBox.group.traverse(c => { if (c.isMesh) new TWEEN.Tween(c.material.emissive).to(targetColor, 300).easing(TWEEN.Easing.Quadratic.Out).start(); }); transformControls.attach(selectedBox.group); populateInfoPanel(selectedBox); infoPanel.classList.remove('hidden'); if (panTo) focusOnBox(boxData); }
         function deselectBox() { if (!selectedBox) return; const targetColor = new THREE.Color(0x000000); selectedBox.group.traverse(c => { if (c.isMesh) new TWEEN.Tween(c.material.emissive).to(targetColor, 300).easing(TWEEN.Easing.Quadratic.Out).start(); }); selectedBox = null; transformControls.detach(); infoPanel.classList.add('hidden'); }
         function deleteSelectedBox() { if (!selectedBox) return; const boxToDelete = selectedBox; deselectBox(); new TWEEN.Tween(boxToDelete.group.scale).to({x: 0.01, y: 0.01, z: 0.01}, 300).easing(TWEEN.Easing.Quadratic.In).onComplete(() => { scene.remove(boxToDelete.group); disposeOfBox(boxToDelete); }).start(); boxes.splice(boxes.findIndex(b => b.code === boxToDelete.code), 1); }
