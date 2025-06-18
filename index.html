@@ -418,7 +418,7 @@
             requestAnimationFrame(animate); 
             TWEEN.update(time); 
             orbitControls.update(); 
-            if (starField) starField.rotation.y -= 0.00005; 
+            if (starField) starField.rotation.y -= 0.0001; 
 
             // --- NEW ---: Animate ambient particles
             if (ambientParticles) {
@@ -434,7 +434,7 @@
             if (selectedBoxes.length === 1 && selectedBoxes[0].threeGroup) {
                 const selectedBox = selectedBoxes[0];
                 const hoverTime = performance.now() * 0.002;
-                const hoverOffset = Math.sin(hoverTime * 3) * 0.1;
+                const hoverOffset = Math.sin(hoverTime * 3) * 0.05;
                 selectedBox.threeGroup.position.y = selectedBox.position.y + hoverOffset;
             }
 
