@@ -489,7 +489,7 @@
             if (selectedBoxes.length === 1 && selectedBoxes[0].threeGroup) {
                 const selectedBox = selectedBoxes[0];
                 const hoverTime = elapsed * 2;
-                const hoverOffset = Math.sin(hoverTime) * 0.05; 
+                const hoverOffset = Math.sin(hoverTime) * 0; 
                 selectedBox.threeGroup.position.y = selectedBox.position.y + hoverOffset;
             }
 
