@@ -282,7 +282,6 @@
             }
         }
         
-        // --- MODIFIED ---: This function now uses the camera's azimuthal angle for paste direction.
         function handlePaste() {
             if (clipboard.length === 0) return;
 
@@ -301,7 +300,8 @@
                 const selectionBBox = new THREE.Box3();
                 clipboard.forEach(boxData => {
                     const center = new THREE.Vector3(boxData.position.x, boxData.position.y, boxData.position.z);
-                    const size = new THREE.Vector3(boxData.size.x, boxData.size.y, boxData.size.y);
+                    // --- FIX ---: Correctly use boxData.size.z for the Z dimension.
+                    const size = new THREE.Vector3(boxData.size.x, boxData.size.y, boxData.size.z);
                     const boxBBox = new THREE.Box3().setFromCenterAndSize(center, size);
                     selectionBBox.union(boxBBox);
                 });
@@ -309,22 +309,24 @@
                 const selectionSize = new THREE.Vector3();
                 selectionBBox.getSize(selectionSize);
                 
-                // --- NEW: Paste direction based on camera azimuthal angle ---
                 let angleRad = orbitControls.getAzimuthalAngle();
-                let angleDeg = angleRad * (180 / Math.PI);
+                let angleDeg = THREE.MathUtils.radToDeg(angleRad);
                 if (angleDeg < 0) angleDeg += 360; // Normalize to 0-360
 
                 let offsetVector;
                 const padding = 1.0;
 
-                // 0°(front) is -Z, 90° is -X, 180°(back) is +Z, 270° is +X.
-                // Request: 0°±45° or 180°±45° -> Paste along +X
+                // 0° is -Z, 90° is -X, 180° is +Z, 270° is +X.
+                // Ranges are now centered on the axes as requested.
+                // 0°±45°  -> (315 to 45) -> Looking from front -> Paste along +X
+                // 180°±45° -> (135 to 225) -> Looking from back -> Paste along +X
                 if ((angleDeg >= 315 || angleDeg < 45) || (angleDeg >= 135 && angleDeg < 225)) {
                     const offsetDistance = selectionSize.x + padding;
                     offsetVector = new THREE.Vector3(offsetDistance, 0, 0);
                 } 
-                // Request: 90°±45° or 270°±45° -> Paste along +Z
-                else { // Covers 45°-135° and 225°-315°
+                // 90°±45°  -> (45 to 135) -> Looking from right side -> Paste along +Z
+                // 270°±45° -> (225 to 315) -> Looking from left side -> Paste along +Z
+                else { 
                     const offsetDistance = selectionSize.z + padding;
                     offsetVector = new THREE.Vector3(0, 0, offsetDistance);
                 }
