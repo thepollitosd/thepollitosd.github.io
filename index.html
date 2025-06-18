@@ -112,8 +112,8 @@
             renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
             renderer.toneMapping = THREE.LinearToneMapping;
             document.body.appendChild(renderer.domElement);
-            scene.add(new THREE.AmbientLight(0xffffff, 4));
-            const dirLight = new THREE.DirectionalLight(0xffffff, 6.6);
+            scene.add(new THREE.AmbientLight(0xffffff, 2));
+            const dirLight = new THREE.DirectionalLight(0xffffff, 3.3);
             dirLight.position.set(30, 50, 40); dirLight.castShadow = true;
             dirLight.shadow.mapSize.width = 2048; dirLight.shadow.mapSize.height = 2048;
             dirLight.shadow.camera.top = 50; dirLight.shadow.camera.bottom = -50;
@@ -153,7 +153,7 @@
             const renderPass = new RenderPass(scene, camera);
             composer.addPass(renderPass);
             const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
-            bloomPass.threshold = 0.85; bloomPass.strength = 0.025; bloomPass.radius = 0.5;
+            bloomPass.threshold = 0.85; bloomPass.strength = 0.005; bloomPass.radius = 0.5;
             composer.addPass(bloomPass);
             window.addEventListener('resize', onWindowResize);
         }
