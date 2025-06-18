@@ -253,59 +253,92 @@
         function handleDeleteSelection() { if (selectedBoxes.length === 0) return; const boxesToRemove = [...selectedBoxes]; deselectAll(); boxesToRemove.forEach(boxToRemove => { if (boxToRemove.threeGroup) { new TWEEN.Tween(boxToRemove.threeGroup.scale).to({x:0.01, y:0.01, z:0.01}, 300).easing(TWEEN.Easing.Quadratic.In).onComplete(() => {scene.remove(boxToRemove.threeGroup); disposeThreeObject(boxToRemove.threeGroup);}).start(); } boxes = boxes.filter(b => b.id !== boxToRemove.id); }); recordAction(); }
         function onMouseMove(event) { const mouse = new THREE.Vector2((event.clientX / window.innerWidth) * 2 - 1, -(event.clientY / window.innerHeight) * 2 + 1); const raycaster = new THREE.Raycaster(); raycaster.setFromCamera(mouse, camera); const collidableMeshes = boxes.flatMap(b => b.threeGroup ? [b.threeGroup.children[0], b.threeGroup.children[1]] : []); const intersects = raycaster.intersectObjects(collidableMeshes, false); let newHoveredBox = null; if (intersects.length > 0) { const parentGroup = intersects[0].object.parent; if (parentGroup && parentGroup.userData.id) newHoveredBox = boxes.find(b => b.id === parentGroup.userData.id); } if (hoveredBoxData !== newHoveredBox) { hoveredBoxData = newHoveredBox; } if (hoveredBoxData) { hoverTooltipEl.innerHTML = `<i class="${hoveredBoxData.icon}"></i> ${hoveredBoxData.name}`; hoverTooltipEl.classList.remove('hidden'); hoverTooltipEl.style.left = (event.clientX + 15) + 'px'; hoverTooltipEl.style.top = (event.clientY + 15) + 'px'; } else { hoverTooltipEl.classList.add('hidden'); } }
         function onCanvasClick(e) { if (transformControls.dragging) return; if (hoveredBoxData) { if (e.shiftKey) { const index = selectedBoxes.findIndex(b => b.id === hoveredBoxData.id); if (index > -1) { releaseMultiSelectPivot(); selectedBoxes.splice(index, 1); } else { releaseMultiSelectPivot(); selectedBoxes.push(hoveredBoxData); } } else { deselectAll(); selectedBoxes.push(hoveredBoxData); } } else { deselectAll(); } updateSelectionState(); }
-        function onKeyDown(e) { if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return; const isCtrlOrMeta = e.ctrlKey || e.metaKey; if (isCtrlOrMeta) { let stateToRestore = null; if (e.key.toLowerCase() === 'z') stateToRestore = actionManager.undo(); if (e.key.toLowerCase() === 'y') stateToRestore = actionManager.redo(); if (e.key.toLowerCase() === 'c') handleCopy(); if (e.key.toLowerCase() === 'v') handlePaste(); if (stateToRestore) restoreState(stateToRestore); } else if (e.key === 'Delete' || e.key === 'Backspace') { if (selectedBoxes.length > 0) handleDeleteSelection(); } }
-        function handleCopy() { if (selectedBoxes.length > 0) { clipboard = selectedBoxes.map(box => ({...box, threeGroup: undefined})); console.log(`Copied ${clipboard.length} box(es) to clipboard.`); } }
+        
+        // --- MODIFIED ---: Now includes Ctrl+X for 'cut'.
+        function onKeyDown(e) { 
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return; 
+            const isCtrlOrMeta = e.ctrlKey || e.metaKey; 
+            if (isCtrlOrMeta) { 
+                let stateToRestore = null; 
+                if (e.key.toLowerCase() === 'z') stateToRestore = actionManager.undo(); 
+                if (e.key.toLowerCase() === 'y') stateToRestore = actionManager.redo(); 
+                if (e.key.toLowerCase() === 'c') handleCopy(); 
+                if (e.key.toLowerCase() === 'x') handleCut(); // Added cut handler
+                if (e.key.toLowerCase() === 'v') handlePaste(); 
+                if (stateToRestore) restoreState(stateToRestore); 
+            } else if (e.key === 'Delete' || e.key === 'Backspace') { 
+                if (selectedBoxes.length > 0) handleDeleteSelection(); 
+            } 
+        }
 
-        // --- MODIFIED ---: This function now contains the axis-aligned paste logic.
+        function handleCopy() { if (selectedBoxes.length > 0) { clipboard = selectedBoxes.map(box => ({...box, threeGroup: undefined})); console.log(`Copied ${clipboard.length} box(es) to clipboard.`); } }
+        
+        // --- NEW ---: Function to handle 'cut' operation.
+        function handleCut() {
+            if (selectedBoxes.length > 0) {
+                handleCopy(); // First, copy the data to the clipboard
+                handleDeleteSelection(); // Then, delete the selection from the scene
+            }
+        }
+
+        // --- MODIFIED ---: Refined paste logic for direction and chained pasting.
         function handlePaste() {
             if (clipboard.length === 0) return;
             const newSelection = [];
 
             if (clipboard.length === 1) {
                 const originalBoxData = clipboard[0];
-                const originalBoxInScene = boxes.find(b => b.id === originalBoxData.id);
-                if (!originalBoxInScene) return;
-                const newPosition = originalBoxInScene.position.clone().add(new THREE.Vector3(0, originalBoxInScene.size.y, 0));
+                const originalBoxInScene = boxes.find(b => b.id === originalBoxData.id) || clipboard[0]; // Fallback to clipboard data if original is gone (cut)
+                const newPosition = new THREE.Vector3(originalBoxInScene.position.x, originalBoxInScene.position.y, originalBoxInScene.position.z).add(new THREE.Vector3(0, originalBoxInScene.size.y, 0));
                 const newBoxData = createBoxData({...originalBoxData, id: THREE.MathUtils.generateUUID(), position: newPosition, lastModified: new Date().toISOString() });
                 const addedBox = addBoxToScene(newBoxData, true);
                 newSelection.push(addedBox);
             } else { 
                 const selectionBBox = new THREE.Box3();
-                clipboard.forEach(boxData => { const boxInScene = boxes.find(b => b.id === boxData.id); if(boxInScene) { const boxBBox = new THREE.Box3().setFromObject(boxInScene.threeGroup); selectionBBox.union(boxBBox); } });
+                clipboard.forEach(boxData => { 
+                    const boxInScene = boxes.find(b => b.id === boxData.id);
+                    if(boxInScene) {
+                        const boxBBox = new THREE.Box3().setFromObject(boxInScene.threeGroup); 
+                        selectionBBox.union(boxBBox);
+                    } else { // Handle cut items that are no longer in the scene
+                        const tempBBox = new THREE.Box3();
+                        tempBBox.setFromCenterAndSize(new THREE.Vector3(boxData.position.x, boxData.position.y, boxData.position.z), new THREE.Vector3(boxData.size.x, boxData.size.y, boxData.size.z));
+                        selectionBBox.union(tempBBox);
+                    }
+                });
 
                 const selectionSize = new THREE.Vector3();
                 selectionBBox.getSize(selectionSize);
 
-                const cameraDirection = new THREE.Vector3();
-                camera.getWorldDirection(cameraDirection);
-                cameraDirection.y = 0; // Project onto XZ plane
-                cameraDirection.normalize();
+                // Get the camera's "right" vector and project it onto the floor.
+                const cameraRight = new THREE.Vector3().setFromMatrixColumn(camera.matrix, 0);
+                cameraRight.y = 0;
+                cameraRight.normalize();
 
-                let offsetVector;
-                const padding = 1.0;
-
-                // If camera is looking more along Z-axis (front/back view), offset along X-axis.
-                if (Math.abs(cameraDirection.z) > Math.abs(cameraDirection.x)) {
-                    const offsetDistance = selectionSize.x + padding;
-                    // Paste to the right (positive X)
-                    offsetVector = new THREE.Vector3(offsetDistance, 0, 0);
-                } else { // If camera is looking more along X-axis (side view), offset along Z-axis.
-                    const offsetDistance = selectionSize.z + padding;
-                    // Paste away from the camera (positive Z)
-                    offsetVector = new THREE.Vector3(0, 0, offsetDistance);
-                }
+                // Use the largest dimension of the selection for a consistent offset distance.
+                const offsetDistance = Math.max(selectionSize.x, selectionSize.z) + 1.0; // 1.0 is padding
+                const offsetVector = cameraRight.multiplyScalar(offsetDistance);
 
                 clipboard.forEach(boxData => {
-                    const originalBoxInScene = boxes.find(b => b.id === boxData.id);
-                    if (!originalBoxInScene) return;
-                    const newPosition = originalBoxInScene.position.clone().add(offsetVector);
+                    const originalPos = new THREE.Vector3(boxData.position.x, boxData.position.y, boxData.position.z);
+                    const newPosition = originalPos.add(offsetVector);
                     const newBoxData = createBoxData({...boxData, id: THREE.MathUtils.generateUUID(), position: newPosition, lastModified: new Date().toISOString() });
                     const addedBox = addBoxToScene(newBoxData, true);
                     newSelection.push(addedBox);
                 });
             }
 
-            if (newSelection.length > 0) { deselectAll(); selectedBoxes = newSelection; updateSelectionState(); recordAction(); }
+            if (newSelection.length > 0) { 
+                deselectAll(); 
+                selectedBoxes = newSelection; 
+                updateSelectionState();
+                
+                // --- FIX for chained paste ---
+                // Update the clipboard to contain the newly created boxes.
+                clipboard = newSelection.map(box => ({...box, threeGroup: undefined}));
+                
+                recordAction(); 
+            }
         }
         
         function createPlopEffect(position) { const ringGeometry = new THREE.TorusGeometry(1, 0.05, 8, 50); const ringMaterial = new THREE.MeshBasicMaterial({ color: 0x00aaff, transparent: true }); const ring = new THREE.Mesh(ringGeometry, ringMaterial); ring.rotation.x = Math.PI / 2; ring.position.copy(position); ring.position.y += 0.02; scene.add(ring); const targetScale = 6; new TWEEN.Tween(ring.scale).to({ x: targetScale, y: targetScale, z: targetScale }, 500).easing(TWEEN.Easing.Quadratic.Out).start(); new TWEEN.Tween(ring.material).to({ opacity: 0 }, 600).easing(TWEEN.Easing.Quadratic.Out).onComplete(() => { scene.remove(ring); ring.geometry.dispose(); ring.material.dispose(); }).start(); }
