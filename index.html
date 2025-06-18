@@ -112,8 +112,8 @@
             renderer.toneMapping = THREE.LinearToneMapping;
             document.body.appendChild(renderer.domElement);
             // --- MODIFIED ---: Increased light intensity
-            scene.add(new THREE.AmbientLight(0xffffff, 1.5));
-            const dirLight = new THREE.DirectionalLight(0xffffff, 2.2);
+            scene.add(new THREE.AmbientLight(0xffffff, 3));
+            const dirLight = new THREE.DirectionalLight(0xffffff, 4.4);
             dirLight.position.set(30, 50, 40); dirLight.castShadow = true;
             dirLight.shadow.mapSize.width = 2048; dirLight.shadow.mapSize.height = 2048;
             dirLight.shadow.camera.top = 50; dirLight.shadow.camera.bottom = -50;
