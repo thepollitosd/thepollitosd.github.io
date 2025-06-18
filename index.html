@@ -98,7 +98,11 @@
 
             createFloorAndGrid(); createStarfield();
             
-            orbitControls = new OrbitControls(camera, renderer.domElement); orbitControls.enableDamping = true;
+            orbitControls = new OrbitControls(camera, renderer.domElement);
+            orbitControls.enableDamping = true;
+            // FIX 2: Add this line to prevent the camera from going below the floor plane.
+            orbitControls.maxPolarAngle = Math.PI / 2;
+
             transformControls = new TransformControls(camera, renderer.domElement);
             transformControls.setMode('scale');
             transformControls.addEventListener('dragging-changed', e => { orbitControls.enabled = !e.value; if(!e.value) recordAction(); });
@@ -134,8 +138,7 @@
             const lidGeometry = new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0); 
             const baseMesh = new THREE.Mesh(baseGeometry, baseMaterial);
             const lidMesh = new THREE.Mesh(lidGeometry, lidMaterial);
-            const iconSprite = createIconSprite(boxData.icon); // Icon sprite created
-            iconSprite.visible = false; // FIXED: Icon is invisible in 3D scene
+            const iconSprite = createIconSprite(boxData.icon);
 
             [baseMesh, lidMesh].forEach(m => { m.castShadow = true; m.receiveShadow = true; });
             group.add(baseMesh, lidMesh, iconSprite); 
@@ -168,7 +171,7 @@
             lidMesh.position.y = boxData.size.y; 
             lidMesh.material.color.set(new THREE.Color(boxData.color).multiplyScalar(0.8));
             if (iconSprite) { 
-                iconSprite.position.y = boxData.size.y + 0.075; 
+                iconSprite.position.y = boxData.size.y + LID_THICKNESS / 2 + 0.01; // Position icon on top of lid
                 iconSprite.position.z = boxData.size.z * 0.5 + 0.01; 
                 iconSprite.scale.set(0.3, 0.3, 1); 
             }
@@ -279,30 +282,42 @@
         function handleItemDrop(e) { e.preventDefault(); const targetLi = e.target.closest('li'); if (!targetLi || !draggedItem || !selectedBoxData) return; const draggedItemId = draggedItem; const targetItemId = targetLi.dataset.itemId; const items = selectedBoxData.items; const draggedIndex = items.findIndex(item => item.id === draggedItemId); let targetIndex = items.findIndex(item => item.id === targetItemId); if (draggedIndex === -1 || targetIndex === -1) return; const [dragged] = items.splice(draggedIndex, 1); if (draggedIndex < targetIndex) targetIndex--; items.splice(targetIndex, 0, dragged); document.querySelectorAll('#itemList li.dragging').forEach(el => el.classList.remove('dragging')); draggedItem = null; renderItemList(); selectedBoxData.lastModified = new Date().toISOString(); recordAction(); }
         function handleDeleteBox() { if (!selectedBoxData) return; const boxToRemove = selectedBoxData; deselectBox(); new TWEEN.Tween(boxToRemove.threeGroup.scale).to({x:0.01, y:0.01, z:0.01}, 300).easing(TWEEN.Easing.Quadratic.In).onComplete(() => {scene.remove(boxToRemove.threeGroup); disposeThreeObject(boxToRemove.threeGroup);}).start(); boxes = boxes.filter(b => b.id !== boxToRemove.id); recordAction(); }
         
+        // FIX 1: This whole function is replaced with a more robust version.
         function onMouseMove(event) {
             const mouse = new THREE.Vector2((event.clientX / window.innerWidth) * 2 - 1, -(event.clientY / window.innerHeight) * 2 + 1);
             const raycaster = new THREE.Raycaster();
             raycaster.setFromCamera(mouse, camera);
-            const allGroups = boxes.map(b => b.threeGroup).filter(g => g);
-            const intersects = raycaster.intersectObjects(allGroups, true);
+
+            // Create a specific list of meshes to check for intersection (the box body and lid).
+            // This prevents the raycaster from hitting decorative sprites, which was causing the hover bug.
+            const collidableMeshes = boxes.flatMap(b =>
+                b.threeGroup ? [b.threeGroup.children[0], b.threeGroup.children[1]] : []
+            );
+            const intersects = raycaster.intersectObjects(collidableMeshes, false);
 
             let newHoveredBox = null;
             if (intersects.length > 0) {
-                let groupToTest = intersects[0].object;
-                while (groupToTest && !groupToTest.userData.id) { groupToTest = groupToTest.parent; }
-                if (groupToTest) newHoveredBox = boxes.find(b => b.id === groupToTest.userData.id);
+                // The first object in the intersects array is the closest one.
+                // Its parent is the THREE.Group that holds our box's ID.
+                const parentGroup = intersects[0].object.parent;
+                if (parentGroup && parentGroup.userData.id) {
+                    newHoveredBox = boxes.find(b => b.id === parentGroup.userData.id);
+                }
             }
             
             if (hoveredBoxData !== newHoveredBox) {
+                // Un-highlight the previously hovered box
                 if (hoveredBoxData && hoveredBoxData !== selectedBoxData) {
                     hoveredBoxData.threeGroup.children.forEach(c => { if (c.isMesh) new TWEEN.Tween(c.material.emissive).to({ r: 0, g: 0, b: 0 }, 100).start(); });
                 }
+                // Highlight the new box
                 if (newHoveredBox && newHoveredBox !== selectedBoxData) {
                     newHoveredBox.threeGroup.children.forEach(c => { if (c.isMesh) new TWEEN.Tween(c.material.emissive).to({ r: 0.2, g: 0.2, b: 0.2 }, 100).start(); });
                 }
                 hoveredBoxData = newHoveredBox;
             }
 
+            // Update and position the tooltip
             if (hoveredBoxData) {
                 hoverTooltipEl.innerHTML = `<i class="${hoveredBoxData.icon}"></i> ${hoveredBoxData.name}`;
                 hoverTooltipEl.classList.remove('hidden');
@@ -319,7 +334,28 @@
         function createPlopEffect(position) { const ringGeometry = new THREE.TorusGeometry(1, 0.05, 8, 50); const ringMaterial = new THREE.MeshBasicMaterial({ color: 0x00aaff, transparent: true }); const ring = new THREE.Mesh(ringGeometry, ringMaterial); ring.rotation.x = Math.PI / 2; ring.position.copy(position); ring.position.y += 0.02; scene.add(ring); const targetScale = 6; new TWEEN.Tween(ring.scale).to({ x: targetScale, y: targetScale, z: targetScale }, 500).easing(TWEEN.Easing.Quadratic.Out).start(); new TWEEN.Tween(ring.material).to({ opacity: 0 }, 600).easing(TWEEN.Easing.Quadratic.Out).onComplete(() => { scene.remove(ring); ring.geometry.dispose(); ring.material.dispose(); }).start(); }
         function createFloorAndGrid() { const floor = new THREE.Mesh(new THREE.PlaneGeometry(GRID_EXTENT * 2, GRID_EXTENT * 2), new THREE.MeshStandardMaterial({ color: 0x333840, roughness: 0.8, metalness: 0.2 })); floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor); const dotGeometry = new THREE.CircleGeometry(0.05 * (SNAP_GRID_SIZE / 0.5) , 12); dotGeometry.rotateX(-Math.PI / 2); const dotMaterial = new THREE.MeshBasicMaterial({ color: 0x555c66, transparent: true, opacity: 0.7 }); const divisions = Math.floor(GRID_EXTENT / SNAP_GRID_SIZE) * 2 + 1; const instancedDots = new THREE.InstancedMesh(dotGeometry, dotMaterial, divisions * divisions); const dummy = new THREE.Object3D(); let i = 0; for (let r = -GRID_EXTENT; r <= GRID_EXTENT; r += SNAP_GRID_SIZE) { for (let c = -GRID_EXTENT; c <= GRID_EXTENT; c += SNAP_GRID_SIZE) { dummy.position.set(r, 0.01, c); dummy.updateMatrix(); instancedDots.setMatrixAt(i++, dummy.matrix); } } scene.add(instancedDots); }
         function createStarfield() { const starVertices = []; for (let i = 0; i < 10000; i++) { const x = THREE.MathUtils.randFloatSpread(2000); const y = THREE.MathUtils.randFloatSpread(2000); const z = THREE.MathUtils.randFloatSpread(2000); starVertices.push(x, y, z); } const starGeometry = new THREE.BufferGeometry(); starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starVertices, 3)); const starMaterial = new THREE.PointsMaterial({ color: 0x666666, size: 0.5, sizeAttenuation: true }); starField = new THREE.Points(starGeometry, starMaterial); scene.add(starField); }
-        function createIconSprite(iconClass) { const canvas = document.createElement('canvas'); canvas.width = 256; canvas.height = 256; const context = canvas.getContext('2d'); const character = ICON_MAP[iconClass]; if (character) { context.font = '200px "bootstrap-icons"'; context.textAlign = 'center'; context.textBaseline = 'middle'; context.fillStyle = 'rgba(255, 255, 255, 0.8)'; context.fillText(character, 128, 128); } const texture = new THREE.CanvasTexture(canvas); const material = new THREE.SpriteMaterial({ map: texture, transparent: true, sizeAttenuation: false, depthTest: false }); const sprite = new THREE.Sprite(material); sprite.visible = false; return sprite; } 
+        
+        // FIX 3: Icon visibility is now handled correctly.
+        function createIconSprite(iconClass) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 256; canvas.height = 256;
+            const context = canvas.getContext('2d');
+            const character = ICON_MAP[iconClass];
+            if (character) {
+                context.font = '200px "bootstrap-icons"';
+                context.textAlign = 'center';
+                context.textBaseline = 'middle';
+                context.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                context.fillText(character, 128, 128);
+            }
+            const texture = new THREE.CanvasTexture(canvas);
+            const material = new THREE.SpriteMaterial({ map: texture, transparent: true, sizeAttenuation: false, depthTest: false });
+            const sprite = new THREE.Sprite(material);
+            // The icon is now visible if one is selected, and invisible otherwise.
+            sprite.visible = !!character;
+            return sprite;
+        }
+
         function disposeThreeObject(object) { if (!object) return; object.traverse(child => { if (child.geometry) child.geometry.dispose(); if (child.material) { if (Array.isArray(child.material)) { child.material.forEach(m => { if (m.map) m.map.dispose(); m.dispose(); }); } else { if (child.material.map) child.material.map.dispose(); child.material.dispose(); } } }); }
         function focusOnBox(box) { const targetPos = box.position.clone(); targetPos.y += box.size.y / 2; const offset = new THREE.Vector3(box.size.x + 5, box.size.y + 5, box.size.z + 5); const cameraPos = targetPos.clone().add(offset); new TWEEN.Tween(camera.position).to(cameraPos, 800).easing(TWEEN.Easing.Quadratic.Out).start(); new TWEEN.Tween(orbitControls.target).to(targetPos, 800).easing(TWEEN.Easing.Quadratic.Out).start(); }
         
