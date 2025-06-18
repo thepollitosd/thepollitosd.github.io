@@ -65,13 +65,19 @@
         import * as THREE from 'three';
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
         import { TransformControls } from 'three/addons/controls/TransformControls.js';
+        // --- NEW ---: Import post-processing modules
+        import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+        import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+        import { SSAOPass } from 'three/addons/postprocessing/SSAOPass.js';
+        import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+        import { SMAAPass } from 'three/addons/postprocessing/SMAAPass.js';
 
         const GRID_EXTENT = 100, SNAP_GRID_SIZE = 0.5; 
         const DEFAULT_BOX_COLOR = '#777777';
         const LID_THICKNESS = 0.15;
         const ICONS = ['none', 'bi-star-fill', 'bi-book-fill', 'bi-tools', 'bi-controller', 'bi-camera-fill', 'bi-lightbulb-fill', 'bi-box-seam', 'bi-archive-fill', 'bi-pc-display', 'bi-music-note-beamed', 'bi-paint-bucket', 'bi-puzzle-fill', 'bi-gift-fill', 'bi-heart-fill'];
         
-        let scene, camera, renderer, orbitControls, transformControls;
+        let scene, camera, renderer, orbitControls, transformControls, composer; // Added composer
         let boxes = [];
         let selectedBoxes = [], hoveredBoxData = null, clipboard = [];
         let infoPanelEl, hoverTooltipEl, starField, draggedItem = null; 
@@ -86,7 +92,8 @@
             scene = new THREE.Scene();
             camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
             camera.position.set(15, 20, 25);
-            renderer = new THREE.WebGLRenderer({ antialias: true });
+            // --- MODIFIED ---: Renderer antialias is now false, as SMAA will handle it.
+            renderer = new THREE.WebGLRenderer({ antialias: false }); 
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.setPixelRatio(window.devicePixelRatio);
             renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -115,18 +122,58 @@
                         multiSelectPivot.updateWorldMatrix(true, true);
                         for(const child of multiSelectPivot.children) {
                             const boxData = boxes.find(b => b.threeGroup === child);
-                            if (boxData) {
-                                child.getWorldPosition(boxData.position);
-                            }
+                            if (boxData) child.getWorldPosition(boxData.position);
                         }
                     }
                     recordAction(); 
                 }
             });
             scene.add(transformControls);
+            
+            // --- NEW ---: Setup post-processing pipeline
+            setupPostProcessing();
+
             setupUI();
             recordAction(); 
             animate();
+        }
+
+        // --- NEW ---: All post-processing setup is handled here.
+        function setupPostProcessing() {
+            composer = new EffectComposer(renderer);
+
+            const renderPass = new RenderPass(scene, camera);
+            composer.addPass(renderPass);
+
+            const ssaoPass = new SSAOPass(scene, camera, window.innerWidth, window.innerHeight);
+            ssaoPass.kernelRadius = 16;
+            ssaoPass.minDistance = 0.005;
+            ssaoPass.maxDistance = 0.1;
+            composer.addPass(ssaoPass);
+
+            const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
+            bloomPass.threshold = 0.9;
+            bloomPass.strength = 0.6;
+            bloomPass.radius = 0.4;
+            composer.addPass(bloomPass);
+
+            const smaaPass = new SMAAPass(window.innerWidth * renderer.getPixelRatio(), window.innerHeight * renderer.getPixelRatio());
+            composer.addPass(smaaPass);
+
+            window.addEventListener('resize', onWindowResize);
+        }
+
+        // --- NEW ---: Handles resizing for the renderer and composer.
+        function onWindowResize() {
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
+
+            renderer.setSize(width, height);
+            composer.setSize(width, height);
+            renderer.setPixelRatio(window.devicePixelRatio);
         }
 
         function createBoxData(overrideData = {}) {
@@ -210,7 +257,8 @@
                 const selectedBoxData = selectedBoxes[0];
                 if (selectedBoxData.threeGroup) {
                     transformControls.attach(selectedBoxData.threeGroup);
-                    selectedBoxData.threeGroup.children.forEach(c => { if (c.isMesh) new TWEEN.Tween(c.material.emissive).to({ r: 0.1, g: 0.3, b: 0.5 }, 200).start(); });
+                    // --- MODIFIED ---: Brighter emissive color to trigger bloom effect
+                    selectedBoxData.threeGroup.children.forEach(c => { if (c.isMesh) new TWEEN.Tween(c.material.emissive).to({ r: 0.2, g: 0.5, b: 0.8 }, 200).start(); });
                 }
                 updateInfoPanel();
                 infoPanelEl.classList.remove('hidden');
@@ -223,7 +271,7 @@
                 transformControls.setMode('translate');
                 transformControls.attach(multiSelectPivot);
                 document.getElementById('toggleModeBtn').disabled = true; 
-                selectedBoxes.forEach(boxData => { if (boxData.threeGroup) { boxData.threeGroup.children.forEach(c => { if (c.isMesh) new TWEEN.Tween(c.material.emissive).to({ r: 0.1, g: 0.3, b: 0.5 }, 200).start(); }); } });
+                selectedBoxes.forEach(boxData => { if (boxData.threeGroup) { boxData.threeGroup.children.forEach(c => { if (c.isMesh) new TWEEN.Tween(c.material.emissive).to({ r: 0.2, g: 0.5, b: 0.8 }, 200).start(); }); } });
                 updateMultiSelectInfoPanel();
                 infoPanelEl.classList.remove('hidden');
             }
@@ -282,7 +330,6 @@
             }
         }
         
-        // --- MODIFIED ---: This function now uses vector comparison for paste direction.
         function handlePaste() {
             if (clipboard.length === 0) return;
 
@@ -301,7 +348,6 @@
                 const selectionBBox = new THREE.Box3();
                 clipboard.forEach(boxData => {
                     const center = new THREE.Vector3(boxData.position.x, boxData.position.y, boxData.position.z);
-                    // Correctly use size.z for the Z dimension to calculate bounding box.
                     const size = new THREE.Vector3(boxData.size.x, boxData.size.y, boxData.size.z);
                     const boxBBox = new THREE.Box3().setFromCenterAndSize(center, size);
                     selectionBBox.union(boxBBox);
@@ -312,24 +358,19 @@
                 
                 const cameraDirection = new THREE.Vector3();
                 camera.getWorldDirection(cameraDirection);
-                cameraDirection.y = 0; // Project onto the XZ ground plane
+                cameraDirection.y = 0;
                 cameraDirection.normalize();
 
                 const dotX = Math.abs(cameraDirection.x);
                 const dotZ = Math.abs(cameraDirection.z);
                 
                 let offsetVector;
-                const padding = 1.0; // Corresponds to 2 grid dots
+                const padding = 1.0; // 2 grid dots
 
-                // If the camera is looking more along the Z-axis (front/back view),
-                // the perpendicular "side" axis is X. Paste along X.
                 if (dotZ > dotX) {
                     const offsetDistance = selectionSize.x + padding;
                     offsetVector = new THREE.Vector3(offsetDistance, 0, 0);
-                } 
-                // If the camera is looking more along the X-axis (side view),
-                // the perpendicular "depth" axis is Z. Paste along Z.
-                else {
+                } else {
                     const offsetDistance = selectionSize.z + padding;
                     offsetVector = new THREE.Vector3(0, 0, offsetDistance);
                 }
@@ -363,7 +404,15 @@
         function handleImport(event) { if (!event.target.files[0]) return; const reader = new FileReader(); reader.onload = (e) => { try { restoreState(e.target.result); } catch (err) { alert('Error: Invalid or corrupt JSON file.'); console.error(err); } }; reader.readAsText(event.target.files[0]); event.target.value = ''; }
         function renderIconPicker() { if (selectedBoxes.length !== 1) return; const selectedBoxData = selectedBoxes[0]; const picker = document.getElementById('iconPicker'); picker.innerHTML = ''; ICONS.forEach(iconClass => { const btn = document.createElement('button'); btn.className = `icon-btn`; if (iconClass === selectedBoxData.icon) btn.classList.add('selected'); btn.innerHTML = iconClass === 'none' ? '<i class="bi bi-slash-circle"></i>' : `<i class="${iconClass}"></i>`; btn.onclick = () => { updateBoxIcon(selectedBoxData, iconClass); renderIconPicker(); selectedBoxData.lastModified = new Date().toISOString(); recordAction(); }; picker.appendChild(btn); }); }
         function updateBoxIcon(box, iconClass) { box.icon = iconClass; }
-        function animate(time) { requestAnimationFrame(animate); TWEEN.update(time); orbitControls.update(); if (starField) starField.rotation.y -= 0.00005; renderer.render(scene, camera); }
+        
+        // --- MODIFIED ---: The main render loop now calls the composer.
+        function animate(time) { 
+            requestAnimationFrame(animate); 
+            TWEEN.update(time); 
+            orbitControls.update(); 
+            if (starField) starField.rotation.y -= 0.00005; 
+            composer.render(); 
+        }
         
         init();
     </script>
