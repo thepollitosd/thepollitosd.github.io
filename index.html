@@ -96,6 +96,14 @@
             const dirLight = new THREE.DirectionalLight(0xffffff, 1.8);
             dirLight.position.set(30, 50, 40); dirLight.castShadow = true;
             dirLight.shadow.mapSize.width = 2048; dirLight.shadow.mapSize.height = 2048;
+            
+            // --- NEW ---: Shadow improvements to reduce artifacts and long shadows.
+            dirLight.shadow.camera.top = 50;
+            dirLight.shadow.camera.bottom = -50;
+            dirLight.shadow.camera.left = -50;
+            dirLight.shadow.camera.right = 50;
+            dirLight.shadow.bias = -0.0005;
+
             scene.add(dirLight);
             createFloorAndGrid(); createStarfield();
             orbitControls = new OrbitControls(camera, renderer.domElement);
@@ -254,7 +262,6 @@
         function onMouseMove(event) { const mouse = new THREE.Vector2((event.clientX / window.innerWidth) * 2 - 1, -(event.clientY / window.innerHeight) * 2 + 1); const raycaster = new THREE.Raycaster(); raycaster.setFromCamera(mouse, camera); const collidableMeshes = boxes.flatMap(b => b.threeGroup ? [b.threeGroup.children[0], b.threeGroup.children[1]] : []); const intersects = raycaster.intersectObjects(collidableMeshes, false); let newHoveredBox = null; if (intersects.length > 0) { const parentGroup = intersects[0].object.parent; if (parentGroup && parentGroup.userData.id) newHoveredBox = boxes.find(b => b.id === parentGroup.userData.id); } if (hoveredBoxData !== newHoveredBox) { hoveredBoxData = newHoveredBox; } if (hoveredBoxData) { hoverTooltipEl.innerHTML = `<i class="${hoveredBoxData.icon}"></i> ${hoveredBoxData.name}`; hoverTooltipEl.classList.remove('hidden'); hoverTooltipEl.style.left = (event.clientX + 15) + 'px'; hoverTooltipEl.style.top = (event.clientY + 15) + 'px'; } else { hoverTooltipEl.classList.add('hidden'); } }
         function onCanvasClick(e) { if (transformControls.dragging) return; if (hoveredBoxData) { if (e.shiftKey) { const index = selectedBoxes.findIndex(b => b.id === hoveredBoxData.id); if (index > -1) { releaseMultiSelectPivot(); selectedBoxes.splice(index, 1); } else { releaseMultiSelectPivot(); selectedBoxes.push(hoveredBoxData); } } else { deselectAll(); selectedBoxes.push(hoveredBoxData); } } else { deselectAll(); } updateSelectionState(); }
         
-        // --- MODIFIED ---: Now includes Ctrl+X for 'cut'.
         function onKeyDown(e) { 
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return; 
             const isCtrlOrMeta = e.ctrlKey || e.metaKey; 
@@ -263,7 +270,7 @@
                 if (e.key.toLowerCase() === 'z') stateToRestore = actionManager.undo(); 
                 if (e.key.toLowerCase() === 'y') stateToRestore = actionManager.redo(); 
                 if (e.key.toLowerCase() === 'c') handleCopy(); 
-                if (e.key.toLowerCase() === 'x') handleCut(); // Added cut handler
+                if (e.key.toLowerCase() === 'x') handleCut();
                 if (e.key.toLowerCase() === 'v') handlePaste(); 
                 if (stateToRestore) restoreState(stateToRestore); 
             } else if (e.key === 'Delete' || e.key === 'Backspace') { 
@@ -273,50 +280,47 @@
 
         function handleCopy() { if (selectedBoxes.length > 0) { clipboard = selectedBoxes.map(box => ({...box, threeGroup: undefined})); console.log(`Copied ${clipboard.length} box(es) to clipboard.`); } }
         
-        // --- NEW ---: Function to handle 'cut' operation.
         function handleCut() {
             if (selectedBoxes.length > 0) {
-                handleCopy(); // First, copy the data to the clipboard
-                handleDeleteSelection(); // Then, delete the selection from the scene
+                handleCopy();
+                handleDeleteSelection();
             }
         }
-
-        // --- MODIFIED ---: Refined paste logic for direction and chained pasting.
+        
+        // --- MODIFIED ---: Rebuilt for robust chained pasting and corrected direction.
         function handlePaste() {
             if (clipboard.length === 0) return;
+
             const newSelection = [];
+            const newClipboardData = [];
 
             if (clipboard.length === 1) {
                 const originalBoxData = clipboard[0];
-                const originalBoxInScene = boxes.find(b => b.id === originalBoxData.id) || clipboard[0]; // Fallback to clipboard data if original is gone (cut)
-                const newPosition = new THREE.Vector3(originalBoxInScene.position.x, originalBoxInScene.position.y, originalBoxInScene.position.z).add(new THREE.Vector3(0, originalBoxInScene.size.y, 0));
+                const sourceBox = boxes.find(b => b.id === originalBoxData.id) || originalBoxData;
+                const newPosition = new THREE.Vector3(sourceBox.position.x, sourceBox.position.y, sourceBox.position.z).add(new THREE.Vector3(0, sourceBox.size.y, 0));
                 const newBoxData = createBoxData({...originalBoxData, id: THREE.MathUtils.generateUUID(), position: newPosition, lastModified: new Date().toISOString() });
                 const addedBox = addBoxToScene(newBoxData, true);
                 newSelection.push(addedBox);
-            } else { 
+                newClipboardData.push({...addedBox, threeGroup: undefined });
+
+            } else {
                 const selectionBBox = new THREE.Box3();
-                clipboard.forEach(boxData => { 
-                    const boxInScene = boxes.find(b => b.id === boxData.id);
-                    if(boxInScene) {
-                        const boxBBox = new THREE.Box3().setFromObject(boxInScene.threeGroup); 
-                        selectionBBox.union(boxBBox);
-                    } else { // Handle cut items that are no longer in the scene
-                        const tempBBox = new THREE.Box3();
-                        tempBBox.setFromCenterAndSize(new THREE.Vector3(boxData.position.x, boxData.position.y, boxData.position.z), new THREE.Vector3(boxData.size.x, boxData.size.y, boxData.size.z));
-                        selectionBBox.union(tempBBox);
-                    }
+                // Calculate BBox directly from clipboard data for reliability, especially for cut items.
+                clipboard.forEach(boxData => {
+                    const center = new THREE.Vector3(boxData.position.x, boxData.position.y, boxData.position.z);
+                    const size = new THREE.Vector3(boxData.size.x, boxData.size.y, boxData.size.z);
+                    const boxBBox = new THREE.Box3().setFromCenterAndSize(center, size);
+                    selectionBBox.union(boxBBox);
                 });
 
                 const selectionSize = new THREE.Vector3();
                 selectionBBox.getSize(selectionSize);
 
-                // Get the camera's "right" vector and project it onto the floor.
                 const cameraRight = new THREE.Vector3().setFromMatrixColumn(camera.matrix, 0);
                 cameraRight.y = 0;
                 cameraRight.normalize();
 
-                // Use the largest dimension of the selection for a consistent offset distance.
-                const offsetDistance = Math.max(selectionSize.x, selectionSize.z) + 1.0; // 1.0 is padding
+                const offsetDistance = Math.max(selectionSize.x, selectionSize.z) + 1.0;
                 const offsetVector = cameraRight.multiplyScalar(offsetDistance);
 
                 clipboard.forEach(boxData => {
@@ -325,19 +329,16 @@
                     const newBoxData = createBoxData({...boxData, id: THREE.MathUtils.generateUUID(), position: newPosition, lastModified: new Date().toISOString() });
                     const addedBox = addBoxToScene(newBoxData, true);
                     newSelection.push(addedBox);
+                    newClipboardData.push({...addedBox, threeGroup: undefined });
                 });
             }
 
-            if (newSelection.length > 0) { 
-                deselectAll(); 
-                selectedBoxes = newSelection; 
+            if (newSelection.length > 0) {
+                deselectAll();
+                selectedBoxes = newSelection;
                 updateSelectionState();
-                
-                // --- FIX for chained paste ---
-                // Update the clipboard to contain the newly created boxes.
-                clipboard = newSelection.map(box => ({...box, threeGroup: undefined}));
-                
-                recordAction(); 
+                clipboard = newClipboardData; // Update clipboard for the next paste.
+                recordAction();
             }
         }
         
