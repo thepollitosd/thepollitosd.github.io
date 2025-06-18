@@ -112,8 +112,8 @@
             renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
             renderer.toneMapping = THREE.LinearToneMapping;
             document.body.appendChild(renderer.domElement);
-            scene.add(new THREE.AmbientLight(0xffffff, 1.5));
-            const dirLight = new THREE.DirectionalLight(0xffffff, 2.2);
+            scene.add(new THREE.AmbientLight(0xffffff, 6));
+            const dirLight = new THREE.DirectionalLight(0xffffff, 8.8);
             dirLight.position.set(30, 50, 40); dirLight.castShadow = true;
             dirLight.shadow.mapSize.width = 2048; dirLight.shadow.mapSize.height = 2048;
             dirLight.shadow.camera.top = 50; dirLight.shadow.camera.bottom = -50;
@@ -396,19 +396,6 @@
                 scene.remove(ring);
                 ring.geometry.dispose();
                 ring.material.dispose();
-            }).start();
-            
-            // 2. Upward "Poof" Ring
-            const poofRing = ring.clone();
-            poofRing.material = ring.material.clone();
-            poofRing.material.color.set(0xffffff);
-            scene.add(poofRing);
-            new TWEEN.Tween(poofRing.scale).to({ x: 2.5, y: 2.5, z: 2.5 }, 400).easing(TWEEN.Easing.Circular.Out).start();
-            new TWEEN.Tween(poofRing.position).to({ y: position.y + 2 }, 400).easing(TWEEN.Easing.Circular.Out).start();
-            new TWEEN.Tween(poofRing.material).to({ opacity: 0 }, 500).easing(TWEEN.Easing.Quadratic.In).onComplete(() => {
-                scene.remove(poofRing);
-                poofRing.geometry.dispose();
-                poofRing.material.dispose();
             }).start();
 
             // 3. Particle Burst
