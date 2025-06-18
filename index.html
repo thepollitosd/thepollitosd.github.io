@@ -112,8 +112,8 @@
             renderer.toneMapping = THREE.LinearToneMapping;
             document.body.appendChild(renderer.domElement);
             // --- MODIFIED ---: Increased light intensity
-            scene.add(new THREE.AmbientLight(0xffffff, 3));
-            const dirLight = new THREE.DirectionalLight(0xffffff, 4.4);
+            scene.add(new THREE.AmbientLight(0xffffff, 6));
+            const dirLight = new THREE.DirectionalLight(0xffffff, 8.8);
             dirLight.position.set(30, 50, 40); dirLight.castShadow = true;
             dirLight.shadow.mapSize.width = 2048; dirLight.shadow.mapSize.height = 2048;
             dirLight.shadow.camera.top = 50; dirLight.shadow.camera.bottom = -50;
@@ -156,7 +156,7 @@
             ssaoPass.kernelRadius = 16; ssaoPass.minDistance = 0.005; ssaoPass.maxDistance = 0.1;
             composer.addPass(ssaoPass);
             const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
-            bloomPass.threshold = 0.85; bloomPass.strength = 0.6; bloomPass.radius = 0.5;
+            bloomPass.threshold = 0.85; bloomPass.strength = 0.3; bloomPass.radius = 0.5;
             composer.addPass(bloomPass);
             const smaaPass = new SMAAPass(window.innerWidth * renderer.getPixelRatio(), window.innerHeight * renderer.getPixelRatio());
             composer.addPass(smaaPass);
