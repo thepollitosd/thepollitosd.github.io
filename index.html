@@ -156,7 +156,7 @@
             ssaoPass.kernelRadius = 16; ssaoPass.minDistance = 0.005; ssaoPass.maxDistance = 0.1;
             composer.addPass(ssaoPass);
             const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
-            bloomPass.threshold = 0.85; bloomPass.strength = 0.3; bloomPass.radius = 0.5;
+            bloomPass.threshold = 0.85; bloomPass.strength = 0.05; bloomPass.radius = 0.5;
             composer.addPass(bloomPass);
             const smaaPass = new SMAAPass(window.innerWidth * renderer.getPixelRatio(), window.innerHeight * renderer.getPixelRatio());
             composer.addPass(smaaPass);
