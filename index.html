@@ -282,6 +282,7 @@
             }
         }
         
+        // --- MODIFIED ---: This function now uses vector comparison for paste direction.
         function handlePaste() {
             if (clipboard.length === 0) return;
 
@@ -300,7 +301,7 @@
                 const selectionBBox = new THREE.Box3();
                 clipboard.forEach(boxData => {
                     const center = new THREE.Vector3(boxData.position.x, boxData.position.y, boxData.position.z);
-                    // --- FIX ---: Correctly use size.z for the Z dimension.
+                    // Correctly use size.z for the Z dimension to calculate bounding box.
                     const size = new THREE.Vector3(boxData.size.x, boxData.size.y, boxData.size.z);
                     const boxBBox = new THREE.Box3().setFromCenterAndSize(center, size);
                     selectionBBox.union(boxBBox);
@@ -309,22 +310,25 @@
                 const selectionSize = new THREE.Vector3();
                 selectionBBox.getSize(selectionSize);
                 
-                let angleRad = orbitControls.getAzimuthalAngle();
-                let angleDeg = angleRad * (180 / Math.PI);
-                if (angleDeg < 0) angleDeg += 360;
+                const cameraDirection = new THREE.Vector3();
+                camera.getWorldDirection(cameraDirection);
+                cameraDirection.y = 0; // Project onto the XZ ground plane
+                cameraDirection.normalize();
 
-                let offsetVector;
-                const padding = 1.0;
+                const dotX = Math.abs(cameraDirection.x);
+                const dotZ = Math.abs(cameraDirection.z);
                 
-                // 0° is along -Z, 90° is -X, 180° is +Z, 270° is +X.
-                // Your request: 0°±45 or 180°±45 (front/back views) -> offset in +X.
-                // These ranges are (315° to 45°) and (135° to 225°).
-                if ((angleDeg >= 315 || angleDeg < 45) || (angleDeg >= 135 && angleDeg < 225)) {
+                let offsetVector;
+                const padding = 1.0; // Corresponds to 2 grid dots
+
+                // If the camera is looking more along the Z-axis (front/back view),
+                // the perpendicular "side" axis is X. Paste along X.
+                if (dotZ > dotX) {
                     const offsetDistance = selectionSize.x + padding;
                     offsetVector = new THREE.Vector3(offsetDistance, 0, 0);
                 } 
-                // Your request: 90°±45 or 270°±45 (side views) -> offset in +Z.
-                // These ranges are (45° to 135°) and (225° to 315°).
+                // If the camera is looking more along the X-axis (side view),
+                // the perpendicular "depth" axis is Z. Paste along Z.
                 else {
                     const offsetDistance = selectionSize.z + padding;
                     offsetVector = new THREE.Vector3(0, 0, offsetDistance);
