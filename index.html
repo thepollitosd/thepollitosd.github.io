@@ -112,8 +112,8 @@
             renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
             renderer.toneMapping = THREE.LinearToneMapping;
             document.body.appendChild(renderer.domElement);
-            scene.add(new THREE.AmbientLight(0xffffff, 2));
-            const dirLight = new THREE.DirectionalLight(0xffffff, 3.3);
+            scene.add(new THREE.AmbientLight(0xffffff, 1.3));
+            const dirLight = new THREE.DirectionalLight(0xffffff, 2.2);
             dirLight.position.set(30, 50, 40); dirLight.castShadow = true;
             dirLight.shadow.mapSize.width = 2048; dirLight.shadow.mapSize.height = 2048;
             dirLight.shadow.camera.top = 50; dirLight.shadow.camera.bottom = -50;
