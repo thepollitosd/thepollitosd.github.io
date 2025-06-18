@@ -18,7 +18,6 @@
         }
         body { margin: 0; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif; background-color: var(--bg-color); color: var(--text-color); overflow: hidden; cursor: default; }
         
-        /* --- NEW ---: UI Animation Transitions */
         .top-bar, .info-panel {
             transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.3s ease-out;
         }
@@ -33,12 +32,11 @@
         
         .info-panel { position: absolute; top: 15px; right: 15px; width: 340px; z-index: 100; background-color: var(--surface-color); border: 1px solid var(--border-color); padding: 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); max-height: calc(100vh - 100px); overflow-y: auto;}
         
-        /* --- MODIFIED ---: UI Animation States */
         .hidden { 
             opacity: 0 !important;
             transform: translateX(30px) !important;
             pointer-events: none !important;
-            display: block !important; /* Keep it in the DOM for transitions */
+            display: block !important;
         }
         
         .info-panel h3 { margin-top: 0; font-size: 1.4em; color: var(--text-color); border-bottom: 1px solid var(--border-color); padding-bottom: 10px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
@@ -93,8 +91,11 @@
         let scene, camera, renderer, orbitControls, transformControls, composer;
         let boxes = [];
         let selectedBoxes = [], hoveredBoxData = null, clipboard = [];
-        let infoPanelEl, hoverTooltipEl, starField, draggedItem = null, ambientParticles; // Added ambientParticles
+        let infoPanelEl, hoverTooltipEl, starField, draggedItem = null, ambientParticles;
         let multiSelectPivot;
+        // --- NEW ---: Clock and array for managing particle effects
+        const clock = new THREE.Clock();
+        let activeEffects = [];
 
         class ActionManager { constructor() { this.undoStack = []; this.redoStack = []; } pushState(state) { this.undoStack.push(state); this.redoStack = []; if (this.undoStack.length > 50) this.undoStack.shift(); } undo() { if (this.undoStack.length <= 1) return null; const currentState = this.undoStack.pop(); this.redoStack.push(currentState); return JSON.parse(JSON.stringify(this.undoStack[this.undoStack.length - 1])); } redo() { if (this.redoStack.length === 0) return null; const nextState = this.redoStack.pop(); this.undoStack.push(nextState); return JSON.parse(JSON.stringify(nextState)); } }
         const actionManager = new ActionManager();
@@ -111,9 +112,8 @@
             renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
             renderer.toneMapping = THREE.LinearToneMapping;
             document.body.appendChild(renderer.domElement);
-            // --- MODIFIED ---: Increased light intensity
-            scene.add(new THREE.AmbientLight(0xffffff, 6));
-            const dirLight = new THREE.DirectionalLight(0xffffff, 8.8);
+            scene.add(new THREE.AmbientLight(0xffffff, 1.5));
+            const dirLight = new THREE.DirectionalLight(0xffffff, 2.2);
             dirLight.position.set(30, 50, 40); dirLight.castShadow = true;
             dirLight.shadow.mapSize.width = 2048; dirLight.shadow.mapSize.height = 2048;
             dirLight.shadow.camera.top = 50; dirLight.shadow.camera.bottom = -50;
@@ -156,7 +156,7 @@
             ssaoPass.kernelRadius = 16; ssaoPass.minDistance = 0.005; ssaoPass.maxDistance = 0.1;
             composer.addPass(ssaoPass);
             const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
-            bloomPass.threshold = 0.85; bloomPass.strength = 0.05; bloomPass.radius = 0.5;
+            bloomPass.threshold = 0.85; bloomPass.strength = 0.6; bloomPass.radius = 0.5;
             composer.addPass(bloomPass);
             const smaaPass = new SMAAPass(window.innerWidth * renderer.getPixelRatio(), window.innerHeight * renderer.getPixelRatio());
             composer.addPass(smaaPass);
@@ -230,7 +230,6 @@
         }
 
         function setupUI() {
-            // UI animations will be handled by CSS transitions.
             document.querySelector('.top-bar').style.transform = 'translateY(0)';
             document.querySelector('.top-bar').style.opacity = '1';
 
@@ -247,7 +246,6 @@
         function updateSelectionState() {
             boxes.forEach(box => {
                 if(box.threeGroup) {
-                    // Reset hover animation and emissive color
                     applyBoxStateFromData(box);
                     box.threeGroup.children.forEach(c => {
                         if (c.isMesh && c.material.emissive.getHex() !== 0x000000) {
@@ -383,11 +381,67 @@
             }
         }
         
-        function createPlopEffect(position) { const ringGeometry = new THREE.TorusGeometry(1, 0.05, 8, 50); const ringMaterial = new THREE.MeshBasicMaterial({ color: 0x00aaff, transparent: true }); const ring = new THREE.Mesh(ringGeometry, ringMaterial); ring.rotation.x = Math.PI / 2; ring.position.copy(position); ring.position.y += 0.02; scene.add(ring); const targetScale = 6; new TWEEN.Tween(ring.scale).to({ x: targetScale, y: targetScale, z: targetScale }, 500).easing(TWEEN.Easing.Quadratic.Out).start(); new TWEEN.Tween(ring.material).to({ opacity: 0 }, 600).easing(TWEEN.Easing.Quadratic.Out).onComplete(() => { scene.remove(ring); ring.geometry.dispose(); ring.material.dispose(); }).start(); }
+        // --- MODIFIED ---: Rebuilt for more "pizazz"
+        function createPlopEffect(position) {
+            // 1. Ground Shockwave Ring
+            const ringGeometry = new THREE.TorusGeometry(1, 0.05, 8, 50);
+            const ringMaterial = new THREE.MeshBasicMaterial({ color: 0x00aaff, transparent: true });
+            const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+            ring.rotation.x = Math.PI / 2;
+            ring.position.copy(position);
+            ring.position.y += 0.02;
+            scene.add(ring);
+            new TWEEN.Tween(ring.scale).to({ x: 6, y: 6, z: 6 }, 500).easing(TWEEN.Easing.Quadratic.Out).start();
+            new TWEEN.Tween(ring.material).to({ opacity: 0 }, 600).easing(TWEEN.Easing.Quadratic.Out).onComplete(() => {
+                scene.remove(ring);
+                ring.geometry.dispose();
+                ring.material.dispose();
+            }).start();
+            
+            // 2. Upward "Poof" Ring
+            const poofRing = ring.clone();
+            poofRing.material = ring.material.clone();
+            poofRing.material.color.set(0xffffff);
+            scene.add(poofRing);
+            new TWEEN.Tween(poofRing.scale).to({ x: 2.5, y: 2.5, z: 2.5 }, 400).easing(TWEEN.Easing.Circular.Out).start();
+            new TWEEN.Tween(poofRing.position).to({ y: position.y + 2 }, 400).easing(TWEEN.Easing.Circular.Out).start();
+            new TWEEN.Tween(poofRing.material).to({ opacity: 0 }, 500).easing(TWEEN.Easing.Quadratic.In).onComplete(() => {
+                scene.remove(poofRing);
+                poofRing.geometry.dispose();
+                poofRing.material.dispose();
+            }).start();
+
+            // 3. Particle Burst
+            const particleCount = 50;
+            const vertices = [];
+            const velocities = [];
+            for (let i = 0; i < particleCount; i++) {
+                vertices.push(position.x, position.y + 0.1, position.z);
+                const velX = (Math.random() - 0.5) * 3;
+                const velY = Math.random() * 4;
+                const velZ = (Math.random() - 0.5) * 3;
+                velocities.push(new THREE.Vector3(velX, velY, velZ));
+            }
+            const geometry = new THREE.BufferGeometry();
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+            const material = new THREE.PointsMaterial({ color: 0x55ddff, size: 0.1, transparent: true });
+            const particles = new THREE.Points(geometry, material);
+            scene.add(particles);
+            activeEffects.push({ particles, velocities, startTime: clock.getElapsedTime(), duration: 1.5 });
+
+            // 4. Light Flash
+            const flash = new THREE.PointLight(0x88ccff, 200, 100);
+            flash.position.copy(position).add(new THREE.Vector3(0,1,0));
+            scene.add(flash);
+            new TWEEN.Tween(flash).to({ intensity: 0 }, 250).easing(TWEEN.Easing.Quadratic.Out).onComplete(() => {
+                scene.remove(flash);
+                flash.dispose();
+            }).start();
+        }
+
         function createFloorAndGrid() { const floor = new THREE.Mesh(new THREE.PlaneGeometry(GRID_EXTENT * 2, GRID_EXTENT * 2), new THREE.MeshStandardMaterial({ color: 0x333840, roughness: 1, metalness: 0 })); floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor); const dotGeometry = new THREE.CircleGeometry(0.05 * (SNAP_GRID_SIZE / 0.5) , 12); dotGeometry.rotateX(-Math.PI / 2); const dotMaterial = new THREE.MeshBasicMaterial({ color: 0xFFFFFF, transparent: true, opacity: 0.1 }); const divisions = Math.floor(GRID_EXTENT / SNAP_GRID_SIZE) * 2 + 1; const instancedDots = new THREE.InstancedMesh(dotGeometry, dotMaterial, divisions * divisions); const dummy = new THREE.Object3D(); let i = 0; for (let r = -GRID_EXTENT; r <= GRID_EXTENT; r += SNAP_GRID_SIZE) { for (let c = -GRID_EXTENT; c <= GRID_EXTENT; c += SNAP_GRID_SIZE) { dummy.position.set(r, 0.01, c); dummy.updateMatrix(); instancedDots.setMatrixAt(i++, dummy.matrix); } } scene.add(instancedDots); }
         function createStarfield() { const starVertices = []; for (let i = 0; i < 10000; i++) { const x = THREE.MathUtils.randFloatSpread(2000); const y = THREE.MathUtils.randFloatSpread(2000); const z = THREE.MathUtils.randFloatSpread(2000); starVertices.push(x, y, z); } const starGeometry = new THREE.BufferGeometry(); starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starVertices, 3)); const starMaterial = new THREE.PointsMaterial({ color: 0x666666, size: 0.5, sizeAttenuation: true }); starField = new THREE.Points(starGeometry, starMaterial); scene.add(starField); }
         
-        // --- NEW ---: Creates ambient dust mote particles.
         function createAmbientParticles() {
             const particleCount = 2000;
             const vertices = [];
@@ -414,28 +468,52 @@
         function renderIconPicker() { if (selectedBoxes.length !== 1) return; const selectedBoxData = selectedBoxes[0]; const picker = document.getElementById('iconPicker'); picker.innerHTML = ''; ICONS.forEach(iconClass => { const btn = document.createElement('button'); btn.className = `icon-btn`; if (iconClass === selectedBoxData.icon) btn.classList.add('selected'); btn.innerHTML = iconClass === 'none' ? '<i class="bi bi-slash-circle"></i>' : `<i class="${iconClass}"></i>`; btn.onclick = () => { updateBoxIcon(selectedBoxData, iconClass); renderIconPicker(); selectedBoxData.lastModified = new Date().toISOString(); recordAction(); }; picker.appendChild(btn); }); }
         function updateBoxIcon(box, iconClass) { box.icon = iconClass; }
         
-        function animate(time) { 
+        function animate() { 
             requestAnimationFrame(animate); 
-            TWEEN.update(time); 
-            orbitControls.update(); 
-            if (starField) starField.rotation.y -= 0.0001; 
+            const delta = clock.getDelta();
+            const elapsed = clock.getElapsedTime();
 
-            // --- NEW ---: Animate ambient particles
+            TWEEN.update(); 
+            orbitControls.update(); 
+            if (starField) starField.rotation.y -= 0.00005; 
+
             if (ambientParticles) {
                 const positions = ambientParticles.geometry.attributes.position.array;
                 for (let i = 1; i < positions.length; i += 3) {
-                    positions[i] -= 0.01; // Move down
-                    if (positions[i] < 0) positions[i] = 50; // Reset to top
+                    positions[i] -= 0.01;
+                    if (positions[i] < 0) positions[i] = 50;
                 }
                 ambientParticles.geometry.attributes.position.needsUpdate = true;
             }
             
-            // --- NEW ---: Animate selected box bobbing
             if (selectedBoxes.length === 1 && selectedBoxes[0].threeGroup) {
                 const selectedBox = selectedBoxes[0];
-                const hoverTime = performance.now() * 0.002;
-                const hoverOffset = Math.sin(hoverTime * 3) * 0.05;
+                const hoverTime = elapsed * 2;
+                const hoverOffset = Math.sin(hoverTime) * 0.05;
                 selectedBox.threeGroup.position.y = selectedBox.position.y + hoverOffset;
+            }
+
+            // --- NEW ---: Update active special effects like particle bursts
+            for (let i = activeEffects.length - 1; i >= 0; i--) {
+                const effect = activeEffects[i];
+                const effectElapsed = elapsed - effect.startTime;
+                if (effectElapsed > effect.duration) {
+                    scene.remove(effect.particles);
+                    effect.particles.geometry.dispose();
+                    effect.particles.material.dispose();
+                    activeEffects.splice(i, 1);
+                } else {
+                    const positions = effect.particles.geometry.attributes.position.array;
+                    const gravity = 9.8;
+                    for (let j = 0; j < effect.velocities.length; j++) {
+                        effect.velocities[j].y -= gravity * delta;
+                        positions[j*3] += effect.velocities[j].x * delta;
+                        positions[j*3 + 1] += effect.velocities[j].y * delta;
+                        positions[j*3 + 2] += effect.velocities[j].z * delta;
+                    }
+                    effect.particles.material.opacity = 1.0 - (effectElapsed / effect.duration);
+                    effect.particles.geometry.attributes.position.needsUpdate = true;
+                }
             }
 
             composer.render(); 
