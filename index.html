@@ -54,6 +54,16 @@
         #itemList li { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-bottom: 1px solid var(--border-color); cursor: grab; }
         #itemList li:last-child { border-bottom: none; }
         #itemList li.dragging { opacity: 0.5; background-color: var(--primary-color); }
+        
+        /* --- FIX 3: STYLE --- Add styles for the drop indicator */
+        #itemList li.drop-indicator-top {
+            border-top: 2px solid var(--primary-color);
+            border-bottom-color: var(--border-color); /* Keep original bottom border */
+        }
+        #itemList li.drop-indicator-bottom {
+            border-bottom: 2px solid var(--primary-color);
+        }
+
         .drag-handle { color: var(--text-muted-color); cursor: grab; }
         .item-name-input { flex-grow: 1; border: none; background: transparent; color: var(--text-color); padding: 4px 0;}
         .item-qty-input { width: 50px; text-align: center; padding: 4px; background-color: var(--surface-color); border: 1px solid var(--border-color);}
@@ -64,27 +74,10 @@
         #deleteBoxBtn { background-color: var(--danger-color); border-color: #c22a38; width: 100%; margin-top: 15px; }
         .hover-tooltip { position: absolute; background-color: rgba(20, 22, 26, 0.9); backdrop-filter: blur(3px); color: var(--text-color); padding: 8px 12px; border-radius: 6px; pointer-events: none; z-index: 101; display: flex; align-items: center; gap: 8px; font-size: 14px; border: 1px solid var(--border-color); }
         
-        /* --- NEW ---: Custom Scrollbar Styling */
-        /* Works in Webkit-based browsers (Chrome, Safari, Edge, Opera) */
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: var(--input-bg-color);
-            border-radius: 10px;
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background-color: var(--border-color);
-            border-radius: 10px;
-            border: 2px solid var(--input-bg-color); /* Creates a padding effect */
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background-color: var(--text-muted-color);
-        }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: var(--input-bg-color); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb { background-color: var(--border-color); border-radius: 10px; border: 2px solid var(--input-bg-color); }
+        ::-webkit-scrollbar-thumb:hover { background-color: var(--text-muted-color); }
 
     </style>
 </head>
@@ -261,6 +254,9 @@
         }
 
         function updateSelectionState() {
+            // FIX 1: Always release the pivot first to ensure a clean state before re-evaluating the selection.
+            releaseMultiSelectPivot();
+
             boxes.forEach(box => {
                 if(box.threeGroup) {
                     applyBoxStateFromData(box);
@@ -299,7 +295,7 @@
             }
         }
         
-        function updateInfoPanel() { if (selectedBoxes.length !== 1) return; const selectedBoxData = selectedBoxes[0]; const recordAndTimestamp = () => { if(selectedBoxData) selectedBoxData.lastModified = new Date().toISOString(); updateInfoPanel(); recordAction(); }; infoPanelEl.innerHTML = `<h3 id="infoPanelTitleArea"><span id="infoPanelTitle"></span> <span id="infoPanelIdChip" class="box-id-chip"></span></h3><div><label for="boxNameInput">Name</label><input type="text" id="boxNameInput"></div><div><label for="boxColorInput">Color</label><input type="color" id="boxColorInput"></div><div><label for="descriptionInput">Description</label><textarea id="descriptionInput" rows="3"></textarea></div><div id="tagsContainer"><h4 class="section-header">Tags</h4><div class="tag-container"><input type="text" id="tagInput" placeholder="Add a tag..."></div></div><div id="weightContainer"><h4 class="section-header">Weight</h4><div style="display: flex; gap: 8px;"><input type="number" id="weightInput" min="0" step="0.1" style="flex-grow: 1;"><select id="weightUnitSelect"><option value="kg">kg</option><option value="lbs">lbs</option></select></div></div><div id="iconContainer"><h4 class="section-header">Icon</h4><div id="iconPicker"></div></div><div id="itemListContainer"><h4 class="section-header">Items</h4><ul id="itemList"></ul><form id="addItemForm" onsubmit="return false;"><input type="text" id="newItemNameInput" placeholder="Item name..." required><input type="number" id="newItemQtyInput" value="1" min="1" style="width: 60px;"><button type="submit" id="addItemBtn"><i class="bi bi-plus-lg"></i> Add</button></form></div><p id="lastModifiedText" style="font-size: 0.8em; color: var(--text-muted-color); text-align: center; margin-top: 20px;"></p><button id="deleteBoxBtn"><i class="bi bi-trash"></i> Delete Box</button>`; document.getElementById('infoPanelTitle').textContent = selectedBoxData.name || "Box Properties"; document.getElementById('infoPanelIdChip').textContent = selectedBoxData.id.substring(0,6).toUpperCase(); document.getElementById('boxNameInput').value = selectedBoxData.name; document.getElementById('boxColorInput').value = selectedBoxData.color; document.getElementById('descriptionInput').value = selectedBoxData.description || ''; document.getElementById('weightInput').value = selectedBoxData.weight || 0; document.getElementById('weightUnitSelect').value = selectedBoxData.weightUnit || 'kg'; document.getElementById('lastModifiedText').textContent = `Last Modified: ${new Date(selectedBoxData.lastModified).toLocaleString()}`; document.getElementById('boxNameInput').onchange = (e) => { if(selectedBoxData) {selectedBoxData.name = e.target.value; recordAndTimestamp();}}; document.getElementById('boxColorInput').onchange = (e) => { if(selectedBoxData) {selectedBoxData.color = e.target.value; applyBoxStateFromData(selectedBoxData); recordAndTimestamp();}}; document.getElementById('descriptionInput').onchange = (e) => { if(selectedBoxData) {selectedBoxData.description = e.target.value; recordAndTimestamp();}}; document.getElementById('weightInput').onchange = (e) => { if(selectedBoxData) {selectedBoxData.weight = parseFloat(e.target.value) || 0; recordAndTimestamp();}}; document.getElementById('weightUnitSelect').onchange = (e) => { if(selectedBoxData) {selectedBoxData.weightUnit = e.target.value; recordAndTimestamp();}}; document.getElementById('tagInput').onkeydown = handleTagInput; document.getElementById('addItemForm').onsubmit = (e) => { handleAddItem(e); recordAndTimestamp(); }; document.getElementById('itemList').ondragstart = handleItemDragStart; document.getElementById('itemList').ondragover = handleItemDragOver; document.getElementById('itemList').ondrop = (e) => { handleItemDrop(e); recordAndTimestamp(); }; document.getElementById('deleteBoxBtn').onclick = handleDeleteSelection; renderTags(); renderItemList(); renderIconPicker(); }
+        function updateInfoPanel() { if (selectedBoxes.length !== 1) return; const selectedBoxData = selectedBoxes[0]; const recordAndTimestamp = () => { if(selectedBoxData) selectedBoxData.lastModified = new Date().toISOString(); updateInfoPanel(); recordAction(); }; infoPanelEl.innerHTML = `<h3 id="infoPanelTitleArea"><span id="infoPanelTitle"></span> <span id="infoPanelIdChip" class="box-id-chip"></span></h3><div><label for="boxNameInput">Name</label><input type="text" id="boxNameInput"></div><div><label for="boxColorInput">Color</label><input type="color" id="boxColorInput"></div><div><label for="descriptionInput">Description</label><textarea id="descriptionInput" rows="3"></textarea></div><div id="tagsContainer"><h4 class="section-header">Tags</h4><div class="tag-container"><input type="text" id="tagInput" placeholder="Add a tag..."></div></div><div id="weightContainer"><h4 class="section-header">Weight</h4><div style="display: flex; gap: 8px;"><input type="number" id="weightInput" min="0" step="0.1" style="flex-grow: 1;"><select id="weightUnitSelect"><option value="kg">kg</option><option value="lbs">lbs</option></select></div></div><div id="iconContainer"><h4 class="section-header">Icon</h4><div id="iconPicker"></div></div><div id="itemListContainer"><h4 class="section-header">Items</h4><ul id="itemList"></ul><form id="addItemForm" onsubmit="return false;"><input type="text" id="newItemNameInput" placeholder="Item name..." required><input type="number" id="newItemQtyInput" value="1" min="1" style="width: 60px;"><button type="submit" id="addItemBtn"><i class="bi bi-plus-lg"></i> Add</button></form></div><p id="lastModifiedText" style="font-size: 0.8em; color: var(--text-muted-color); text-align: center; margin-top: 20px;"></p><button id="deleteBoxBtn"><i class="bi bi-trash"></i> Delete Box</button>`; document.getElementById('infoPanelTitle').textContent = selectedBoxData.name || "Box Properties"; document.getElementById('infoPanelIdChip').textContent = selectedBoxData.id.substring(0,6).toUpperCase(); document.getElementById('boxNameInput').value = selectedBoxData.name; document.getElementById('boxColorInput').value = selectedBoxData.color; document.getElementById('descriptionInput').value = selectedBoxData.description || ''; document.getElementById('weightInput').value = selectedBoxData.weight || 0; document.getElementById('weightUnitSelect').value = selectedBoxData.weightUnit || 'kg'; document.getElementById('lastModifiedText').textContent = `Last Modified: ${new Date(selectedBoxData.lastModified).toLocaleString()}`; document.getElementById('boxNameInput').onchange = (e) => { if(selectedBoxData) {selectedBoxData.name = e.target.value; recordAndTimestamp();}}; document.getElementById('boxColorInput').onchange = (e) => { if(selectedBoxData) {selectedBoxData.color = e.target.value; applyBoxStateFromData(selectedBoxData); recordAndTimestamp();}}; document.getElementById('descriptionInput').onchange = (e) => { if(selectedBoxData) {selectedBoxData.description = e.target.value; recordAndTimestamp();}}; document.getElementById('weightInput').onchange = (e) => { if(selectedBoxData) {selectedBoxData.weight = parseFloat(e.target.value) || 0; recordAndTimestamp();}}; document.getElementById('weightUnitSelect').onchange = (e) => { if(selectedBoxData) {selectedBoxData.weightUnit = e.target.value; recordAndTimestamp();}}; document.getElementById('tagInput').onkeydown = handleTagInput; document.getElementById('addItemForm').onsubmit = (e) => { handleAddItem(e); recordAndTimestamp(); }; const itemListEl = document.getElementById('itemList'); itemListEl.ondragstart = handleItemDragStart; itemListEl.ondragover = handleItemDragOver; itemListEl.ondrop = (e) => { handleItemDrop(e); recordAndTimestamp(); }; itemListEl.ondragleave = clearItemDropIndicators; document.getElementById('deleteBoxBtn').onclick = handleDeleteSelection; renderTags(); renderItemList(); renderIconPicker(); }
         function updateMultiSelectInfoPanel() { infoPanelEl.innerHTML = `<h3>${selectedBoxes.length} Boxes Selected</h3><button id="deleteBoxBtn"><i class="bi bi-trash"></i> Delete Selected</button>`; document.getElementById('deleteBoxBtn').onclick = handleDeleteSelection; }
         function renderTags() { if (selectedBoxes.length !== 1) return; const selectedBoxData = selectedBoxes[0]; const tagContainer = document.querySelector('#tagsContainer .tag-container'); const tagInput = document.getElementById('tagInput'); [...tagContainer.children].filter(child => child !== tagInput).forEach(child => child.remove()); selectedBoxData.tags.forEach(tagText => { const tagEl = document.createElement('span'); tagEl.className = 'tag'; tagEl.textContent = tagText; const removeEl = document.createElement('span'); removeEl.className = 'tag-remove bi bi-x'; removeEl.onclick = () => { selectedBoxData.tags = selectedBoxData.tags.filter(t => t !== tagText); selectedBoxData.lastModified = new Date().toISOString(); recordAction(); renderTags(); }; tagEl.appendChild(removeEl); tagContainer.insertBefore(tagEl, tagInput); }); }
         function handleTagInput(e) { if (e.key === 'Enter' && selectedBoxes.length === 1) { e.preventDefault(); const tagValue = e.target.value.trim(); if (tagValue && !selectedBoxes[0].tags.includes(tagValue)) { selectedBoxes[0].tags.push(tagValue); selectedBoxes[0].lastModified = new Date().toISOString(); recordAction(); renderTags(); } e.target.value = ''; } }
@@ -321,12 +317,91 @@
         function renderItemList() { if (selectedBoxes.length !== 1) return; const selectedBoxData = selectedBoxes[0]; const itemListEl = document.getElementById('itemList'); itemListEl.innerHTML = ''; selectedBoxData.items.forEach((item, index) => { const li = document.createElement('li'); li.dataset.itemId = item.id; li.draggable = true; const handle = document.createElement('span'); handle.className = 'drag-handle bi bi-grip-vertical'; const nameInput = document.createElement('input'); nameInput.type = 'text'; nameInput.className = 'item-name-input'; nameInput.value = item.name; nameInput.onchange = (e) => { item.name = e.target.value; selectedBoxData.lastModified = new Date().toISOString(); recordAction(); }; const qtyInput = document.createElement('input'); qtyInput.type = 'number'; qtyInput.className = 'item-qty-input'; qtyInput.value = item.qty; qtyInput.min = 1; qtyInput.onchange = (e) => { item.qty = parseInt(e.target.value) || 1; selectedBoxData.lastModified = new Date().toISOString(); recordAction(); }; const deleteBtn = document.createElement('button'); deleteBtn.className = 'delete-item-btn bi bi-x-lg'; deleteBtn.onclick = () => { selectedBoxData.items.splice(index, 1); renderItemList(); selectedBoxData.lastModified = new Date().toISOString(); recordAction(); }; li.append(handle, nameInput, qtyInput, deleteBtn); itemListEl.appendChild(li); }); }
         function handleAddItem(event) { event.preventDefault(); if (selectedBoxes.length !== 1) return; const selectedBoxData = selectedBoxes[0]; const nameInput = document.getElementById('newItemNameInput'); const qtyInput = document.getElementById('newItemQtyInput'); const name = nameInput.value.trim(); const qty = parseInt(qtyInput.value) || 1; if (name) { selectedBoxData.items.push({ id: THREE.MathUtils.generateUUID(), name, qty }); nameInput.value = ''; qtyInput.value = 1; renderItemList(); selectedBoxData.lastModified = new Date().toISOString(); recordAction(); } }
         function handleItemDragStart(e) { if (e.target.tagName === 'LI') { e.target.classList.add('dragging'); draggedItem = e.target.dataset.itemId; e.dataTransfer.effectAllowed = 'move'; } }
-        function handleItemDragOver(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }
-        function handleItemDrop(e) { e.preventDefault(); const targetLi = e.target.closest('li'); if (!targetLi || !draggedItem || selectedBoxes.length !== 1) return; const selectedBoxData = selectedBoxes[0]; const draggedItemId = draggedItem; const targetItemId = targetLi.dataset.itemId; const items = selectedBoxData.items; const draggedIndex = items.findIndex(item => item.id === draggedItemId); let targetIndex = items.findIndex(item => item.id === targetItemId); if (draggedIndex === -1 || targetIndex === -1) return; const [dragged] = items.splice(draggedIndex, 1); if (draggedIndex < targetIndex) targetIndex--; items.splice(targetIndex, 0, dragged); document.querySelectorAll('#itemList li.dragging').forEach(el => el.classList.remove('dragging')); draggedItem = null; renderItemList(); selectedBoxData.lastModified = new Date().toISOString(); recordAction(); }
+        
+        // --- FIX 3: LOGIC --- Updated drag/drop handlers for items list
+        function clearItemDropIndicators() {
+            document.querySelectorAll('#itemList li').forEach(li => {
+                li.classList.remove('drop-indicator-top', 'drop-indicator-bottom');
+            });
+        }
+        function handleItemDragOver(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            const targetLi = e.target.closest('li');
+            const draggingLi = document.querySelector('#itemList li.dragging');
+            if (!targetLi || !draggingLi || targetLi === draggingLi) return;
+            
+            clearItemDropIndicators();
+
+            const rect = targetLi.getBoundingClientRect();
+            const midY = rect.top + rect.height / 2;
+            if (e.clientY < midY) {
+                targetLi.classList.add('drop-indicator-top');
+            } else {
+                targetLi.classList.add('drop-indicator-bottom');
+            }
+        }
+        function handleItemDrop(e) {
+            e.preventDefault();
+            const targetLi = e.target.closest('li');
+            if (!targetLi || !draggedItem || selectedBoxes.length !== 1) {
+                clearItemDropIndicators();
+                draggedItem = null;
+                return;
+            }
+
+            const selectedBoxData = selectedBoxes[0];
+            const items = selectedBoxData.items;
+            const draggedIndex = items.findIndex(item => item.id === draggedItem);
+            let targetIndex = Array.from(targetLi.parentElement.children).indexOf(targetLi);
+
+            if (draggedIndex === -1) return;
+
+            // Adjust target index based on drop indicator position
+            if (targetLi.classList.contains('drop-indicator-bottom')) {
+                targetIndex++;
+            }
+            
+            // Adjust index if dragging down
+            if (draggedIndex < targetIndex) {
+                targetIndex--;
+            }
+
+            const [dragged] = items.splice(draggedIndex, 1);
+            items.splice(targetIndex, 0, dragged);
+            
+            clearItemDropIndicators();
+            document.querySelector('#itemList li.dragging')?.classList.remove('dragging');
+            draggedItem = null;
+            renderItemList();
+            selectedBoxData.lastModified = new Date().toISOString();
+            recordAction();
+        }
+
         function handleDeleteSelection() { if (selectedBoxes.length === 0) return; const boxesToRemove = [...selectedBoxes]; deselectAll(); boxesToRemove.forEach(boxToRemove => { if (boxToRemove.threeGroup) { new TWEEN.Tween(boxToRemove.threeGroup.scale).to({x:0.01, y:0.01, z:0.01}, 300).easing(TWEEN.Easing.Quadratic.In).onComplete(() => {scene.remove(boxToRemove.threeGroup); disposeThreeObject(boxToRemove.threeGroup);}).start(); } boxes = boxes.filter(b => b.id !== boxToRemove.id); }); recordAction(); }
         function onMouseMove(event) { const mouse = new THREE.Vector2((event.clientX / window.innerWidth) * 2 - 1, -(event.clientY / window.innerHeight) * 2 + 1); const raycaster = new THREE.Raycaster(); raycaster.setFromCamera(mouse, camera); const collidableMeshes = boxes.flatMap(b => b.threeGroup ? [b.threeGroup.children[0], b.threeGroup.children[1]] : []); const intersects = raycaster.intersectObjects(collidableMeshes, false); let newHoveredBox = null; if (intersects.length > 0) { const parentGroup = intersects[0].object.parent; if (parentGroup && parentGroup.userData.id) newHoveredBox = boxes.find(b => b.id === parentGroup.userData.id); } if (hoveredBoxData !== newHoveredBox) { hoveredBoxData = newHoveredBox; } if (hoveredBoxData) { hoverTooltipEl.innerHTML = `<i class="${hoveredBoxData.icon}"></i> ${hoveredBoxData.name}`; hoverTooltipEl.classList.remove('hidden'); hoverTooltipEl.style.left = (event.clientX + 15) + 'px'; hoverTooltipEl.style.top = (event.clientY + 15) + 'px'; } else { hoverTooltipEl.classList.add('hidden'); } }
-        function onCanvasClick(e) { if (transformControls.dragging) return; if (hoveredBoxData) { if (e.shiftKey) { const index = selectedBoxes.findIndex(b => b.id === hoveredBoxData.id); if (index > -1) { releaseMultiSelectPivot(); selectedBoxes.splice(index, 1); } else { releaseMultiSelectPivot(); selectedBoxes.push(hoveredBoxData); } } else { deselectAll(); selectedBoxes.push(hoveredBoxData); } } else { deselectAll(); } updateSelectionState(); }
         
+        // --- FIX 1: LOGIC --- Simplified click handler relies on the robust `updateSelectionState`
+        function onCanvasClick(e) {
+            if (transformControls.dragging) return;
+            if (hoveredBoxData) {
+                if (e.shiftKey) {
+                    const index = selectedBoxes.findIndex(b => b.id === hoveredBoxData.id);
+                    if (index > -1) {
+                        selectedBoxes.splice(index, 1); // Deselect if already selected
+                    } else {
+                        selectedBoxes.push(hoveredBoxData); // Add to selection
+                    }
+                } else {
+                    deselectAll();
+                    selectedBoxes.push(hoveredBoxData);
+                }
+            } else {
+                deselectAll();
+            }
+            updateSelectionState();
+        }
+
         function onKeyDown(e) { 
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return; 
             const isCtrlOrMeta = e.ctrlKey || e.metaKey; 
@@ -343,7 +418,18 @@
             } 
         }
 
-        function handleCopy() { if (selectedBoxes.length > 0) { clipboard = selectedBoxes.map(box => ({...box, threeGroup: undefined})); console.log(`Copied ${clipboard.length} box(es) to clipboard.`); } }
+        function handleCopy() { 
+            if (selectedBoxes.length > 0) { 
+                // Deep copy position and size to prevent reference issues
+                clipboard = selectedBoxes.map(box => {
+                    const cleanBox = { ...box, threeGroup: undefined };
+                    cleanBox.position = box.position.clone();
+                    cleanBox.size = box.size.clone();
+                    return cleanBox;
+                });
+                console.log(`Copied ${clipboard.length} box(es) to clipboard.`);
+            } 
+        }
         
         function handleCut() {
             if (selectedBoxes.length > 0) {
@@ -357,19 +443,20 @@
             const newSelection = []; const newClipboardData = [];
             if (clipboard.length === 1) {
                 const originalBoxData = clipboard[0];
-                const sourceBox = boxes.find(b => b.id === originalBoxData.id) || originalBoxData;
-                const newPosition = new THREE.Vector3(sourceBox.position.x, sourceBox.position.y, sourceBox.position.z).add(new THREE.Vector3(0, sourceBox.size.y, 0));
+                const newPosition = originalBoxData.position.clone().add(new THREE.Vector3(0, originalBoxData.size.y, 0));
                 const newBoxData = createBoxData({...originalBoxData, id: THREE.MathUtils.generateUUID(), position: newPosition, lastModified: new Date().toISOString() });
                 const addedBox = addBoxToScene(newBoxData, true);
                 newSelection.push(addedBox); newClipboardData.push({...addedBox, threeGroup: undefined });
             } else {
+                // --- FIX 2: LOGIC --- Rewrote multi-paste logic to be more robust
+                const originalCenter = new THREE.Vector3();
                 const selectionBBox = new THREE.Box3();
                 clipboard.forEach(boxData => {
-                    const center = new THREE.Vector3(boxData.position.x, boxData.position.y, boxData.position.z);
-                    const size = new THREE.Vector3(boxData.size.x, boxData.size.y, boxData.size.z);
-                    const boxBBox = new THREE.Box3().setFromCenterAndSize(center, size);
+                    const boxBBox = new THREE.Box3().setFromCenterAndSize(boxData.position, boxData.size);
                     selectionBBox.union(boxBBox);
                 });
+                selectionBBox.getCenter(originalCenter);
+
                 const selectionSize = new THREE.Vector3();
                 selectionBBox.getSize(selectionSize);
                 const cameraDirection = new THREE.Vector3();
@@ -377,24 +464,32 @@
                 cameraDirection.y = 0; cameraDirection.normalize();
                 const dotX = Math.abs(cameraDirection.x); const dotZ = Math.abs(cameraDirection.z);
                 let offsetVector; const padding = 1.0;
-                if (dotZ > dotX) {
-                    const offsetDistance = selectionSize.x + padding;
-                    offsetVector = new THREE.Vector3(offsetDistance, 0, 0);
-                } else {
-                    const offsetDistance = selectionSize.z + padding;
-                    offsetVector = new THREE.Vector3(0, 0, offsetDistance);
+                if (dotZ > dotX) { // More top-down view
+                    offsetVector = new THREE.Vector3(selectionSize.x + padding, 0, 0);
+                } else { // More side-on view
+                    offsetVector = new THREE.Vector3(0, 0, selectionSize.z + padding);
                 }
+
+                const newCenter = originalCenter.clone().add(offsetVector);
+
                 clipboard.forEach(boxData => {
-                    const originalPos = new THREE.Vector3(boxData.position.x, boxData.position.y, boxData.position.z);
-                    const newPosition = originalPos.add(offsetVector);
+                    const relativePos = boxData.position.clone().sub(originalCenter);
+                    const newPosition = newCenter.clone().add(relativePos);
+                    
                     const newBoxData = createBoxData({...boxData, id: THREE.MathUtils.generateUUID(), position: newPosition, lastModified: new Date().toISOString() });
                     const addedBox = addBoxToScene(newBoxData, true);
-                    newSelection.push(addedBox); newClipboardData.push({...addedBox, threeGroup: undefined });
+                    newSelection.push(addedBox); 
+                    // Create new clipboard data with updated positions
+                    const cleanPastedBox = {...addedBox, threeGroup: undefined};
+                    cleanPastedBox.position = newPosition.clone();
+                    newClipboardData.push(cleanPastedBox);
                 });
             }
             if (newSelection.length > 0) {
                 deselectAll(); selectedBoxes = newSelection;
-                updateSelectionState(); clipboard = newClipboardData; recordAction();
+                updateSelectionState(); 
+                clipboard = newClipboardData; // Update clipboard for subsequent pastes
+                recordAction();
             }
         }
         
