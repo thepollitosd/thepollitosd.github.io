@@ -17,6 +17,12 @@
             --danger-color: #dc3545;
         }
         body { margin: 0; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif; background-color: var(--bg-color); color: var(--text-color); overflow: hidden; cursor: default; }
+        
+        /* --- NEW ---: UI Animation Transitions */
+        .top-bar, .info-panel {
+            transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.3s ease-out;
+        }
+
         .top-bar { position: absolute; top: 15px; left: 15px; z-index: 100; display: flex; gap: 10px; align-items: center; }
         .ui-panel { background-color: var(--surface-color); border: 1px solid var(--border-color); padding: 12px 15px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); display: flex; gap: 10px; align-items: center; }
         button { padding: 9px 15px; border: 1px solid var(--border-color); border-radius: 6px; background-color: #484d53; color: var(--text-color); cursor: pointer; transition: background-color 0.2s, border-color 0.2s; font-size: 14px; font-weight: 500; display: inline-flex; align-items: center; gap: 6px;}
@@ -26,7 +32,15 @@
         input[type="text"], input[type="color"], input[type="number"], textarea, select { padding: 9px 12px; border: 1px solid var(--border-color); border-radius: 6px; background-color: var(--input-bg-color); color: var(--text-color); font-size: 14px; box-sizing: border-box; font-family: inherit; }
         
         .info-panel { position: absolute; top: 15px; right: 15px; width: 340px; z-index: 100; background-color: var(--surface-color); border: 1px solid var(--border-color); padding: 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); max-height: calc(100vh - 100px); overflow-y: auto;}
-        .hidden { display: none !important; }
+        
+        /* --- MODIFIED ---: UI Animation States */
+        .hidden { 
+            opacity: 0 !important;
+            transform: translateX(30px) !important;
+            pointer-events: none !important;
+            display: block !important; /* Keep it in the DOM for transitions */
+        }
+        
         .info-panel h3 { margin-top: 0; font-size: 1.4em; color: var(--text-color); border-bottom: 1px solid var(--border-color); padding-bottom: 10px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
         .info-panel h3 .box-id-chip { font-size: 0.6em; color: var(--text-muted-color); background-color: var(--input-bg-color); padding: 3px 6px; border-radius: 4px; font-family: monospace; }
         .info-panel label { display: block; margin-bottom: 5px; font-size: 0.9em; color: var(--text-muted-color); }
@@ -65,7 +79,6 @@
         import * as THREE from 'three';
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
         import { TransformControls } from 'three/addons/controls/TransformControls.js';
-        // --- NEW ---: Import post-processing modules
         import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
         import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
         import { SSAOPass } from 'three/addons/postprocessing/SSAOPass.js';
@@ -77,10 +90,10 @@
         const LID_THICKNESS = 0.15;
         const ICONS = ['none', 'bi-star-fill', 'bi-book-fill', 'bi-tools', 'bi-controller', 'bi-camera-fill', 'bi-lightbulb-fill', 'bi-box-seam', 'bi-archive-fill', 'bi-pc-display', 'bi-music-note-beamed', 'bi-paint-bucket', 'bi-puzzle-fill', 'bi-gift-fill', 'bi-heart-fill'];
         
-        let scene, camera, renderer, orbitControls, transformControls, composer; // Added composer
+        let scene, camera, renderer, orbitControls, transformControls, composer;
         let boxes = [];
         let selectedBoxes = [], hoveredBoxData = null, clipboard = [];
-        let infoPanelEl, hoverTooltipEl, starField, draggedItem = null; 
+        let infoPanelEl, hoverTooltipEl, starField, draggedItem = null, ambientParticles; // Added ambientParticles
         let multiSelectPivot;
 
         class ActionManager { constructor() { this.undoStack = []; this.redoStack = []; } pushState(state) { this.undoStack.push(state); this.redoStack = []; if (this.undoStack.length > 50) this.undoStack.shift(); } undo() { if (this.undoStack.length <= 1) return null; const currentState = this.undoStack.pop(); this.redoStack.push(currentState); return JSON.parse(JSON.stringify(this.undoStack[this.undoStack.length - 1])); } redo() { if (this.redoStack.length === 0) return null; const nextState = this.redoStack.pop(); this.undoStack.push(nextState); return JSON.parse(JSON.stringify(nextState)); } }
@@ -92,22 +105,22 @@
             scene = new THREE.Scene();
             camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
             camera.position.set(15, 20, 25);
-            // --- MODIFIED ---: Renderer antialias is now false, as SMAA will handle it.
             renderer = new THREE.WebGLRenderer({ antialias: false }); 
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.setPixelRatio(window.devicePixelRatio);
             renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
             renderer.toneMapping = THREE.LinearToneMapping;
             document.body.appendChild(renderer.domElement);
-            scene.add(new THREE.AmbientLight(0xffffff, 1.2));
-            const dirLight = new THREE.DirectionalLight(0xffffff, 1.8);
+            // --- MODIFIED ---: Increased light intensity
+            scene.add(new THREE.AmbientLight(0xffffff, 1.5));
+            const dirLight = new THREE.DirectionalLight(0xffffff, 2.2);
             dirLight.position.set(30, 50, 40); dirLight.castShadow = true;
             dirLight.shadow.mapSize.width = 2048; dirLight.shadow.mapSize.height = 2048;
             dirLight.shadow.camera.top = 50; dirLight.shadow.camera.bottom = -50;
             dirLight.shadow.camera.left = -50; dirLight.shadow.camera.right = 50;
             dirLight.shadow.bias = -0.0005;
             scene.add(dirLight);
-            createFloorAndGrid(); createStarfield();
+            createFloorAndGrid(); createStarfield(); createAmbientParticles();
             orbitControls = new OrbitControls(camera, renderer.domElement);
             orbitControls.enableDamping = true;
             orbitControls.maxPolarAngle = Math.PI / 2;
@@ -129,50 +142,31 @@
                 }
             });
             scene.add(transformControls);
-            
-            // --- NEW ---: Setup post-processing pipeline
             setupPostProcessing();
-
             setupUI();
             recordAction(); 
             animate();
         }
 
-        // --- NEW ---: All post-processing setup is handled here.
         function setupPostProcessing() {
             composer = new EffectComposer(renderer);
-
             const renderPass = new RenderPass(scene, camera);
             composer.addPass(renderPass);
-
             const ssaoPass = new SSAOPass(scene, camera, window.innerWidth, window.innerHeight);
-            ssaoPass.kernelRadius = 16;
-            ssaoPass.minDistance = 0.005;
-            ssaoPass.maxDistance = 0.1;
+            ssaoPass.kernelRadius = 16; ssaoPass.minDistance = 0.005; ssaoPass.maxDistance = 0.1;
             composer.addPass(ssaoPass);
-
             const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
-            bloomPass.threshold = 0.9;
-            bloomPass.strength = 0.6;
-            bloomPass.radius = 0.4;
+            bloomPass.threshold = 0.85; bloomPass.strength = 0.6; bloomPass.radius = 0.5;
             composer.addPass(bloomPass);
-
             const smaaPass = new SMAAPass(window.innerWidth * renderer.getPixelRatio(), window.innerHeight * renderer.getPixelRatio());
             composer.addPass(smaaPass);
-
             window.addEventListener('resize', onWindowResize);
         }
 
-        // --- NEW ---: Handles resizing for the renderer and composer.
         function onWindowResize() {
-            const width = window.innerWidth;
-            const height = window.innerHeight;
-
-            camera.aspect = width / height;
-            camera.updateProjectionMatrix();
-
-            renderer.setSize(width, height);
-            composer.setSize(width, height);
+            const width = window.innerWidth; const height = window.innerHeight;
+            camera.aspect = width / height; camera.updateProjectionMatrix();
+            renderer.setSize(width, height); composer.setSize(width, height);
             renderer.setPixelRatio(window.devicePixelRatio);
         }
 
@@ -236,6 +230,10 @@
         }
 
         function setupUI() {
+            // UI animations will be handled by CSS transitions.
+            document.querySelector('.top-bar').style.transform = 'translateY(0)';
+            document.querySelector('.top-bar').style.opacity = '1';
+
             document.getElementById('addBoxBtn').addEventListener('click', () => { const newBoxData = createBoxData(); addBoxToScene(newBoxData, true); deselectAll(); selectedBoxes.push(newBoxData); updateSelectionState(); recordAction(); });
             document.getElementById('toggleModeBtn').addEventListener('click', (e) => { const currentMode = transformControls.getMode(); if (currentMode === 'scale') { transformControls.setMode('translate'); e.target.innerHTML = '<i class="bi bi-arrows-fullscreen"></i> Switch to Resize'; } else { transformControls.setMode('scale'); e.target.innerHTML = '<i class="bi bi-arrows-move"></i> Switch to Move';} });
             document.getElementById('findBtn').addEventListener('click', () => { const code = document.getElementById('findCodeInput').value.trim().toUpperCase(); const foundBox = boxes.find(b => b.id.substring(0,6).toUpperCase() === code); if (foundBox) { deselectAll(); selectedBoxes.push(foundBox); updateSelectionState(); focusOnBox(foundBox); } else { alert('Box not found! Make sure to use the first 6 characters of the ID.'); } });
@@ -247,7 +245,17 @@
         }
 
         function updateSelectionState() {
-            boxes.forEach(box => { if (box.threeGroup) { box.threeGroup.children.forEach(c => { if (c.isMesh && c.material.emissive.getHex() !== 0x000000) new TWEEN.Tween(c.material.emissive).to({ r: 0, g: 0, b: 0 }, 100).start(); }); } });
+            boxes.forEach(box => {
+                if(box.threeGroup) {
+                    // Reset hover animation and emissive color
+                    applyBoxStateFromData(box);
+                    box.threeGroup.children.forEach(c => {
+                        if (c.isMesh && c.material.emissive.getHex() !== 0x000000) {
+                            new TWEEN.Tween(c.material.emissive).to({ r: 0, g: 0, b: 0 }, 100).start();
+                        }
+                    });
+                }
+            });
 
             if (selectedBoxes.length === 0) {
                 transformControls.detach();
@@ -257,7 +265,6 @@
                 const selectedBoxData = selectedBoxes[0];
                 if (selectedBoxData.threeGroup) {
                     transformControls.attach(selectedBoxData.threeGroup);
-                    // --- MODIFIED ---: Brighter emissive color to trigger bloom effect
                     selectedBoxData.threeGroup.children.forEach(c => { if (c.isMesh) new TWEEN.Tween(c.material.emissive).to({ r: 0.2, g: 0.5, b: 0.8 }, 200).start(); });
                 }
                 updateInfoPanel();
@@ -332,18 +339,14 @@
         
         function handlePaste() {
             if (clipboard.length === 0) return;
-
-            const newSelection = [];
-            const newClipboardData = [];
-
+            const newSelection = []; const newClipboardData = [];
             if (clipboard.length === 1) {
                 const originalBoxData = clipboard[0];
                 const sourceBox = boxes.find(b => b.id === originalBoxData.id) || originalBoxData;
                 const newPosition = new THREE.Vector3(sourceBox.position.x, sourceBox.position.y, sourceBox.position.z).add(new THREE.Vector3(0, sourceBox.size.y, 0));
                 const newBoxData = createBoxData({...originalBoxData, id: THREE.MathUtils.generateUUID(), position: newPosition, lastModified: new Date().toISOString() });
                 const addedBox = addBoxToScene(newBoxData, true);
-                newSelection.push(addedBox);
-                newClipboardData.push({...addedBox, threeGroup: undefined });
+                newSelection.push(addedBox); newClipboardData.push({...addedBox, threeGroup: undefined });
             } else {
                 const selectionBBox = new THREE.Box3();
                 clipboard.forEach(boxData => {
@@ -352,21 +355,13 @@
                     const boxBBox = new THREE.Box3().setFromCenterAndSize(center, size);
                     selectionBBox.union(boxBBox);
                 });
-
                 const selectionSize = new THREE.Vector3();
                 selectionBBox.getSize(selectionSize);
-                
                 const cameraDirection = new THREE.Vector3();
                 camera.getWorldDirection(cameraDirection);
-                cameraDirection.y = 0;
-                cameraDirection.normalize();
-
-                const dotX = Math.abs(cameraDirection.x);
-                const dotZ = Math.abs(cameraDirection.z);
-                
-                let offsetVector;
-                const padding = 1.0; // 2 grid dots
-
+                cameraDirection.y = 0; cameraDirection.normalize();
+                const dotX = Math.abs(cameraDirection.x); const dotZ = Math.abs(cameraDirection.z);
+                let offsetVector; const padding = 1.0;
                 if (dotZ > dotX) {
                     const offsetDistance = selectionSize.x + padding;
                     offsetVector = new THREE.Vector3(offsetDistance, 0, 0);
@@ -374,29 +369,43 @@
                     const offsetDistance = selectionSize.z + padding;
                     offsetVector = new THREE.Vector3(0, 0, offsetDistance);
                 }
-
                 clipboard.forEach(boxData => {
                     const originalPos = new THREE.Vector3(boxData.position.x, boxData.position.y, boxData.position.z);
                     const newPosition = originalPos.add(offsetVector);
                     const newBoxData = createBoxData({...boxData, id: THREE.MathUtils.generateUUID(), position: newPosition, lastModified: new Date().toISOString() });
                     const addedBox = addBoxToScene(newBoxData, true);
-                    newSelection.push(addedBox);
-                    newClipboardData.push({...addedBox, threeGroup: undefined });
+                    newSelection.push(addedBox); newClipboardData.push({...addedBox, threeGroup: undefined });
                 });
             }
-
             if (newSelection.length > 0) {
-                deselectAll();
-                selectedBoxes = newSelection;
-                updateSelectionState();
-                clipboard = newClipboardData;
-                recordAction();
+                deselectAll(); selectedBoxes = newSelection;
+                updateSelectionState(); clipboard = newClipboardData; recordAction();
             }
         }
         
         function createPlopEffect(position) { const ringGeometry = new THREE.TorusGeometry(1, 0.05, 8, 50); const ringMaterial = new THREE.MeshBasicMaterial({ color: 0x00aaff, transparent: true }); const ring = new THREE.Mesh(ringGeometry, ringMaterial); ring.rotation.x = Math.PI / 2; ring.position.copy(position); ring.position.y += 0.02; scene.add(ring); const targetScale = 6; new TWEEN.Tween(ring.scale).to({ x: targetScale, y: targetScale, z: targetScale }, 500).easing(TWEEN.Easing.Quadratic.Out).start(); new TWEEN.Tween(ring.material).to({ opacity: 0 }, 600).easing(TWEEN.Easing.Quadratic.Out).onComplete(() => { scene.remove(ring); ring.geometry.dispose(); ring.material.dispose(); }).start(); }
         function createFloorAndGrid() { const floor = new THREE.Mesh(new THREE.PlaneGeometry(GRID_EXTENT * 2, GRID_EXTENT * 2), new THREE.MeshStandardMaterial({ color: 0x333840, roughness: 0.8, metalness: 0.2 })); floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor); const dotGeometry = new THREE.CircleGeometry(0.05 * (SNAP_GRID_SIZE / 0.5) , 12); dotGeometry.rotateX(-Math.PI / 2); const dotMaterial = new THREE.MeshBasicMaterial({ color: 0x555c66, transparent: true, opacity: 0.7 }); const divisions = Math.floor(GRID_EXTENT / SNAP_GRID_SIZE) * 2 + 1; const instancedDots = new THREE.InstancedMesh(dotGeometry, dotMaterial, divisions * divisions); const dummy = new THREE.Object3D(); let i = 0; for (let r = -GRID_EXTENT; r <= GRID_EXTENT; r += SNAP_GRID_SIZE) { for (let c = -GRID_EXTENT; c <= GRID_EXTENT; c += SNAP_GRID_SIZE) { dummy.position.set(r, 0.01, c); dummy.updateMatrix(); instancedDots.setMatrixAt(i++, dummy.matrix); } } scene.add(instancedDots); }
         function createStarfield() { const starVertices = []; for (let i = 0; i < 10000; i++) { const x = THREE.MathUtils.randFloatSpread(2000); const y = THREE.MathUtils.randFloatSpread(2000); const z = THREE.MathUtils.randFloatSpread(2000); starVertices.push(x, y, z); } const starGeometry = new THREE.BufferGeometry(); starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starVertices, 3)); const starMaterial = new THREE.PointsMaterial({ color: 0x666666, size: 0.5, sizeAttenuation: true }); starField = new THREE.Points(starGeometry, starMaterial); scene.add(starField); }
+        
+        // --- NEW ---: Creates ambient dust mote particles.
+        function createAmbientParticles() {
+            const particleCount = 2000;
+            const vertices = [];
+            for (let i = 0; i < particleCount; i++) {
+                const x = THREE.MathUtils.randFloatSpread(100);
+                const y = THREE.MathUtils.randFloat(0, 50);
+                const z = THREE.MathUtils.randFloatSpread(100);
+                vertices.push(x, y, z);
+            }
+            const geometry = new THREE.BufferGeometry();
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+            const material = new THREE.PointsMaterial({
+                color: 0x666666, size: 0.1, transparent: true, opacity: 0.5, sizeAttenuation: false
+            });
+            ambientParticles = new THREE.Points(geometry, material);
+            scene.add(ambientParticles);
+        }
+        
         function disposeThreeObject(object) { if (!object) return; object.traverse(child => { if (child.geometry) child.geometry.dispose(); if (child.material) { if (Array.isArray(child.material)) { child.material.forEach(m => { if (m.map) m.map.dispose(); m.dispose(); }); } else { if (child.material.map) child.material.map.dispose(); child.material.dispose(); } } }); }
         function focusOnBox(box) { const targetPos = box.position.clone(); targetPos.y += box.size.y / 2; const offset = new THREE.Vector3(box.size.x + 5, box.size.y + 5, box.size.z + 5); const cameraPos = targetPos.clone().add(offset); new TWEEN.Tween(camera.position).to(cameraPos, 800).easing(TWEEN.Easing.Quadratic.Out).start(); new TWEEN.Tween(orbitControls.target).to(targetPos, 800).easing(TWEEN.Easing.Quadratic.Out).start(); }
         function recordAction() { actionManager.pushState(JSON.stringify(boxes.map(box => ({...box, threeGroup: undefined})))); }
@@ -405,12 +414,30 @@
         function renderIconPicker() { if (selectedBoxes.length !== 1) return; const selectedBoxData = selectedBoxes[0]; const picker = document.getElementById('iconPicker'); picker.innerHTML = ''; ICONS.forEach(iconClass => { const btn = document.createElement('button'); btn.className = `icon-btn`; if (iconClass === selectedBoxData.icon) btn.classList.add('selected'); btn.innerHTML = iconClass === 'none' ? '<i class="bi bi-slash-circle"></i>' : `<i class="${iconClass}"></i>`; btn.onclick = () => { updateBoxIcon(selectedBoxData, iconClass); renderIconPicker(); selectedBoxData.lastModified = new Date().toISOString(); recordAction(); }; picker.appendChild(btn); }); }
         function updateBoxIcon(box, iconClass) { box.icon = iconClass; }
         
-        // --- MODIFIED ---: The main render loop now calls the composer.
         function animate(time) { 
             requestAnimationFrame(animate); 
             TWEEN.update(time); 
             orbitControls.update(); 
             if (starField) starField.rotation.y -= 0.00005; 
+
+            // --- NEW ---: Animate ambient particles
+            if (ambientParticles) {
+                const positions = ambientParticles.geometry.attributes.position.array;
+                for (let i = 1; i < positions.length; i += 3) {
+                    positions[i] -= 0.01; // Move down
+                    if (positions[i] < 0) positions[i] = 50; // Reset to top
+                }
+                ambientParticles.geometry.attributes.position.needsUpdate = true;
+            }
+            
+            // --- NEW ---: Animate selected box bobbing
+            if (selectedBoxes.length === 1 && selectedBoxes[0].threeGroup) {
+                const selectedBox = selectedBoxes[0];
+                const hoverTime = performance.now() * 0.002;
+                const hoverOffset = Math.sin(hoverTime * 3) * 0.1;
+                selectedBox.threeGroup.position.y = selectedBox.position.y + hoverOffset;
+            }
+
             composer.render(); 
         }
         
