@@ -79,6 +79,12 @@
         ::-webkit-scrollbar-thumb { background-color: var(--border-color); border-radius: 10px; border: 2px solid var(--input-bg-color); }
         ::-webkit-scrollbar-thumb:hover { background-color: var(--text-muted-color); }
 
+        /* Style for keyboard mode indicator */
+        #keyboardModeIndicator {
+            font-weight: 500;
+            color: var(--text-muted-color);
+        }
+
     </style>
 </head>
 <body>
@@ -90,8 +96,11 @@
             <input type="file" id="importFile" accept=".json" style="display: none;">
             <button onclick="document.getElementById('importFile').click()"><i class="bi bi-box-arrow-down"></i> Import</button>
         </div>
+        <!-- ADDED MODE INDICATOR HERE -->
+        <div class="ui-panel" id="keyboardModeIndicator" style="padding: 9px 12px; font-size: 14px;">
+            Mode: Move (M/R/Tab)
+        </div>
         <div class="ui-panel">
-            <!-- MODIFIED PLACEHOLDER HERE -->
             <input type="text" id="findCodeInput" placeholder="Enter ID or Name...">
             <button id="findBtn"><i class="bi bi-search"></i></button>
         </div>
@@ -124,6 +133,11 @@
         let multiSelectPivot;
         const clock = new THREE.Clock();
         let activeEffects = [];
+
+        // --- NEW GLOBAL STATE FOR KEYBOARD MODE ---
+        let keyboardInteractionMode = 'move'; // 'move' or 'rotate'
+        const KEYBOARD_MOVE_INCREMENT = SNAP_GRID_SIZE;
+        const KEYBOARD_ROTATE_INCREMENT = THREE.MathUtils.degToRad(5); // 5 degrees
 
         class ActionManager { constructor() { this.undoStack = []; this.redoStack = []; } pushState(state) { this.undoStack.push(state); this.redoStack = []; if (this.undoStack.length > 50) this.undoStack.shift(); } undo() { if (this.undoStack.length <= 1) return null; const currentState = this.undoStack.pop(); this.redoStack.push(currentState); return JSON.parse(JSON.stringify(this.undoStack[this.undoStack.length - 1])); } redo() { if (this.redoStack.length === 0) return null; const nextState = this.redoStack.pop(); this.undoStack.push(nextState); return JSON.parse(JSON.stringify(nextState)); } }
         const actionManager = new ActionManager();
@@ -165,6 +179,11 @@
                             const boxData = boxes.find(b => b.threeGroup === child);
                             if (boxData) child.getWorldPosition(boxData.position);
                         }
+                    } else if (selectedBoxes.length === 1) { // Single selection transform, update rotation data
+                        const box = selectedBoxes[0];
+                        if (box.threeGroup) {
+                            box.rotation.copy(box.threeGroup.rotation);
+                        }
                     }
                     recordAction();
                 }
@@ -193,8 +212,25 @@
             renderer.setPixelRatio(window.devicePixelRatio);
         }
 
+        // --- MODIFIED createBoxData ---
         function createBoxData(overrideData = {}) {
-            return { id: THREE.MathUtils.generateUUID(), name: "New Box", color: DEFAULT_BOX_COLOR, position: new THREE.Vector3(0, 0, 0), size: new THREE.Vector3(4, 3, 4), items: [], icon: 'none', thumbnail: null, description: '', tags: [], weight: 0, weightUnit: 'kg', lastModified: new Date().toISOString(), ...overrideData, };
+            return {
+                id: THREE.MathUtils.generateUUID(),
+                name: "New Box",
+                color: DEFAULT_BOX_COLOR,
+                position: new THREE.Vector3(0, 0, 0),
+                size: new THREE.Vector3(4, 3, 4),
+                rotation: new THREE.Euler(0, 0, 0), // Added rotation
+                items: [],
+                icon: 'none',
+                thumbnail: null,
+                description: '',
+                tags: [],
+                weight: 0,
+                weightUnit: 'kg',
+                lastModified: new Date().toISOString(),
+                ...overrideData,
+            };
         }
 
         function addBoxToScene(boxData, isNew = false) {
@@ -222,13 +258,17 @@
             return boxData;
         }
 
+        // --- MODIFIED applyBoxStateFromData ---
         function applyBoxStateFromData(boxData) {
             if (!boxData.threeGroup) return;
             const [baseMesh, lidMesh] = boxData.threeGroup.children;
             boxData.threeGroup.position.copy(boxData.position);
-            baseMesh.scale.copy(boxData.size); baseMesh.material.color.set(boxData.color);
+            boxData.threeGroup.rotation.copy(boxData.rotation); // Apply rotation
+            baseMesh.scale.copy(boxData.size);
+            baseMesh.material.color.set(boxData.color);
             lidMesh.scale.set(boxData.size.x * 1.02, LID_THICKNESS, boxData.size.z * 1.02);
-            lidMesh.position.y = boxData.size.y; lidMesh.material.color.set(new THREE.Color(boxData.color).multiplyScalar(0.8));
+            lidMesh.position.y = boxData.size.y;
+            lidMesh.material.color.set(new THREE.Color(boxData.color).multiplyScalar(0.8));
         }
 
         function onTransformObject() {
@@ -240,54 +280,101 @@
                     selectedBoxData.size.x = Math.max(SNAP_GRID_SIZE, Math.round(baseMesh.scale.x / SNAP_GRID_SIZE) * SNAP_GRID_SIZE);
                     selectedBoxData.size.y = Math.max(SNAP_GRID_SIZE, Math.round(baseMesh.scale.y / SNAP_GRID_SIZE) * SNAP_GRID_SIZE);
                     selectedBoxData.size.z = Math.max(SNAP_GRID_SIZE, Math.round(baseMesh.scale.z / SNAP_GRID_SIZE) * SNAP_GRID_SIZE);
+                } else if (transformControls.mode === 'rotate') { // Capture rotation from transform controls
+                    selectedBoxData.rotation.copy(group.rotation);
                 }
                 selectedBoxData.position.x = Math.round(group.position.x / SNAP_GRID_SIZE) * SNAP_GRID_SIZE;
                 selectedBoxData.position.y = Math.round(group.position.y / SNAP_GRID_SIZE) * SNAP_GRID_SIZE;
                 selectedBoxData.position.z = Math.round(group.position.z / SNAP_GRID_SIZE) * SNAP_GRID_SIZE;
                 applyBoxStateFromData(selectedBoxData);
-            } else if (selectedBoxes.length > 1) {
+                selectedBoxData.lastModified = new Date().toISOString();
+                 if (infoPanelEl && !infoPanelEl.classList.contains('hidden') && selectedBoxes.length ===1) {
+                    const lastModifiedTextEl = document.getElementById('lastModifiedText');
+                    if(lastModifiedTextEl) lastModifiedTextEl.textContent = `Last Modified: ${new Date(selectedBoxData.lastModified).toLocaleString()}`;
+                }
+
+            } else if (selectedBoxes.length > 1) { // Multi-select only supports translate for now
                 multiSelectPivot.position.x = Math.round(multiSelectPivot.position.x / SNAP_GRID_SIZE) * SNAP_GRID_SIZE;
                 multiSelectPivot.position.y = Math.round(multiSelectPivot.position.y / SNAP_GRID_SIZE) * SNAP_GRID_SIZE;
                 multiSelectPivot.position.z = Math.round(multiSelectPivot.position.z / SNAP_GRID_SIZE) * SNAP_GRID_SIZE;
+                 selectedBoxes.forEach(box => box.lastModified = new Date().toISOString());
             }
         }
 
+        // --- NEW HELPER to update mode indicator ---
+        function updateKeyboardModeIndicator() {
+            const indicator = document.getElementById('keyboardModeIndicator');
+            if (indicator) {
+                let modeText = keyboardInteractionMode.charAt(0).toUpperCase() + keyboardInteractionMode.slice(1);
+                indicator.textContent = `Mode: ${modeText} (M/R/Tab)`;
+                // Update transformControls mode to match keyboard mode if a single box is selected
+                if (selectedBoxes.length === 1 && transformControls.object) {
+                    if (keyboardInteractionMode === 'move' && transformControls.getMode() !== 'translate') {
+                        transformControls.setMode('translate');
+                        document.getElementById('toggleModeBtn').innerHTML = '<i class="bi bi-arrows-fullscreen"></i> Switch to Resize';
+                    } else if (keyboardInteractionMode === 'rotate' && transformControls.getMode() !== 'rotate') {
+                        transformControls.setMode('rotate');
+                        // No direct button for rotate mode, toggleModeBtn handles translate/scale
+                    }
+                }
+            }
+        }
+
+        // --- MODIFIED setupUI ---
         function setupUI() {
             document.querySelector('.top-bar').style.transform = 'translateY(0)';
             document.querySelector('.top-bar').style.opacity = '1';
 
-            document.getElementById('addBoxBtn').addEventListener('click', () => { const newBoxData = createBoxData(); addBoxToScene(newBoxData, true); deselectAll(); selectedBoxes.push(newBoxData); updateSelectionState(); recordAction(); });
-            document.getElementById('toggleModeBtn').addEventListener('click', (e) => { const currentMode = transformControls.getMode(); if (currentMode === 'scale') { transformControls.setMode('translate'); e.target.innerHTML = '<i class="bi bi-arrows-fullscreen"></i> Switch to Resize'; } else { transformControls.setMode('scale'); e.target.innerHTML = '<i class="bi bi-arrows-move"></i> Switch to Move';} });
+            updateKeyboardModeIndicator(); // Initialize indicator text
 
-            // --- MODIFIED SEARCH LOGIC ---
+            document.getElementById('addBoxBtn').addEventListener('click', () => {
+                 const newBoxData = createBoxData({ position: camera.getWorldPosition(new THREE.Vector3()).add(camera.getWorldDirection(new THREE.Vector3()).multiplyScalar(10)) });
+                 const addedBox = addBoxToScene(newBoxData, true);
+                 deselectAll();
+                 selectedBoxes.push(addedBox);
+                 updateSelectionState();
+                 focusOnBox(addedBox);
+                 recordAction();
+            });
+            document.getElementById('toggleModeBtn').addEventListener('click', (e) => {
+                const currentTransformMode = transformControls.getMode();
+                if (currentTransformMode === 'scale') {
+                    transformControls.setMode('translate');
+                    keyboardInteractionMode = 'move'; // Sync keyboard mode
+                    e.target.innerHTML = '<i class="bi bi-arrows-fullscreen"></i> Switch to Resize';
+                } else if (currentTransformMode === 'translate') {
+                    transformControls.setMode('scale');
+                    // No direct keyboard mode for scale, but can keep it as 'move' or set to 'scale' if you add scale via keyboard
+                    e.target.innerHTML = '<i class="bi bi-arrows-move"></i> Switch to Move';
+                }
+                updateKeyboardModeIndicator();
+            });
+
             document.getElementById('findBtn').addEventListener('click', () => {
                 const searchTerm = document.getElementById('findCodeInput').value.trim();
                 let foundBox = null;
-
-                if (searchTerm) { // Only proceed if searchTerm is not empty
-                    const searchTermUpper = searchTerm.toUpperCase(); // For case-insensitive comparison
-
+                if (searchTerm) {
+                    const searchTermUpper = searchTerm.toUpperCase();
                     foundBox = boxes.find(b =>
                         (b.id.substring(0, 6).toUpperCase() === searchTermUpper) ||
                         (b.name && b.name.toUpperCase() === searchTermUpper)
                     );
                 }
-
                 if (foundBox) {
-                    deselectAll();
-                    selectedBoxes.push(foundBox);
-                    updateSelectionState();
-                    focusOnBox(foundBox);
-                    document.getElementById('findCodeInput').value = ''; // Clear input on successful find
+                    deselectAll(); selectedBoxes.push(foundBox); updateSelectionState(); focusOnBox(foundBox);
+                    document.getElementById('findCodeInput').value = '';
                 } else {
-                    if (searchTerm) { // Only show alert if a search was attempted
-                        alert('Box not found! Searched by ID (first 6 chars) and exact Name (case-insensitive).');
-                    } else {
-                        alert('Please enter a Box ID or Name to search.');
-                    }
+                    alert(searchTerm ? 'Box not found! Searched by ID (first 6 chars) and exact Name (case-insensitive).' : 'Please enter a Box ID or Name to search.');
                 }
             });
-            // --- END OF MODIFIED SEARCH LOGIC ---
+
+            // Enter key for search
+            document.getElementById('findCodeInput').addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    document.getElementById('findBtn').click();
+                }
+            });
 
             document.getElementById('exportBtn').addEventListener('click', () => { const exportData = JSON.stringify(boxes.map(b => ({...b, threeGroup: undefined})), null, 2); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([exportData], {type: 'application/json'})); a.download = 'box_organizer_layout.json'; a.click(); URL.revokeObjectURL(a.href); });
             document.getElementById('importFile').addEventListener('change', handleImport);
@@ -298,10 +385,9 @@
 
         function updateSelectionState() {
             releaseMultiSelectPivot();
-
             boxes.forEach(box => {
                 if(box.threeGroup) {
-                    applyBoxStateFromData(box);
+                    applyBoxStateFromData(box); // Ensures rotation is applied
                     box.threeGroup.children.forEach(c => {
                         if (c.isMesh && c.material.emissive.getHex() !== 0x000000) {
                             new TWEEN.Tween(c.material.emissive).to({ r: 0, g: 0, b: 0 }, 100).start();
@@ -318,23 +404,30 @@
                 const selectedBoxData = selectedBoxes[0];
                 if (selectedBoxData.threeGroup) {
                     transformControls.attach(selectedBoxData.threeGroup);
+                    // Set transformControls mode based on keyboardInteractionMode
+                    if (keyboardInteractionMode === 'move' && transformControls.getMode() !== 'translate') {
+                        transformControls.setMode('translate');
+                    } else if (keyboardInteractionMode === 'rotate' && transformControls.getMode() !== 'rotate') {
+                         transformControls.setMode('rotate');
+                    } // else keep current (e.g. scale)
                     selectedBoxData.threeGroup.children.forEach(c => { if (c.isMesh) new TWEEN.Tween(c.material.emissive).to({ r: 0.2, g: 0.5, b: 0.8 }, 200).start(); });
                 }
                 updateInfoPanel();
                 infoPanelEl.classList.remove('hidden');
                 document.getElementById('toggleModeBtn').disabled = false;
-            } else {
+            } else { // Multi-select
                 const selectionBBox = new THREE.Box3();
                 selectedBoxes.forEach(box => selectionBBox.expandByPoint(box.position));
                 selectionBBox.getCenter(multiSelectPivot.position);
                 selectedBoxes.forEach(box => multiSelectPivot.attach(box.threeGroup));
-                transformControls.setMode('translate');
+                transformControls.setMode('translate'); // Multi-select always uses translate
                 transformControls.attach(multiSelectPivot);
                 document.getElementById('toggleModeBtn').disabled = true;
                 selectedBoxes.forEach(boxData => { if (boxData.threeGroup) { boxData.threeGroup.children.forEach(c => { if (c.isMesh) new TWEEN.Tween(c.material.emissive).to({ r: 0.2, g: 0.5, b: 0.8 }, 200).start(); }); } });
                 updateMultiSelectInfoPanel();
                 infoPanelEl.classList.remove('hidden');
             }
+            updateKeyboardModeIndicator(); // Ensure indicator is in sync with transform gizmo
         }
 
         function updateInfoPanel() { if (selectedBoxes.length !== 1) return; const selectedBoxData = selectedBoxes[0]; const recordAndTimestamp = () => { if(selectedBoxData) selectedBoxData.lastModified = new Date().toISOString(); updateInfoPanel(); recordAction(); }; infoPanelEl.innerHTML = `<h3 id="infoPanelTitleArea"><span id="infoPanelTitle"></span> <span id="infoPanelIdChip" class="box-id-chip"></span></h3><div><label for="boxNameInput">Name</label><input type="text" id="boxNameInput"></div><div><label for="boxColorInput">Color</label><input type="color" id="boxColorInput"></div><div><label for="descriptionInput">Description</label><textarea id="descriptionInput" rows="3"></textarea></div><div id="tagsContainer"><h4 class="section-header">Tags</h4><div class="tag-container"><input type="text" id="tagInput" placeholder="Add a tag..."></div></div><div id="weightContainer"><h4 class="section-header">Weight</h4><div style="display: flex; gap: 8px;"><input type="number" id="weightInput" min="0" step="0.1" style="flex-grow: 1;"><select id="weightUnitSelect"><option value="kg">kg</option><option value="lbs">lbs</option></select></div></div><div id="iconContainer"><h4 class="section-header">Icon</h4><div id="iconPicker"></div></div><div id="itemListContainer"><h4 class="section-header">Items</h4><ul id="itemList"></ul><form id="addItemForm" onsubmit="return false;"><input type="text" id="newItemNameInput" placeholder="Item name..." required><input type="number" id="newItemQtyInput" value="1" min="1" style="width: 60px;"><button type="submit" id="addItemBtn"><i class="bi bi-plus-lg"></i> Add</button></form></div><p id="lastModifiedText" style="font-size: 0.8em; color: var(--text-muted-color); text-align: center; margin-top: 20px;"></p><button id="deleteBoxBtn"><i class="bi bi-trash"></i> Delete Box</button>`; document.getElementById('infoPanelTitle').textContent = selectedBoxData.name || "Box Properties"; document.getElementById('infoPanelIdChip').textContent = selectedBoxData.id.substring(0,6).toUpperCase(); document.getElementById('boxNameInput').value = selectedBoxData.name; document.getElementById('boxColorInput').value = selectedBoxData.color; document.getElementById('descriptionInput').value = selectedBoxData.description || ''; document.getElementById('weightInput').value = selectedBoxData.weight || 0; document.getElementById('weightUnitSelect').value = selectedBoxData.weightUnit || 'kg'; document.getElementById('lastModifiedText').textContent = `Last Modified: ${new Date(selectedBoxData.lastModified).toLocaleString()}`; document.getElementById('boxNameInput').onchange = (e) => { if(selectedBoxData) {selectedBoxData.name = e.target.value; recordAndTimestamp();}}; document.getElementById('boxColorInput').onchange = (e) => { if(selectedBoxData) {selectedBoxData.color = e.target.value; applyBoxStateFromData(selectedBoxData); recordAndTimestamp();}}; document.getElementById('descriptionInput').onchange = (e) => { if(selectedBoxData) {selectedBoxData.description = e.target.value; recordAndTimestamp();}}; document.getElementById('weightInput').onchange = (e) => { if(selectedBoxData) {selectedBoxData.weight = parseFloat(e.target.value) || 0; recordAndTimestamp();}}; document.getElementById('weightUnitSelect').onchange = (e) => { if(selectedBoxData) {selectedBoxData.weightUnit = e.target.value; recordAndTimestamp();}}; document.getElementById('tagInput').onkeydown = handleTagInput; document.getElementById('addItemForm').onsubmit = (e) => { handleAddItem(e); recordAndTimestamp(); }; const itemListEl = document.getElementById('itemList'); itemListEl.ondragstart = handleItemDragStart; itemListEl.ondragover = handleItemDragOver; itemListEl.ondrop = (e) => { handleItemDrop(e); recordAndTimestamp(); }; itemListEl.ondragleave = clearItemDropIndicators; document.getElementById('deleteBoxBtn').onclick = handleDeleteSelection; renderTags(); renderItemList(); renderIconPicker(); }
@@ -350,6 +443,7 @@
                     const boxData = boxes.find(b => b.threeGroup === child);
                     if (boxData) {
                         child.getWorldPosition(boxData.position);
+                        // For multi-select, we don't try to get individual rotations back from the pivot
                         scene.attach(child);
                     }
                 }
@@ -371,9 +465,7 @@
             const targetLi = e.target.closest('li');
             const draggingLi = document.querySelector('#itemList li.dragging');
             if (!targetLi || !draggingLi || targetLi === draggingLi) return;
-
             clearItemDropIndicators();
-
             const rect = targetLi.getBoundingClientRect();
             const midY = rect.top + rect.height / 2;
             if (e.clientY < midY) {
@@ -386,44 +478,25 @@
             e.preventDefault();
             const targetLi = e.target.closest('li');
             if (!targetLi || !draggedItem || selectedBoxes.length !== 1) {
-                clearItemDropIndicators();
-                draggedItem = null;
-                return;
+                clearItemDropIndicators(); draggedItem = null; return;
             }
-
-            const selectedBoxData = selectedBoxes[0];
-            const items = selectedBoxData.items;
+            const selectedBoxData = selectedBoxes[0]; const items = selectedBoxData.items;
             const draggedIndex = items.findIndex(item => item.id === draggedItem);
             let targetIndex = Array.from(targetLi.parentElement.children).indexOf(targetLi);
-
             if (draggedIndex === -1) return;
-
-            if (targetLi.classList.contains('drop-indicator-bottom')) {
-                targetIndex++;
-            }
-
-            if (draggedIndex < targetIndex) {
-                targetIndex--;
-            }
-
+            if (targetLi.classList.contains('drop-indicator-bottom')) targetIndex++;
+            if (draggedIndex < targetIndex) targetIndex--;
             const [dragged] = items.splice(draggedIndex, 1);
             items.splice(targetIndex, 0, dragged);
-
-            clearItemDropIndicators();
-            document.querySelector('#itemList li.dragging')?.classList.remove('dragging');
-            draggedItem = null;
-            renderItemList();
-            selectedBoxData.lastModified = new Date().toISOString();
-            recordAction();
+            clearItemDropIndicators(); document.querySelector('#itemList li.dragging')?.classList.remove('dragging');
+            draggedItem = null; renderItemList(); selectedBoxData.lastModified = new Date().toISOString(); recordAction();
         }
 
         function handleDeleteSelection() { if (selectedBoxes.length === 0) return; const boxesToRemove = [...selectedBoxes]; deselectAll(); boxesToRemove.forEach(boxToRemove => { if (boxToRemove.threeGroup) { new TWEEN.Tween(boxToRemove.threeGroup.scale).to({x:0.01, y:0.01, z:0.01}, 300).easing(TWEEN.Easing.Quadratic.In).onComplete(() => {scene.remove(boxToRemove.threeGroup); disposeThreeObject(boxToRemove.threeGroup);}).start(); } boxes = boxes.filter(b => b.id !== boxToRemove.id); }); recordAction(); }
 
-        // --- MODIFIED HOVER TOOLTIP ---
         function onMouseMove(event) {
             const mouse = new THREE.Vector2((event.clientX / window.innerWidth) * 2 - 1, -(event.clientY / window.innerHeight) * 2 + 1);
-            const raycaster = new THREE.Raycaster();
-            raycaster.setFromCamera(mouse, camera);
+            const raycaster = new THREE.Raycaster(); raycaster.setFromCamera(mouse, camera);
             const collidableMeshes = boxes.flatMap(b => b.threeGroup ? [b.threeGroup.children[0], b.threeGroup.children[1]] : []);
             const intersects = raycaster.intersectObjects(collidableMeshes, false);
             let newHoveredBox = null;
@@ -431,33 +504,24 @@
                 const parentGroup = intersects[0].object.parent;
                 if (parentGroup && parentGroup.userData.id) newHoveredBox = boxes.find(b => b.id === parentGroup.userData.id);
             }
-            if (hoveredBoxData !== newHoveredBox) {
-                hoveredBoxData = newHoveredBox;
-            }
+            if (hoveredBoxData !== newHoveredBox) hoveredBoxData = newHoveredBox;
             if (hoveredBoxData) {
                 hoverTooltipEl.innerHTML = `<i class="${hoveredBoxData.icon || 'bi-box'}"></i> ${hoveredBoxData.name} <small>[${hoveredBoxData.id.substring(0,6).toUpperCase()}]</small>`;
                 hoverTooltipEl.classList.remove('hidden');
-                hoverTooltipEl.style.left = (event.clientX + 15) + 'px';
-                hoverTooltipEl.style.top = (event.clientY + 15) + 'px';
+                hoverTooltipEl.style.left = (event.clientX + 15) + 'px'; hoverTooltipEl.style.top = (event.clientY + 15) + 'px';
             } else {
                 hoverTooltipEl.classList.add('hidden');
             }
         }
-        // --- END OF MODIFIED HOVER TOOLTIP ---
 
         function onCanvasClick(e) {
             if (transformControls.dragging) return;
             if (hoveredBoxData) {
                 if (e.shiftKey) {
                     const index = selectedBoxes.findIndex(b => b.id === hoveredBoxData.id);
-                    if (index > -1) {
-                        selectedBoxes.splice(index, 1);
-                    } else {
-                        selectedBoxes.push(hoveredBoxData);
-                    }
+                    if (index > -1) selectedBoxes.splice(index, 1); else selectedBoxes.push(hoveredBoxData);
                 } else {
-                    deselectAll();
-                    selectedBoxes.push(hoveredBoxData);
+                    deselectAll(); selectedBoxes.push(hoveredBoxData);
                 }
             } else {
                 deselectAll();
@@ -465,94 +529,198 @@
             updateSelectionState();
         }
 
+        // --- MODIFIED onKeyDown for new shortcuts and modes ---
         function onKeyDown(e) {
-            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+            const activeElement = document.activeElement;
+            const isInputFocused = activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA' || activeElement.isContentEditable);
+
             const isCtrlOrMeta = e.ctrlKey || e.metaKey;
+
+            if (isInputFocused) {
+                // Allow specific Ctrl/Meta shortcuts within inputs
+                if (isCtrlOrMeta && ['a', 'c', 'x', 'v', 'z', 'y'].includes(e.key.toLowerCase())) {
+                    return; // Allow native browser behavior for these
+                }
+                // Allow arrow keys, enter, escape within inputs
+                if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'enter', 'escape'].includes(e.key.toLowerCase()) && activeElement.id !== 'findCodeInput' && e.key === 'Enter') {
+                     // For findCodeInput, Enter is handled by its own listener in setupUI
+                    return;
+                }
+                if (!isCtrlOrMeta) { // If not a Ctrl/Meta command, and input is focused, block global.
+                     // Exception: Enter on findCodeInput is handled by its own listener
+                    if (activeElement.id === 'findCodeInput' && e.key.toLowerCase() === 'enter') {
+                        // Let specific listener handle it
+                    } else {
+                        return;
+                    }
+                }
+            }
+
+
             if (isCtrlOrMeta) {
+                e.preventDefault(); // Prevent browser default for Ctrl shortcuts
                 let stateToRestore = null;
-                if (e.key.toLowerCase() === 'z') stateToRestore = actionManager.undo();
-                if (e.key.toLowerCase() === 'y') stateToRestore = actionManager.redo();
-                if (e.key.toLowerCase() === 'c') handleCopy();
-                if (e.key.toLowerCase() === 'x') handleCut();
-                if (e.key.toLowerCase() === 'v') handlePaste();
+                switch (e.key.toLowerCase()) {
+                    case 'n': // Create New Box
+                        const newBoxData = createBoxData({ position: camera.getWorldPosition(new THREE.Vector3()).add(camera.getWorldDirection(new THREE.Vector3()).multiplyScalar(10)) });
+                        const addedBox = addBoxToScene(newBoxData, true);
+                        deselectAll(); selectedBoxes.push(addedBox); updateSelectionState(); focusOnBox(addedBox); recordAction();
+                        break;
+                    case 'f': // Focus Search
+                        document.getElementById('findCodeInput').focus(); document.getElementById('findCodeInput').select();
+                        break;
+                    case ',': alert('Settings panel would open here (Ctrl+,).'); break;
+                    case 'z': stateToRestore = actionManager.undo(); break;
+                    case 'y': stateToRestore = actionManager.redo(); break;
+                    case 'c': handleCopy(); break;
+                    case 'x': handleCut(); break;
+                    case 'v': handlePaste(); break;
+                }
                 if (stateToRestore) restoreState(stateToRestore);
-            } else if (e.key === 'Delete' || e.key === 'Backspace') {
-                if (selectedBoxes.length > 0) handleDeleteSelection();
+            } else { // Not Ctrl/Meta pressed
+                switch (e.key.toLowerCase()) {
+                    case 'm':
+                        keyboardInteractionMode = 'move'; updateKeyboardModeIndicator(); e.preventDefault();
+                        break;
+                    case 'r':
+                        keyboardInteractionMode = 'rotate'; updateKeyboardModeIndicator(); e.preventDefault();
+                        break;
+                    case 'tab':
+                        e.preventDefault();
+                        keyboardInteractionMode = (keyboardInteractionMode === 'move') ? 'rotate' : 'move';
+                        updateKeyboardModeIndicator();
+                        break;
+                    case 'delete':
+                    case 'backspace':
+                        if (selectedBoxes.length > 0 && !isInputFocused) { // Check !isInputFocused again to be safe
+                             e.preventDefault(); handleDeleteSelection();
+                        }
+                        break;
+                    case 'arrowup': case 'arrowdown': case 'arrowleft': case 'arrowright':
+                        if (selectedBoxes.length === 1) {
+                            e.preventDefault();
+                            const box = selectedBoxes[0];
+                            if (keyboardInteractionMode === 'move') {
+                                const moveDirection = new THREE.Vector3();
+                                const camDir = new THREE.Vector3(); camera.getWorldDirection(camDir);
+                                const forward = new THREE.Vector3(camDir.x, 0, camDir.z).normalize();
+                                const right = new THREE.Vector3().crossVectors(new THREE.Vector3(0,1,0), forward).normalize(); // Use world UP for horizontal right
+
+                                if (e.key === 'ArrowUp') moveDirection.add(forward);
+                                if (e.key === 'ArrowDown') moveDirection.sub(forward);
+                                if (e.key === 'ArrowLeft') moveDirection.sub(right);
+                                if (e.key === 'ArrowRight') moveDirection.add(right);
+
+                                moveDirection.multiplyScalar(KEYBOARD_MOVE_INCREMENT);
+                                box.position.add(moveDirection);
+                                box.position.x = Math.round(box.position.x / SNAP_GRID_SIZE) * SNAP_GRID_SIZE;
+                                box.position.y = Math.max(0, Math.round(box.position.y / SNAP_GRID_SIZE) * SNAP_GRID_SIZE); // Keep y >= 0 for ground
+                                box.position.z = Math.round(box.position.z / SNAP_GRID_SIZE) * SNAP_GRID_SIZE;
+                            } else if (keyboardInteractionMode === 'rotate') {
+                                if (e.key === 'ArrowLeft') box.rotation.y += KEYBOARD_ROTATE_INCREMENT;
+                                if (e.key === 'ArrowRight') box.rotation.y -= KEYBOARD_ROTATE_INCREMENT;
+                                if (e.key === 'ArrowUp') box.rotation.x += KEYBOARD_ROTATE_INCREMENT;
+                                if (e.key === 'ArrowDown') box.rotation.x -= KEYBOARD_ROTATE_INCREMENT;
+                            }
+                            applyBoxStateFromData(box);
+                            box.lastModified = new Date().toISOString();
+                            if (infoPanelEl && !infoPanelEl.classList.contains('hidden')) {
+                                const lastModifiedTextEl = document.getElementById('lastModifiedText');
+                                if(lastModifiedTextEl) lastModifiedTextEl.textContent = `Last Modified: ${new Date(box.lastModified).toLocaleString()}`;
+                            }
+                            recordAction();
+                        }
+                        break;
+                    case 'escape':
+                        if (selectedBoxes.length > 0) deselectAll();
+                        else if (!infoPanelEl.classList.contains('hidden')) infoPanelEl.classList.add('hidden');
+                        e.preventDefault();
+                        break;
+                }
             }
         }
 
-        function handleCopy() {
-            if (selectedBoxes.length > 0) {
-                clipboard = selectedBoxes.map(box => {
-                    const cleanBox = { ...box, threeGroup: undefined };
-                    cleanBox.position = box.position.clone();
-                    cleanBox.size = box.size.clone();
-                    return cleanBox;
-                });
-                console.log(`Copied ${clipboard.length} box(es) to clipboard.`);
-            }
-        }
-
-        function handleCut() {
-            if (selectedBoxes.length > 0) {
-                handleCopy();
-                handleDeleteSelection();
-            }
-        }
-
+        function handleCopy() { if (selectedBoxes.length > 0) { clipboard = selectedBoxes.map(box => { const cleanBox = { ...box, threeGroup: undefined }; cleanBox.position = box.position.clone(); cleanBox.size = box.size.clone(); cleanBox.rotation = box.rotation.clone(); return cleanBox; }); console.log(`Copied ${clipboard.length} box(es) to clipboard.`); } }
+        function handleCut() { if (selectedBoxes.length > 0) { handleCopy(); handleDeleteSelection(); } }
         function handlePaste() {
             if (clipboard.length === 0) return;
             const newSelection = []; const newClipboardData = [];
             if (clipboard.length === 1) {
                 const originalBoxData = clipboard[0];
                 const newPosition = originalBoxData.position.clone().add(new THREE.Vector3(0, originalBoxData.size.y, 0));
-                const newBoxData = createBoxData({...originalBoxData, id: THREE.MathUtils.generateUUID(), position: newPosition, lastModified: new Date().toISOString() });
+                const newBoxData = createBoxData({...originalBoxData, id: THREE.MathUtils.generateUUID(), position: newPosition, rotation: originalBoxData.rotation.clone(), lastModified: new Date().toISOString() });
                 const addedBox = addBoxToScene(newBoxData, true);
-                newSelection.push(addedBox); newClipboardData.push({...addedBox, threeGroup: undefined });
+                newSelection.push(addedBox); newClipboardData.push({...addedBox, threeGroup: undefined, rotation: addedBox.rotation.clone() });
             } else {
-                const originalCenter = new THREE.Vector3();
-                const selectionBBox = new THREE.Box3();
-                clipboard.forEach(boxData => {
-                    const boxBBox = new THREE.Box3().setFromCenterAndSize(boxData.position, boxData.size);
-                    selectionBBox.union(boxBBox);
-                });
+                const originalCenter = new THREE.Vector3(); const selectionBBox = new THREE.Box3();
+                clipboard.forEach(boxData => { const boxBBox = new THREE.Box3().setFromCenterAndSize(boxData.position, boxData.size); selectionBBox.union(boxBBox); });
                 selectionBBox.getCenter(originalCenter);
-
-                const selectionSize = new THREE.Vector3();
-                selectionBBox.getSize(selectionSize);
-                const cameraDirection = new THREE.Vector3();
-                camera.getWorldDirection(cameraDirection);
-                cameraDirection.y = 0; cameraDirection.normalize();
+                const selectionSize = new THREE.Vector3(); selectionBBox.getSize(selectionSize);
+                const cameraDirection = new THREE.Vector3(); camera.getWorldDirection(cameraDirection); cameraDirection.y = 0; cameraDirection.normalize();
                 const dotX = Math.abs(cameraDirection.x); const dotZ = Math.abs(cameraDirection.z);
                 let offsetVector; const padding = 1.0;
-                if (dotZ > dotX) {
-                    offsetVector = new THREE.Vector3(selectionSize.x + padding, 0, 0);
-                } else {
-                    offsetVector = new THREE.Vector3(0, 0, selectionSize.z + padding);
-                }
-
+                if (dotZ > dotX) offsetVector = new THREE.Vector3(selectionSize.x + padding, 0, 0);
+                else offsetVector = new THREE.Vector3(0, 0, selectionSize.z + padding);
                 const newCenter = originalCenter.clone().add(offsetVector);
-
                 clipboard.forEach(boxData => {
                     const relativePos = boxData.position.clone().sub(originalCenter);
                     const newPosition = newCenter.clone().add(relativePos);
-
-                    const newBoxData = createBoxData({...boxData, id: THREE.MathUtils.generateUUID(), position: newPosition, lastModified: new Date().toISOString() });
-                    const addedBox = addBoxToScene(newBoxData, true);
-                    newSelection.push(addedBox);
-                    const cleanPastedBox = {...addedBox, threeGroup: undefined};
-                    cleanPastedBox.position = newPosition.clone();
-                    newClipboardData.push(cleanPastedBox);
+                    const newBoxData = createBoxData({...boxData, id: THREE.MathUtils.generateUUID(), position: newPosition, rotation: boxData.rotation.clone(), lastModified: new Date().toISOString() });
+                    const addedBox = addBoxToScene(newBoxData, true); newSelection.push(addedBox);
+                    const cleanPastedBox = {...addedBox, threeGroup: undefined, rotation: addedBox.rotation.clone()};
+                    cleanPastedBox.position = newPosition.clone(); newClipboardData.push(cleanPastedBox);
                 });
             }
             if (newSelection.length > 0) {
-                deselectAll(); selectedBoxes = newSelection;
-                updateSelectionState();
-                clipboard = newClipboardData;
-                recordAction();
+                deselectAll(); selectedBoxes = newSelection; updateSelectionState();
+                clipboard = newClipboardData; recordAction();
             }
         }
 
+        function createPlopEffect(position) { /* ... (same as before) ... */ }
+        function createFloorAndGrid() { /* ... (same as before) ... */ }
+        function createStarfield() { /* ... (same as before) ... */ }
+        function createAmbientParticles() { /* ... (same as before) ... */ }
+        function disposeThreeObject(object) { /* ... (same as before) ... */ }
+        function focusOnBox(box) { /* ... (same as before, consider box rotation for camera target if needed) ... */ }
+        function recordAction() { actionManager.pushState(JSON.stringify(boxes.map(box => ({...box, threeGroup: undefined})))); }
+
+        // --- MODIFIED restoreState for rotation ---
+        function restoreState(stateJSON) {
+            deselectAll();
+            [...boxes].forEach(b => { if (b.threeGroup) { scene.remove(b.threeGroup); disposeThreeObject(b.threeGroup); } });
+            boxes = [];
+            const parsedState = JSON.parse(stateJSON);
+            parsedState.forEach(boxData => {
+                boxData.position = new THREE.Vector3(boxData.position.x, boxData.position.y, boxData.position.z);
+                boxData.size = new THREE.Vector3(boxData.size.x, boxData.size.y, boxData.size.z);
+                // Reconstruct THREE.Euler from plain object
+                if (boxData.rotation && typeof boxData.rotation === 'object' && boxData.rotation._x !== undefined) {
+                    boxData.rotation = new THREE.Euler(boxData.rotation._x, boxData.rotation._y, boxData.rotation._z, boxData.rotation._order || 'XYZ');
+                } else {
+                    boxData.rotation = new THREE.Euler(0,0,0); // Default if missing or malformed
+                }
+                addBoxToScene(boxData);
+            });
+            // recordAction(); // This might cause an immediate push of the restored state, potentially clearing redo. Usually called after a user action.
+            updateSelectionState(); // Refresh UI after restoring
+        }
+        function handleImport(event) { if (!event.target.files[0]) return; const reader = new FileReader(); reader.onload = (e) => { try { restoreState(e.target.result); recordAction(); /* Record after successful import */ } catch (err) { alert('Error: Invalid or corrupt JSON file.'); console.error(err); } }; reader.readAsText(event.target.files[0]); event.target.value = ''; }
+        function renderIconPicker() { /* ... (same as before) ... */ }
+        function updateBoxIcon(box, iconClass) { /* ... (same as before) ... */ }
+
+        function animate() {
+            requestAnimationFrame(animate); const delta = clock.getDelta(); const elapsed = clock.getElapsedTime();
+            TWEEN.update(); orbitControls.update();
+            if (starField) starField.rotation.y -= 0.00005;
+            if (ambientParticles) { const positions = ambientParticles.geometry.attributes.position.array; for (let i = 1; i < positions.length; i += 3) { positions[i] -= 0.01; if (positions[i] < 0) positions[i] = 50; } ambientParticles.geometry.attributes.position.needsUpdate = true; }
+            // Removed selected box hover animation for simplicity with keyboard controls
+            for (let i = activeEffects.length - 1; i >= 0; i--) { const effect = activeEffects[i]; const effectElapsed = elapsed - effect.startTime; if (effectElapsed > effect.duration) { scene.remove(effect.particles); effect.particles.geometry.dispose(); effect.particles.material.dispose(); activeEffects.splice(i, 1); } else { const positions = effect.particles.geometry.attributes.position.array; const gravity = 9.8; for (let j = 0; j < effect.velocities.length; j++) { effect.velocities[j].y -= gravity * delta; positions[j*3] += effect.velocities[j].x * delta; positions[j*3 + 1] += effect.velocities[j].y * delta; positions[j*3 + 2] += effect.velocities[j].z * delta; } effect.particles.material.opacity = 1.0 - (effectElapsed / effect.duration); effect.particles.geometry.attributes.position.needsUpdate = true; } }
+            composer.render();
+        }
+
+        // Functions not changed from previous version, but needed for completeness.
+        // Make sure these are the correct versions if you made other changes earlier.
         function createPlopEffect(position) {
             const ringGeometry = new THREE.TorusGeometry(1, 0.05, 8, 50);
             const ringMaterial = new THREE.MeshBasicMaterial({ color: 0x00aaff, transparent: true });
@@ -590,7 +758,7 @@
             scene.add(flash);
             new TWEEN.Tween(flash).to({ intensity: 0 }, 250).easing(TWEEN.Easing.Quadratic.Out).onComplete(() => {
                 scene.remove(flash);
-                flash.dispose();
+                flash.dispose(); // Ensure light is disposed
             }).start();
         }
 
@@ -598,81 +766,16 @@
         function createStarfield() { const starVertices = []; for (let i = 0; i < 10000; i++) { const x = THREE.MathUtils.randFloatSpread(2000); const y = THREE.MathUtils.randFloatSpread(2000); const z = THREE.MathUtils.randFloatSpread(2000); starVertices.push(x, y, z); } const starGeometry = new THREE.BufferGeometry(); starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starVertices, 3)); const starMaterial = new THREE.PointsMaterial({ color: 0x666666, size: 0.5, sizeAttenuation: true }); starField = new THREE.Points(starGeometry, starMaterial); scene.add(starField); }
 
         function createAmbientParticles() {
-            const particleCount = 2000;
-            const vertices = [];
-            for (let i = 0; i < particleCount; i++) {
-                const x = THREE.MathUtils.randFloatSpread(100);
-                const y = THREE.MathUtils.randFloat(0, 50);
-                const z = THREE.MathUtils.randFloatSpread(100);
-                vertices.push(x, y, z);
-            }
-            const geometry = new THREE.BufferGeometry();
-            geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
-            const material = new THREE.PointsMaterial({
-                color: 0x666666, size: 0.1, transparent: true, opacity: 0.5, sizeAttenuation: false
-            });
-            ambientParticles = new THREE.Points(geometry, material);
-            scene.add(ambientParticles);
+            const particleCount = 2000; const vertices = [];
+            for (let i = 0; i < particleCount; i++) { const x = THREE.MathUtils.randFloatSpread(100); const y = THREE.MathUtils.randFloat(0, 50); const z = THREE.MathUtils.randFloatSpread(100); vertices.push(x, y, z); }
+            const geometry = new THREE.BufferGeometry(); geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+            const material = new THREE.PointsMaterial({ color: 0x666666, size: 0.1, transparent: true, opacity: 0.5, sizeAttenuation: false });
+            ambientParticles = new THREE.Points(geometry, material); scene.add(ambientParticles);
         }
-
         function disposeThreeObject(object) { if (!object) return; object.traverse(child => { if (child.geometry) child.geometry.dispose(); if (child.material) { if (Array.isArray(child.material)) { child.material.forEach(m => { if (m.map) m.map.dispose(); m.dispose(); }); } else { if (child.material.map) child.material.map.dispose(); child.material.dispose(); } } }); }
         function focusOnBox(box) { const targetPos = box.position.clone(); targetPos.y += box.size.y / 2; const offset = new THREE.Vector3(box.size.x + 5, box.size.y + 5, box.size.z + 5); const cameraPos = targetPos.clone().add(offset); new TWEEN.Tween(camera.position).to(cameraPos, 800).easing(TWEEN.Easing.Quadratic.Out).start(); new TWEEN.Tween(orbitControls.target).to(targetPos, 800).easing(TWEEN.Easing.Quadratic.Out).start(); }
-        function recordAction() { actionManager.pushState(JSON.stringify(boxes.map(box => ({...box, threeGroup: undefined})))); }
-        function restoreState(stateJSON) { deselectAll(); [...boxes].forEach(b => { if (b.threeGroup) { scene.remove(b.threeGroup); disposeThreeObject(b.threeGroup); } }); boxes = []; const parsedState = JSON.parse(stateJSON); parsedState.forEach(boxData => { boxData.position = new THREE.Vector3(boxData.position.x, boxData.position.y, boxData.position.z); boxData.size = new THREE.Vector3(boxData.size.x, boxData.size.y, boxData.size.z); addBoxToScene(boxData); }); recordAction(); } // Note: recordAction() was here, might be redundant depending on import flow. Assuming it's fine for now.
-        function handleImport(event) { if (!event.target.files[0]) return; const reader = new FileReader(); reader.onload = (e) => { try { restoreState(e.target.result); } catch (err) { alert('Error: Invalid or corrupt JSON file.'); console.error(err); } }; reader.readAsText(event.target.files[0]); event.target.value = ''; }
         function renderIconPicker() { if (selectedBoxes.length !== 1) return; const selectedBoxData = selectedBoxes[0]; const picker = document.getElementById('iconPicker'); picker.innerHTML = ''; ICONS.forEach(iconClass => { const btn = document.createElement('button'); btn.className = `icon-btn`; if (iconClass === selectedBoxData.icon) btn.classList.add('selected'); btn.innerHTML = iconClass === 'none' ? '<i class="bi bi-slash-circle"></i>' : `<i class="${iconClass}"></i>`; btn.onclick = () => { updateBoxIcon(selectedBoxData, iconClass); renderIconPicker(); selectedBoxData.lastModified = new Date().toISOString(); recordAction(); }; picker.appendChild(btn); }); }
         function updateBoxIcon(box, iconClass) { box.icon = iconClass; }
-
-        function animate() {
-            requestAnimationFrame(animate);
-            const delta = clock.getDelta();
-            const elapsed = clock.getElapsedTime();
-
-            TWEEN.update();
-            orbitControls.update();
-            if (starField) starField.rotation.y -= 0.00005;
-
-            if (ambientParticles) {
-                const positions = ambientParticles.geometry.attributes.position.array;
-                for (let i = 1; i < positions.length; i += 3) {
-                    positions[i] -= 0.01;
-                    if (positions[i] < 0) positions[i] = 50;
-                }
-                ambientParticles.geometry.attributes.position.needsUpdate = true;
-            }
-
-            if (selectedBoxes.length === 1 && selectedBoxes[0].threeGroup) {
-                // Removed hover animation for stability, can be re-added if desired.
-                // const selectedBox = selectedBoxes[0];
-                // const hoverTime = elapsed * 2;
-                // const hoverOffset = Math.sin(hoverTime) * 0;
-                // selectedBox.threeGroup.position.y = selectedBox.position.y + hoverOffset;
-            }
-
-            for (let i = activeEffects.length - 1; i >= 0; i--) {
-                const effect = activeEffects[i];
-                const effectElapsed = elapsed - effect.startTime;
-                if (effectElapsed > effect.duration) {
-                    scene.remove(effect.particles);
-                    effect.particles.geometry.dispose();
-                    effect.particles.material.dispose();
-                    activeEffects.splice(i, 1);
-                } else {
-                    const positions = effect.particles.geometry.attributes.position.array;
-                    const gravity = 9.8;
-                    for (let j = 0; j < effect.velocities.length; j++) {
-                        effect.velocities[j].y -= gravity * delta;
-                        positions[j*3] += effect.velocities[j].x * delta;
-                        positions[j*3 + 1] += effect.velocities[j].y * delta;
-                        positions[j*3 + 2] += effect.velocities[j].z * delta;
-                    }
-                    effect.particles.material.opacity = 1.0 - (effectElapsed / effect.duration);
-                    effect.particles.geometry.attributes.position.needsUpdate = true;
-                }
-            }
-
-            composer.render();
-        }
 
         init();
     </script>
