@@ -719,64 +719,6 @@
             composer.render();
         }
 
-        // Functions not changed from previous version, but needed for completeness.
-        // Make sure these are the correct versions if you made other changes earlier.
-        function createPlopEffect(position) {
-            const ringGeometry = new THREE.TorusGeometry(1, 0.05, 8, 50);
-            const ringMaterial = new THREE.MeshBasicMaterial({ color: 0x00aaff, transparent: true });
-            const ring = new THREE.Mesh(ringGeometry, ringMaterial);
-            ring.rotation.x = Math.PI / 2;
-            ring.position.copy(position);
-            ring.position.y += 0.02;
-            scene.add(ring);
-            new TWEEN.Tween(ring.scale).to({ x: 6, y: 6, z: 6 }, 500).easing(TWEEN.Easing.Quadratic.Out).start();
-            new TWEEN.Tween(ring.material).to({ opacity: 0 }, 600).easing(TWEEN.Easing.Quadratic.Out).onComplete(() => {
-                scene.remove(ring);
-                ring.geometry.dispose();
-                ring.material.dispose();
-            }).start();
-
-            const particleCount = 50;
-            const vertices = [];
-            const velocities = [];
-            for (let i = 0; i < particleCount; i++) {
-                vertices.push(position.x, position.y + 0.1, position.z);
-                const velX = (Math.random() - 0.5) * 3;
-                const velY = Math.random() * 4;
-                const velZ = (Math.random() - 0.5) * 3;
-                velocities.push(new THREE.Vector3(velX, velY, velZ));
-            }
-            const geometry = new THREE.BufferGeometry();
-            geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
-            const material = new THREE.PointsMaterial({ color: 0x55ddff, size: 0.1, transparent: true });
-            const particles = new THREE.Points(geometry, material);
-            scene.add(particles);
-            activeEffects.push({ particles, velocities, startTime: clock.getElapsedTime(), duration: 1.5 });
-
-            const flash = new THREE.PointLight(0x88ccff, 200, 100);
-            flash.position.copy(position).add(new THREE.Vector3(0,1,0));
-            scene.add(flash);
-            new TWEEN.Tween(flash).to({ intensity: 0 }, 250).easing(TWEEN.Easing.Quadratic.Out).onComplete(() => {
-                scene.remove(flash);
-                flash.dispose(); // Ensure light is disposed
-            }).start();
-        }
-
-        function createFloorAndGrid() { const floor = new THREE.Mesh(new THREE.PlaneGeometry(GRID_EXTENT * 2, GRID_EXTENT * 2), new THREE.MeshStandardMaterial({ color: 0x333840, roughness: 1, metalness: 0 })); floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor); const dotGeometry = new THREE.CircleGeometry(0.05 * (SNAP_GRID_SIZE / 0.5) , 12); dotGeometry.rotateX(-Math.PI / 2); const dotMaterial = new THREE.MeshBasicMaterial({ color: 0xFFFFFF, transparent: true, opacity: 0.05 }); const divisions = Math.floor(GRID_EXTENT / SNAP_GRID_SIZE) * 2 + 1; const instancedDots = new THREE.InstancedMesh(dotGeometry, dotMaterial, divisions * divisions); const dummy = new THREE.Object3D(); let i = 0; for (let r = -GRID_EXTENT; r <= GRID_EXTENT; r += SNAP_GRID_SIZE) { for (let c = -GRID_EXTENT; c <= GRID_EXTENT; c += SNAP_GRID_SIZE) { dummy.position.set(r, 0.01, c); dummy.updateMatrix(); instancedDots.setMatrixAt(i++, dummy.matrix); } } scene.add(instancedDots); }
-        function createStarfield() { const starVertices = []; for (let i = 0; i < 10000; i++) { const x = THREE.MathUtils.randFloatSpread(2000); const y = THREE.MathUtils.randFloatSpread(2000); const z = THREE.MathUtils.randFloatSpread(2000); starVertices.push(x, y, z); } const starGeometry = new THREE.BufferGeometry(); starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starVertices, 3)); const starMaterial = new THREE.PointsMaterial({ color: 0x666666, size: 0.5, sizeAttenuation: true }); starField = new THREE.Points(starGeometry, starMaterial); scene.add(starField); }
-
-        function createAmbientParticles() {
-            const particleCount = 2000; const vertices = [];
-            for (let i = 0; i < particleCount; i++) { const x = THREE.MathUtils.randFloatSpread(100); const y = THREE.MathUtils.randFloat(0, 50); const z = THREE.MathUtils.randFloatSpread(100); vertices.push(x, y, z); }
-            const geometry = new THREE.BufferGeometry(); geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
-            const material = new THREE.PointsMaterial({ color: 0x666666, size: 0.1, transparent: true, opacity: 0.5, sizeAttenuation: false });
-            ambientParticles = new THREE.Points(geometry, material); scene.add(ambientParticles);
-        }
-        function disposeThreeObject(object) { if (!object) return; object.traverse(child => { if (child.geometry) child.geometry.dispose(); if (child.material) { if (Array.isArray(child.material)) { child.material.forEach(m => { if (m.map) m.map.dispose(); m.dispose(); }); } else { if (child.material.map) child.material.map.dispose(); child.material.dispose(); } } }); }
-        function focusOnBox(box) { const targetPos = box.position.clone(); targetPos.y += box.size.y / 2; const offset = new THREE.Vector3(box.size.x + 5, box.size.y + 5, box.size.z + 5); const cameraPos = targetPos.clone().add(offset); new TWEEN.Tween(camera.position).to(cameraPos, 800).easing(TWEEN.Easing.Quadratic.Out).start(); new TWEEN.Tween(orbitControls.target).to(targetPos, 800).easing(TWEEN.Easing.Quadratic.Out).start(); }
-        function renderIconPicker() { if (selectedBoxes.length !== 1) return; const selectedBoxData = selectedBoxes[0]; const picker = document.getElementById('iconPicker'); picker.innerHTML = ''; ICONS.forEach(iconClass => { const btn = document.createElement('button'); btn.className = `icon-btn`; if (iconClass === selectedBoxData.icon) btn.classList.add('selected'); btn.innerHTML = iconClass === 'none' ? '<i class="bi bi-slash-circle"></i>' : `<i class="${iconClass}"></i>`; btn.onclick = () => { updateBoxIcon(selectedBoxData, iconClass); renderIconPicker(); selectedBoxData.lastModified = new Date().toISOString(); recordAction(); }; picker.appendChild(btn); }); }
-        function updateBoxIcon(box, iconClass) { box.icon = iconClass; }
-
         init();
     </script>
 </body>
