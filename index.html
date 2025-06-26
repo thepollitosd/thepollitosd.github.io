@@ -6,71 +6,92 @@
     <title>Box Organizer Pro - Full Feature v2</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <style>
-        :root {
-            --bg-color: #2a2d31;
+        :root { 
+            --bg-color: #2a2d31; 
             --surface-color: #3c4045;
-            --primary-color: #0d6efd;
+            --primary-color: #0d6efd; 
             --text-color: #e8e8e8;
             --text-muted-color: #b0b0b0;
             --border-color: #50555c;
             --input-bg-color: #202226;
             --danger-color: #dc3545;
+            --success-color: #198754;
         }
         body { margin: 0; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif; background-color: var(--bg-color); color: var(--text-color); overflow: hidden; cursor: default; }
 
-        .top-bar, .info-panel { /* ... existing ... */ }
+        .top-bar, .info-panel {
+            transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.3s ease-out;
+        }
+
         .top-bar { position: absolute; top: 15px; left: 15px; z-index: 100; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
-        .ui-panel { /* ... existing ... */ }
-        button { /* ... existing ... */ }
-        input[type="text"], input[type="color"], input[type="number"], textarea, select { /* ... existing ... */ }
-        .info-panel { /* ... existing ... */ }
+        .ui-panel { background-color: var(--surface-color); border: 1px solid var(--border-color); padding: 12px 15px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); display: flex; gap: 10px; align-items: center; }
+        button { padding: 9px 15px; border: 1px solid var(--border-color); border-radius: 6px; background-color: #484d53; color: var(--text-color); cursor: pointer; transition: background-color 0.2s, border-color 0.2s; font-size: 14px; font-weight: 500; display: inline-flex; align-items: center; gap: 6px;}
+        button:hover { background-color: #585d63; border-color: #686d73; }
+        button:active { background-color: #383c42; }
+        button:disabled { background-color: #3c4045; color: var(--text-muted-color); cursor: not-allowed; }
+        input[type="text"], input[type="color"], input[type="number"], textarea, select { padding: 9px 12px; border: 1px solid var(--border-color); border-radius: 6px; background-color: var(--input-bg-color); color: var(--text-color); font-size: 14px; box-sizing: border-box; font-family: inherit; }
+
+        .info-panel { position: absolute; top: 15px; right: 15px; width: 340px; z-index: 100; background-color: var(--surface-color); border: 1px solid var(--border-color); padding: 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); max-height: calc(100vh - 100px); overflow-y: auto;}
         .hidden { opacity: 0 !important; transform: translateX(30px) !important; pointer-events: none !important; display: block !important; }
-        .info-panel h3 { /* ... existing ... */ }
-        .section-header { /* ... existing ... */ }
-        #iconPicker, .icon-btn { /* ... existing ... */ }
-        #itemList, #itemList li, #itemList li.dragging, #itemList li.drop-indicator-top, #itemList li.drop-indicator-bottom { /* ... existing ... */ }
-        .drag-handle, .item-name-input, .item-qty-input, .delete-item-btn, #addItemForm { /* ... existing ... */ }
-        #deleteBoxBtn { /* ... existing ... */ }
-        .hover-tooltip { /* ... existing ... */ }
-        ::-webkit-scrollbar { /* ... existing ... */ }
+        .info-panel h3 { margin-top: 0; font-size: 1.4em; color: var(--text-color); border-bottom: 1px solid var(--border-color); padding-bottom: 10px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
+        .info-panel h3 .box-id-chip { font-size: 0.6em; color: var(--text-muted-color); background-color: var(--input-bg-color); padding: 3px 6px; border-radius: 4px; font-family: monospace; }
+        .info-panel label { display: block; margin-bottom: 5px; font-size: 0.9em; color: var(--text-muted-color); }
+        .info-panel input[type="text"], .info-panel input[type="color"], .info-panel textarea { width: 100%; margin-bottom: 15px; }
+        .section-header { font-size: 1.1em; margin-top: 20px; margin-bottom: 10px; color: var(--text-muted-color); border-top: 1px solid var(--border-color); padding-top: 15px;}
+        #iconPicker { display: grid; grid-template-columns: repeat(auto-fill, minmax(32px, 1fr)); gap: 5px; max-height: 108px; overflow-y: auto; background-color: var(--input-bg-color); padding: 5px; border-radius: 6px; border: 1px solid var(--border-color); margin-bottom: 15px; }
+        .icon-btn { font-size: 18px; width: 32px; height: 32px; padding: 0; border: 2px solid transparent; justify-content: center; }
+        .icon-btn.selected { border-color: var(--primary-color); }
+        #itemList { list-style: none; padding: 0; margin: 0 0 15px 0; max-height: 200px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 6px; background-color: var(--input-bg-color);}
+        #itemList li { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-bottom: 1px solid var(--border-color); cursor: grab; }
+        #itemList li:last-child { border-bottom: none; }
+        #itemList li.dragging { opacity: 0.5; background-color: var(--primary-color); }
+        #itemList li.drop-indicator-top { border-top: 2px solid var(--primary-color); border-bottom-color: var(--border-color); }
+        #itemList li.drop-indicator-bottom { border-bottom: 2px solid var(--primary-color); }
+        .drag-handle { color: var(--text-muted-color); cursor: grab; }
+        .item-name-input { flex-grow: 1; border: none; background: transparent; color: var(--text-color); padding: 4px 0;}
+        .item-qty-input { width: 50px; text-align: center; padding: 4px; background-color: var(--surface-color); border: 1px solid var(--border-color);}
+        .delete-item-btn { background: none; border: none; color: var(--danger-color); cursor: pointer; font-size: 1.2em; padding: 0 5px; }
+        #addItemForm { display: flex; gap: 8px; }
+        #addItemForm input[type="text"] { flex-grow: 1; }
+        #deleteBoxBtn { background-color: var(--danger-color); border-color: #c22a38; width: 100%; margin-top: 15px; }
+        .hover-tooltip { position: absolute; background-color: rgba(20, 22, 26, 0.9); backdrop-filter: blur(3px); color: var(--text-color); padding: 8px 12px; border-radius: 6px; pointer-events: none; z-index: 101; display: flex; align-items: center; gap: 8px; font-size: 14px; border: 1px solid var(--border-color); }
+        .hover-tooltip small { font-size: 0.8em; color: var(--text-muted-color); font-family: monospace; }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: var(--input-bg-color); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb { background-color: var(--border-color); border-radius: 10px; border: 2px solid var(--input-bg-color); }
+        ::-webkit-scrollbar-thumb:hover { background-color: var(--text-muted-color); }
 
-        /* Generic Modal Styles (Base for Help & Settings) */
-        .modal-overlay { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); animation: fadeIn 0.3s ease-out; justify-content: center; align-items: center; }
-        .modal-content-wrapper { background-color: var(--surface-color); padding: 25px; border: 1px solid var(--border-color); border-radius: 10px; width: 80%; color: var(--text-color); box-shadow: 0 5px 25px rgba(0,0,0,0.4); animation: slideInUp 0.4s cubic-bezier(0.2, 0.8, 0.2, 1); }
-        .modal-content-wrapper h2 { margin-top:0; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; font-size: 1.6em; }
-        .modal-content-wrapper table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        .modal-content-wrapper th, .modal-content-wrapper td { text-align:left; padding: 10px 8px; border-bottom: 1px solid var(--input-bg-color); }
-        .modal-content-wrapper th { font-weight: 600; color: var(--text-muted-color); }
-        .modal-content-wrapper tr:last-child td { border-bottom: none; }
-        .modal-content-wrapper code { background-color: var(--input-bg-color); padding: 3px 6px; border-radius: 4px; border: 1px solid var(--border-color); font-family: monospace; font-size: 0.9em; }
-        .modal-content-wrapper .modal-close-btn { margin-top: 25px; padding: 10px 18px; float: right; background-color: var(--primary-color); border-color: var(--primary-color); }
-        .modal-content-wrapper .modal-close-btn:hover { background-color: #0b5ed7; border-color: #0a58ca;}
+        /* Modal Styles (Help, QR, Confirm, Settings) */
+        .modal-overlay { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); justify-content: center; align-items: center; animation: fadeIn 0.3s ease-out; }
+        .modal-content { background-color: var(--surface-color); padding: 25px; border: 1px solid var(--border-color); border-radius: 10px; width: 80%; color: var(--text-color); box-shadow: 0 5px 25px rgba(0,0,0,0.4); animation: slideInUp 0.4s cubic-bezier(0.2, 0.8, 0.2, 1); text-align: left; }
+        #helpModal .modal-content { max-width: 650px; }
+        #qrScannerModal .modal-content { max-width: 500px; text-align: center; }
+        #customConfirmModal .modal-content { max-width: 450px; text-align: center; }
+        #settingsModal .modal-content { max-width: 500px; }
+        
+        .modal-content h2, .modal-content h3 { margin-top:0; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; font-size: 1.6em; }
+        .modal-content h3 {font-size: 1.4em;}
+        #helpModal table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        #helpModal th, #helpModal td { text-align:left; padding: 10px 8px; border-bottom: 1px solid var(--input-bg-color); }
+        #helpModal th { font-weight: 600; color: var(--text-muted-color); }
+        #helpModal tr:last-child td { border-bottom: none; }
+        #helpModal code { background-color: var(--input-bg-color); padding: 3px 6px; border-radius: 4px; border: 1px solid var(--border-color); font-family: monospace; font-size: 0.9em; }
+        .modal-buttons { margin-top: 25px; display: flex; justify-content: flex-end; gap: 10px; }
+        .modal-buttons button.primary { background-color: var(--primary-color); border-color: var(--primary-color); }
+        .modal-buttons button.primary:hover { background-color: #0b5ed7; border-color: #0a58ca;}
+        .modal-buttons button.danger { background-color: var(--danger-color); border-color: var(--danger-color);}
+        .modal-buttons button.danger:hover { background-color: #bb2d3b; border-color: #b02a37;}
+        #settingsModal label { font-size: 1em; color: var(--text-color); margin-left: 5px; cursor: pointer;}
+        #settingsModal input[type="checkbox"] { vertical-align: middle; }
 
-        /* Specific Modal Max Widths */
-        #helpModal .modal-content-wrapper { max-width: 650px; }
-        #settingsModal .modal-content-wrapper { max-width: 500px; }
-        #qrScannerModal .qr-scanner-content { max-width: 500px; } /* Already had specific styling */
 
-        /* Settings Modal Specific */
-        .setting-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--input-bg-color); }
-        .setting-item:last-child { border-bottom: none; }
-        .setting-item label { margin-right: 15px; }
-        .setting-item input[type="checkbox"] { width: auto; transform: scale(1.2); cursor: pointer;}
-
-
-        /* QR Scanner Modal Styles (mostly existing) */
-        #qrScannerModal { display: none; position: fixed; z-index: 1001; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); justify-content: center; align-items: center; animation: fadeIn 0.3s ease-out; }
-        .qr-scanner-content { background-color: var(--surface-color); padding: 20px; border-radius: 8px; text-align: center; width: 90%; box-shadow: 0 5px 25px rgba(0,0,0,0.4); animation: slideInUp 0.4s cubic-bezier(0.2, 0.8, 0.2, 1); }
-        .qr-scanner-content h3 { margin-top: 0; }
         #qrVideoFeed { width: 100%; max-height: 350px; border-radius: 6px; background-color: #000; margin-bottom: 10px; }
         #qrScanResult { min-height: 1.5em; margin-bottom: 15px; color: var(--text-muted-color); }
 
-        /* List View Styles (mostly existing) */
         #listViewContainer { display: none; position: absolute; left:0; right:0; bottom:0; background: var(--bg-color); overflow-y: auto; z-index: 50; padding: 15px; box-sizing: border-box; }
         #listViewContainer ul { list-style: none; padding: 0; margin: 0; }
         #listViewContainer li { background-color: var(--surface-color); border: 1px solid var(--border-color); border-radius: 6px; padding: 12px 18px; margin-bottom: 10px; display: flex; align-items: center; cursor: pointer; transition: background-color 0.2s, transform 0.1s ease-out, outline 0.1s ease-out; }
         #listViewContainer li:hover { background-color: #4a4e54; transform: translateY(-1px); }
-        #listViewContainer li.selected-list-item { outline: 2px solid var(--primary-color); background-color: #45494e; }
         #listViewContainer li .list-item-icon { font-size: 1.8em; margin-right: 18px; width:30px; text-align:center;}
         #listViewContainer li .list-item-details strong { font-size: 1.15em; display: block; margin-bottom: 3px; }
         #listViewContainer li .list-item-details p { font-size: 0.85em; color: var(--text-muted-color); margin: 0; }
@@ -84,17 +105,16 @@
     <div class="top-bar">
         <div class="ui-panel">
             <button id="addBoxBtn"><i class="bi bi-plus-lg"></i> Add</button>
-            <button id="toggleModeBtn"><i class="bi bi-arrows-move"></i> Mode: Move</button> <!-- Text will be updated by JS -->
+            <button id="toggleModeBtn" title="Cycle Interaction Mode (M,R,S)"><i class="bi bi-arrows-move"></i> Move</button>
             <button id="exportBtn"><i class="bi bi-box-arrow-up"></i> Export</button>
             <input type="file" id="importFile" accept=".json" style="display: none;">
             <button onclick="document.getElementById('importFile').click()"><i class="bi bi-box-arrow-down"></i> Import</button>
         </div>
-        <!-- Removed keyboardModeIndicator div -->
         <div class="ui-panel">
             <button id="printAllLabelsBtn" title="Print All Box Labels (PDF)"><i class="bi bi-printer"></i> Labels</button>
             <button id="scanQRBtn" title="Find Box by QR Code"><i class="bi bi-qr-code-scan"></i> Scan</button>
             <button id="toggleListViewBtn" title="Toggle List/3D View"><i class="bi bi-list-ul"></i> List View</button>
-            <button id="openSettingsBtn" title="Open Settings (Ctrl + ,)"><i class="bi bi-gear-fill"></i></button>
+            <button id="settingsBtn" title="Settings"><i class="bi bi-gear-fill"></i></button>
         </div>
         <div class="ui-panel">
             <input type="text" id="findCodeInput" placeholder="Enter ID or Name...">
@@ -106,54 +126,63 @@
     <div id="hoverTooltip" class="hover-tooltip hidden"></div>
 
     <div id="helpModal" class="modal-overlay">
-        <div class="modal-content-wrapper">
+        <div class="modal-content">
             <h2>Keyboard Shortcuts</h2>
             <table>
                 <thead><tr><th>Action</th><th>Shortcut</th></tr></thead>
                 <tbody>
+                    <tr><td>Cycle Tool (Move/Rotate/Scale)</td><td>Click Tool Button</td></tr>
+                    <tr><td>Activate Move Tool</td><td><code>M</code></td></tr>
+                    <tr><td>Activate Rotate Tool</td><td><code>R</code></td></tr>
+                    <tr><td>Activate Scale Tool</td><td><code>S</code></td></tr>
+                    <tr><td>Toggle Move/Rotate Tool</td><td><code>Tab</code></td></tr>
                     <tr><td>Create New Box</td><td><code>Ctrl + N</code></td></tr>
                     <tr><td>Search (Focus Input)</td><td><code>Ctrl + F</code></td></tr>
                     <tr><td>Search (Execute)</td><td><code>Enter</code> (in search input)</td></tr>
-                    <tr><td>Delete Selected Box(es)</td><td><code>Delete</code> / <code>Backspace</code></td></tr>
-                    <tr><td>Set Mode to Move</td><td><code>M</code></td></tr>
-                    <tr><td>Set Mode to Rotate</td><td><code>R</code></td></tr>
-                    <tr><td>Set Mode to Scale</td><td><code>S</code></td></tr>
-                    <tr><td>Cycle Mode (Move/Rotate/Scale)</td><td><code>Tab</code> or Click Mode Button</td></tr>
-                    <tr><td>Move/Rotate Selected Box</td><td><code>← ↑ → ↓</code> (Arrow Keys)</td></tr>
-                    <tr><td>Undo</td><td><code>Ctrl + Z</code></td></tr>
-                    <tr><td>Redo</td><td><code>Ctrl + Y</code></td></tr>
-                    <tr><td>Copy</td><td><code>Ctrl + C</code></td></tr>
-                    <tr><td>Cut</td><td><code>Ctrl + X</code></td></tr>
-                    <tr><td>Paste</td><td><code>Ctrl + V</code></td></tr>
-                    <tr><td>Deselect / Close Panel / Close Modal</td><td><code>Escape</code></td></tr>
-                    <tr><td>Open Settings</td><td><code>Ctrl + ,</code> or Gear Icon</td></tr>
-                    <tr><td>Show/Hide This Help</td><td><code>Ctrl + /</code> or <code>Ctrl + ?</code></td></tr>
+                    <tr><td>Delete Selected</td><td><code>Delete</code> / <code>Backspace</code></td></tr>
+                    <tr><td>Transform Selected Box</td><td><code>← ↑ → ↓</code> (Arrow Keys)</td></tr>
+                    <tr><td>Undo / Redo</td><td><code>Ctrl + Z</code> / <code>Ctrl + Y</code></td></tr>
+                    <tr><td>Copy / Cut / Paste</td><td><code>Ctrl + C</code> / <code>Ctrl + X</code> / <code>Ctrl + V</code></td></tr>
+                    <tr><td>Close Modal / Deselect</td><td><code>Escape</code></td></tr>
+                    <tr><td>Open Settings</td><td><code>Ctrl + ,</code></td></tr>
+                    <tr><td>Show/Hide This Help</td><td><code>Ctrl + /</code> (or <code>?</code>)</td></tr>
                 </tbody>
             </table>
-            <button id="closeHelpModalBtn" class="modal-close-btn">Close</button>
+            <div class="modal-buttons"><button id="closeHelpModalBtn" class="primary">Close</button></div>
         </div>
     </div>
 
-    <div id="settingsModal" class="modal-overlay">
-        <div class="modal-content-wrapper">
-            <h2>Settings</h2>
-            <div class="setting-item">
-              <label for="showDeleteConfirmCheckbox">Show delete confirmation dialog:</label>
-              <input type="checkbox" id="showDeleteConfirmCheckbox">
-            </div>
-            <!-- Add more settings here as needed -->
-            <button id="closeSettingsModalBtn" class="modal-close-btn">Close</button>
-        </div>
-    </div>
-
-
-    <div id="qrScannerModal" class="modal-overlay"> <!-- Added modal-overlay class -->
-        <div class="qr-scanner-content modal-content-wrapper"> <!-- Added modal-content-wrapper for consistency -->
+    <div id="qrScannerModal" class="modal-overlay">
+        <div class="modal-content">
             <h3>Scan Box QR Code</h3>
             <video id="qrVideoFeed" playsinline></video>
             <canvas id="qrScanCanvas" style="display:none;"></canvas>
             <p id="qrScanResult">Align QR code within the frame...</p>
-            <button id="closeQrScannerBtn" class="modal-close-btn">Cancel</button> <!-- Reused class -->
+            <div class="modal-buttons"><button id="closeQrScannerBtn">Cancel</button></div>
+        </div>
+    </div>
+
+    <div id="customConfirmModal" class="modal-overlay">
+        <div class="modal-content">
+            <h3 id="confirmTitle">Confirm Action</h3>
+            <p id="confirmMessage" style="margin: 15px 0; line-height: 1.6;">Are you sure?</p>
+            <div class="modal-buttons">
+                <button id="confirmCancelBtn">Cancel</button>
+                <button id="confirmOkBtn" class="danger">Confirm</button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="settingsModal" class="modal-overlay">
+        <div class="modal-content">
+            <h2>Settings</h2>
+            <div style="margin: 20px 0;">
+                <input type="checkbox" id="showDeleteConfirmSetting" style="vertical-align: middle; margin-right: 8px; width:18px; height:18px; cursor:pointer;">
+                <label for="showDeleteConfirmSetting" style="cursor:pointer;">Show delete confirmation dialog</label>
+            </div>
+            <div class="modal-buttons">
+                <button id="closeSettingsModalBtn" class="primary">Close</button>
+            </div>
         </div>
     </div>
 
@@ -173,9 +202,7 @@
         import { TransformControls } from 'three/addons/controls/TransformControls.js';
         import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
         import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
-        // import { SSAOPass } from 'three/addons/postprocessing/SSAOPass.js'; // SSAO can be heavy, optional
         import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
-        // import { SMAAPass } from 'three/addons/postprocessing/SMAAPass.js'; // SMAA optional
 
         const GRID_EXTENT = 100, SNAP_GRID_SIZE = 0.5;
         const DEFAULT_BOX_COLOR = '#777777';
@@ -190,74 +217,92 @@
         const clock = new THREE.Clock();
         let activeEffects = [];
 
-        // Unified mode for Gizmo and Keyboard Arrow behavior
-        let currentAppMode = 'translate'; // 'translate' (Move), 'rotate', 'scale'
+        let currentInteractionMode = 'translate'; 
         const KEYBOARD_MOVE_INCREMENT = SNAP_GRID_SIZE;
-        const KEYBOARD_ROTATE_INCREMENT = THREE.MathUtils.degToRad(5); // 5 degrees
+        const KEYBOARD_ROTATE_INCREMENT = THREE.MathUtils.degToRad(5);
+        const KEYBOARD_SCALE_INCREMENT = 0.1; // For arrow key scaling if implemented
 
         let videoStream;
         let qrVideoElement;
         let qrScanCanvasElement;
         let qrScanCanvasCtx;
         let scanRequestId;
-        let currentView = '3d'; // '3d' or 'list'
+        let currentView = '3d';
 
-        // Settings
-        let settings = {
-            showDeleteConfirmation: true
-        };
+        let appSettings = { showDeleteConfirmation: true };
 
         class ActionManager { constructor() { this.undoStack = []; this.redoStack = []; } pushState(state) { this.undoStack.push(state); this.redoStack = []; if (this.undoStack.length > 50) this.undoStack.shift(); } undo() { if (this.undoStack.length <= 1) return null; const currentState = this.undoStack.pop(); this.redoStack.push(currentState); return JSON.parse(JSON.stringify(this.undoStack[this.undoStack.length - 1])); } redo() { if (this.redoStack.length === 0) return null; const nextState = this.redoStack.pop(); this.undoStack.push(nextState); return JSON.parse(JSON.stringify(nextState)); } }
         const actionManager = new ActionManager();
 
+        function loadSettings() {
+            const savedSettings = localStorage.getItem('boxOrganizerAppSettings');
+            if (savedSettings) {
+                try {
+                    const parsed = JSON.parse(savedSettings);
+                     // Merge, giving precedence to saved values but keeping defaults for new/missing ones
+                    appSettings = { ...appSettings, ...parsed };
+                } catch(e) {
+                    console.error("Error parsing saved settings:", e);
+                    // Keep default appSettings
+                }
+            }
+             // Ensure critical defaults
+            appSettings.showDeleteConfirmation = appSettings.showDeleteConfirmation !== undefined ? appSettings.showDeleteConfirmation : true;
+        }
+
+        function saveSettings() {
+            localStorage.setItem('boxOrganizerAppSettings', JSON.stringify(appSettings));
+        }
+
         function init() {
+            loadSettings();
             infoPanelEl = document.getElementById('infoPanel');
             hoverTooltipEl = document.getElementById('hoverTooltip');
             scene = new THREE.Scene();
             camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
             camera.position.set(15, 20, 25);
-            renderer = new THREE.WebGLRenderer({ antialias: false }); // Set to false if using SMAAPass/FXAAPass
+            renderer = new THREE.WebGLRenderer({ antialias: false });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.setPixelRatio(window.devicePixelRatio);
             renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-            renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.0; // Improved Tonemapping
+            renderer.toneMapping = THREE.LinearToneMapping;
             document.body.appendChild(renderer.domElement);
-            scene.add(new THREE.AmbientLight(0xffffff, 1.0)); // Adjusted intensity
-            const dirLight = new THREE.DirectionalLight(0xffffff, 1.5); // Adjusted intensity
-            dirLight.position.set(40, 60, 50); dirLight.castShadow = true;
+            scene.add(new THREE.AmbientLight(0xffffff, 1.3));
+            const dirLight = new THREE.DirectionalLight(0xffffff, 2.2);
+            dirLight.position.set(30, 50, 40); dirLight.castShadow = true;
             dirLight.shadow.mapSize.width = 2048; dirLight.shadow.mapSize.height = 2048;
-            dirLight.shadow.camera.top = 60; dirLight.shadow.camera.bottom = -60;
-            dirLight.shadow.camera.left = -60; dirLight.shadow.camera.right = 60;
+            dirLight.shadow.camera.top = 50; dirLight.shadow.camera.bottom = -50;
+            dirLight.shadow.camera.left = -50; dirLight.shadow.camera.right = 50;
             dirLight.shadow.bias = -0.0005;
             scene.add(dirLight);
             createFloorAndGrid(); createStarfield(); createAmbientParticles();
             orbitControls = new OrbitControls(camera, renderer.domElement);
-            orbitControls.enableDamping = true; orbitControls.dampingFactor = 0.05;
-            orbitControls.maxPolarAngle = Math.PI / 2 - 0.05; // Prevent camera from going exactly horizontal or below
+            orbitControls.enableDamping = true; orbitControls.maxPolarAngle = Math.PI / 2;
             multiSelectPivot = new THREE.Object3D(); scene.add(multiSelectPivot);
             transformControls = new TransformControls(camera, renderer.domElement);
             transformControls.addEventListener('objectChange', onTransformObject);
             transformControls.addEventListener('dragging-changed', e => {
                 orbitControls.enabled = !e.value;
-                if (!e.value && selectedBoxes.length > 0) { // Drag finished
-                    if (selectedBoxes.length > 1 && transformControls.object === multiSelectPivot) {
+                if (!e.value && selectedBoxes.length > 0) {
+                    if (selectedBoxes.length > 1) {
                         multiSelectPivot.updateWorldMatrix(true, true);
                         for(const child of multiSelectPivot.children) {
                             const boxData = boxes.find(b => b.threeGroup === child);
-                            if (boxData) child.getWorldPosition(boxData.position); // Update boxData.position
+                            if (boxData) child.getWorldPosition(boxData.position);
                         }
-                    } else if (selectedBoxes.length === 1 && selectedBoxes[0].threeGroup === transformControls.object) {
-                        const box = selectedBoxes[0]; // Update boxData.rotation if gizmo was rotate
-                        if (transformControls.mode === 'rotate') box.rotation.copy(box.threeGroup.rotation);
+                    } else if (selectedBoxes.length === 1) {
+                        const box = selectedBoxes[0];
+                        if (box.threeGroup && transformControls.mode === 'rotate') {
+                            box.rotation.copy(box.threeGroup.rotation);
+                        }
                     }
                     recordAction();
                 }
             });
             scene.add(transformControls);
             setupPostProcessing();
-            loadSettings();
             setupUI();
-            updateModeButtonAndGizmo(); // Initialize button text/gizmo
+            updateInteractionModeButton();
             recordAction();
             animate();
         }
@@ -266,147 +311,236 @@
             composer = new EffectComposer(renderer);
             const renderPass = new RenderPass(scene, camera);
             composer.addPass(renderPass);
-            const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.4, 0.5, 0.85); // Adjusted bloom
+            const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
+            bloomPass.threshold = 0.85; bloomPass.strength = 0.005; bloomPass.radius = 0.5;
             composer.addPass(bloomPass);
             window.addEventListener('resize', onWindowResize);
         }
 
-        function onWindowResize() { const width = window.innerWidth; const height = window.innerHeight; camera.aspect = width / height; camera.updateProjectionMatrix(); renderer.setSize(width, height); composer.setSize(width, height); renderer.setPixelRatio(window.devicePixelRatio); }
-        function createBoxData(overrideData = {}) { return { id: THREE.MathUtils.generateUUID(), name: "New Box", color: DEFAULT_BOX_COLOR, position: new THREE.Vector3(0, 0, 0), size: new THREE.Vector3(4, 3, 4), rotation: new THREE.Euler(0, 0, 0), items: [], icon: 'none', thumbnail: null, description: '', tags: [], weight: 0, weightUnit: 'kg', lastModified: new Date().toISOString(), ...overrideData }; }
-        function addBoxToScene(boxData, isNew = false) { const group = new THREE.Group(); group.userData.id = boxData.id; const baseMaterial = new THREE.MeshStandardMaterial({ color: boxData.color, roughness: 0.7, metalness: 0.2 }); const lidMaterial = new THREE.MeshStandardMaterial({ color: new THREE.Color(boxData.color).multiplyScalar(0.8), roughness: 0.7, metalness: 0.2 }); const baseGeometry = new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0); const lidGeometry = new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0); const baseMesh = new THREE.Mesh(baseGeometry, baseMaterial); const lidMesh = new THREE.Mesh(lidGeometry, lidMaterial); [baseMesh, lidMesh].forEach(m => { m.castShadow = true; m.receiveShadow = true; }); group.add(baseMesh, lidMesh); boxData.threeGroup = group; applyBoxStateFromData(boxData); boxes.push(boxData); scene.add(group); if (isNew) { const finalSize = boxData.size.clone(); const finalPos = boxData.position.clone(); baseMesh.scale.set(0.01,0.01,0.01); group.position.set(finalPos.x, finalPos.y + 10, finalPos.z); applyBoxStateFromData(boxData); new TWEEN.Tween(baseMesh.scale).to(finalSize, 600).easing(TWEEN.Easing.Back.Out).onUpdate(() => applyBoxStateFromData(boxData)).start(); new TWEEN.Tween(group.position).to(finalPos, 800).easing(TWEEN.Easing.Bounce.Out).start(); if (currentView === '3d') createPlopEffect(finalPos); } if (currentView === 'list' && isNew) populateListView(); return boxData; }
-        function applyBoxStateFromData(boxData) { if (!boxData.threeGroup) return; const [baseMesh, lidMesh] = boxData.threeGroup.children; boxData.threeGroup.position.copy(boxData.position); boxData.threeGroup.rotation.copy(boxData.rotation); baseMesh.scale.copy(boxData.size); baseMesh.material.color.set(boxData.color); lidMesh.scale.set(boxData.size.x * 1.02, LID_THICKNESS, boxData.size.z * 1.02); lidMesh.position.y = boxData.size.y; lidMesh.material.color.set(new THREE.Color(boxData.color).multiplyScalar(0.8)); }
-        function onTransformObject() { if (selectedBoxes.length === 1) { const selectedBoxData = selectedBoxes[0]; if (!selectedBoxData || !selectedBoxData.threeGroup) return; const group = selectedBoxData.threeGroup; const baseMesh = group.children[0]; if (transformControls.mode === 'scale') { selectedBoxData.size.x = Math.max(SNAP_GRID_SIZE, Math.round(baseMesh.scale.x / SNAP_GRID_SIZE) * SNAP_GRID_SIZE); selectedBoxData.size.y = Math.max(SNAP_GRID_SIZE, Math.round(baseMesh.scale.y / SNAP_GRID_SIZE) * SNAP_GRID_SIZE); selectedBoxData.size.z = Math.max(SNAP_GRID_SIZE, Math.round(baseMesh.scale.z / SNAP_GRID_SIZE) * SNAP_GRID_SIZE); } else if (transformControls.mode === 'rotate') { selectedBoxData.rotation.copy(group.rotation); } selectedBoxData.position.x = Math.round(group.position.x / SNAP_GRID_SIZE) * SNAP_GRID_SIZE; selectedBoxData.position.y = Math.max(0,Math.round(group.position.y / SNAP_GRID_SIZE) * SNAP_GRID_SIZE); selectedBoxData.position.z = Math.round(group.position.z / SNAP_GRID_SIZE) * SNAP_GRID_SIZE; applyBoxStateFromData(selectedBoxData); selectedBoxData.lastModified = new Date().toISOString(); if (infoPanelEl && !infoPanelEl.classList.contains('hidden')) { const lastModifiedTextEl = document.getElementById('lastModifiedText'); if(lastModifiedTextEl) lastModifiedTextEl.textContent = `Last Modified: ${new Date(selectedBoxData.lastModified).toLocaleString()}`; } } else if (selectedBoxes.length > 1) { multiSelectPivot.position.x = Math.round(multiSelectPivot.position.x / SNAP_GRID_SIZE) * SNAP_GRID_SIZE; multiSelectPivot.position.y = Math.max(0,Math.round(multiSelectPivot.position.y / SNAP_GRID_SIZE) * SNAP_GRID_SIZE); multiSelectPivot.position.z = Math.round(multiSelectPivot.position.z / SNAP_GRID_SIZE) * SNAP_GRID_SIZE; selectedBoxes.forEach(box => box.lastModified = new Date().toISOString()); } }
+        function onWindowResize() {
+            const width = window.innerWidth; const height = window.innerHeight;
+            camera.aspect = width / height; camera.updateProjectionMatrix();
+            renderer.setSize(width, height); composer.setSize(width, height);
+            renderer.setPixelRatio(window.devicePixelRatio);
+        }
 
-        function updateModeButtonAndGizmo() {
-            const btn = document.getElementById('toggleModeBtn');
-            if (!btn) return;
+        function createBoxData(overrideData = {}) {
+            return {
+                id: THREE.MathUtils.generateUUID(), name: "New Box", color: DEFAULT_BOX_COLOR,
+                position: new THREE.Vector3(0, 0, 0), size: new THREE.Vector3(4, 3, 4),
+                rotation: new THREE.Euler(0, 0, 0), items: [], icon: 'none', thumbnail: null,
+                description: '', tags: [], weight: 0, weightUnit: 'kg',
+                lastModified: new Date().toISOString(), ...overrideData,
+            };
+        }
 
-            // Detach first to avoid errors if object changes
-            if (transformControls.object) transformControls.detach();
-
-            if (selectedBoxes.length === 0) {
-                btn.innerHTML = `<i class="bi bi-tools"></i> Select Box`;
-                btn.disabled = true;
-                return;
+        function addBoxToScene(boxData, isNew = false) {
+            const group = new THREE.Group(); group.userData.id = boxData.id;
+            const baseMaterial = new THREE.MeshStandardMaterial({ color: boxData.color });
+            const lidMaterial = new THREE.MeshStandardMaterial({ color: new THREE.Color(boxData.color).multiplyScalar(0.8) });
+            const baseGeometry = new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0);
+            const lidGeometry = new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0);
+            const baseMesh = new THREE.Mesh(baseGeometry, baseMaterial);
+            const lidMesh = new THREE.Mesh(lidGeometry, lidMaterial);
+            [baseMesh, lidMesh].forEach(m => { m.castShadow = true; m.receiveShadow = true; });
+            group.add(baseMesh, lidMesh); boxData.threeGroup = group;
+            applyBoxStateFromData(boxData); boxes.push(boxData); scene.add(group);
+            if (isNew) {
+                const finalSize = boxData.size.clone(); const finalPos = boxData.position.clone();
+                baseMesh.scale.set(0.01,0.01,0.01); group.position.set(finalPos.x, finalPos.y + 10, finalPos.z);
+                applyBoxStateFromData(boxData);
+                 new TWEEN.Tween(baseMesh.scale).to(finalSize, 600).easing(TWEEN.Easing.Back.Out).onUpdate(() => applyBoxStateFromData(boxData)).start();
+                 new TWEEN.Tween(group.position).to(finalPos, 800).easing(TWEEN.Easing.Bounce.Out).start();
+                 if (currentView === '3d') createPlopEffect(finalPos);
             }
+            if (currentView === 'list' && isNew) populateListView();
+            return boxData;
+        }
 
-            if (selectedBoxes.length > 1) { // Multi-select always uses translate
-                currentAppMode = 'translate'; // Force mode
-                transformControls.setMode('translate');
-                btn.innerHTML = `<i class="bi bi-arrows-move"></i> Mode: Move (Multi)`;
-                btn.disabled = false; // Translate works for multi
-                 // Attach to pivot for multi-select
-                const selectionBBox = new THREE.Box3();
-                selectedBoxes.forEach(box => selectionBBox.expandByPoint(box.position));
-                selectionBBox.getCenter(multiSelectPivot.position);
-                // Ensure boxes are parented to scene before attaching to pivot
-                selectedBoxes.forEach(box => { if(box.threeGroup.parent !== scene) scene.add(box.threeGroup); });
-                [...multiSelectPivot.children].forEach(child => multiSelectPivot.detach(child)); // Clear pivot
-                selectedBoxes.forEach(box => multiSelectPivot.attach(box.threeGroup));
-                transformControls.attach(multiSelectPivot);
-                return;
-            }
+        function applyBoxStateFromData(boxData) {
+            if (!boxData.threeGroup) return;
+            const [baseMesh, lidMesh] = boxData.threeGroup.children;
+            boxData.threeGroup.position.copy(boxData.position);
+            boxData.threeGroup.rotation.copy(boxData.rotation);
+            baseMesh.scale.copy(boxData.size); baseMesh.material.color.set(boxData.color);
+            lidMesh.scale.set(boxData.size.x * 1.02, LID_THICKNESS, boxData.size.z * 1.02);
+            lidMesh.position.y = boxData.size.y; lidMesh.material.color.set(new THREE.Color(boxData.color).multiplyScalar(0.8));
+        }
 
-            // Single selection
-            const selectedBox = selectedBoxes[0];
-            transformControls.attach(selectedBox.threeGroup);
-            transformControls.setMode(currentAppMode);
-            btn.disabled = false;
-
-            switch (currentAppMode) {
-                case 'translate': btn.innerHTML = `<i class="bi bi-arrows-move"></i> Mode: Move`; break;
-                case 'rotate':    btn.innerHTML = `<i class="bi bi-arrow-repeat"></i> Mode: Rotate`; break;
-                case 'scale':     btn.innerHTML = `<i class="bi bi-arrows-fullscreen"></i> Mode: Scale`; break;
+        function onTransformObject() {
+            if (selectedBoxes.length === 1) {
+                const selectedBoxData = selectedBoxes[0];
+                if (!selectedBoxData || !selectedBoxData.threeGroup) return;
+                const group = selectedBoxData.threeGroup; const baseMesh = group.children[0];
+                if (transformControls.mode === 'scale') {
+                    selectedBoxData.size.x = Math.max(SNAP_GRID_SIZE, Math.round(baseMesh.scale.x / SNAP_GRID_SIZE) * SNAP_GRID_SIZE);
+                    selectedBoxData.size.y = Math.max(SNAP_GRID_SIZE, Math.round(baseMesh.scale.y / SNAP_GRID_SIZE) * SNAP_GRID_SIZE);
+                    selectedBoxData.size.z = Math.max(SNAP_GRID_SIZE, Math.round(baseMesh.scale.z / SNAP_GRID_SIZE) * SNAP_GRID_SIZE);
+                } else if (transformControls.mode === 'rotate') {
+                    selectedBoxData.rotation.copy(group.rotation);
+                }
+                selectedBoxData.position.x = Math.round(group.position.x / SNAP_GRID_SIZE) * SNAP_GRID_SIZE;
+                selectedBoxData.position.y = Math.max(0, Math.round(group.position.y / SNAP_GRID_SIZE) * SNAP_GRID_SIZE); // Keep on or above ground
+                selectedBoxData.position.z = Math.round(group.position.z / SNAP_GRID_SIZE) * SNAP_GRID_SIZE;
+                applyBoxStateFromData(selectedBoxData);
+                selectedBoxData.lastModified = new Date().toISOString();
+                 if (infoPanelEl && !infoPanelEl.classList.contains('hidden') && selectedBoxes.length ===1) {
+                    const lastModifiedTextEl = document.getElementById('lastModifiedText');
+                    if(lastModifiedTextEl) lastModifiedTextEl.textContent = `Last Modified: ${new Date(selectedBoxData.lastModified).toLocaleString()}`;
+                }
+            } else if (selectedBoxes.length > 1) {
+                multiSelectPivot.position.x = Math.round(multiSelectPivot.position.x / SNAP_GRID_SIZE) * SNAP_GRID_SIZE;
+                multiSelectPivot.position.y = Math.max(0, Math.round(multiSelectPivot.position.y / SNAP_GRID_SIZE) * SNAP_GRID_SIZE);
+                multiSelectPivot.position.z = Math.round(multiSelectPivot.position.z / SNAP_GRID_SIZE) * SNAP_GRID_SIZE;
+                 selectedBoxes.forEach(box => box.lastModified = new Date().toISOString());
             }
         }
 
+        function updateInteractionModeButton() {
+            const btn = document.getElementById('toggleModeBtn');
+            if (!btn) return;
+            if (currentView === 'list' || selectedBoxes.length > 1) {
+                btn.innerHTML = `<i class="bi bi-tools"></i> Tools`;
+                btn.disabled = true; return;
+            }
+            btn.disabled = selectedBoxes.length === 0;
+            switch (currentInteractionMode) {
+                case 'translate': btn.innerHTML = `<i class="bi bi-arrows-move"></i> Move (M)`; btn.title = "Mode: Move. Keys: M,Tab. Click for Rotate."; break;
+                case 'rotate': btn.innerHTML = `<i class="bi bi-arrow-repeat"></i> Rotate (R)`; btn.title = "Mode: Rotate. Keys: R,Tab. Click for Scale."; break;
+                case 'scale': btn.innerHTML = `<i class="bi bi-arrows-fullscreen"></i> Scale (S)`; btn.title = "Mode: Scale. Key: S. Click for Move."; break;
+            }
+            if(transformControls.object && transformControls.mode !== currentInteractionMode) {
+                transformControls.setMode(currentInteractionMode);
+            }
+        }
+        
+        function cycleInteractionMode() {
+            if (currentView === 'list' || selectedBoxes.length === 0) return;
+            switch (currentInteractionMode) {
+                case 'translate': setCurrentInteractionMode('rotate'); break;
+                case 'rotate': setCurrentInteractionMode('scale'); break;
+                case 'scale': setCurrentInteractionMode('translate'); break;
+            }
+        }
 
-        function getNewBoxTargetPosition() { const raycaster = new THREE.Raycaster(); raycaster.setFromCamera(new THREE.Vector2(0, 0), camera); const floorPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0); const intersectionPoint = new THREE.Vector3(); let targetPosition; if (raycaster.ray.intersectPlane(floorPlane, intersectionPoint)) { const camDirHorizontal = camera.getWorldDirection(new THREE.Vector3()).setY(0).normalize(); targetPosition = intersectionPoint.add(camDirHorizontal.multiplyScalar(5)); targetPosition.y = 0; } else { const camPos = camera.getWorldPosition(new THREE.Vector3()); const camDir = camera.getWorldDirection(new THREE.Vector3()); targetPosition = new THREE.Vector3(camPos.x + camDir.x * 10, 0, camPos.z + camDir.z * 10); } targetPosition.x = Math.round(targetPosition.x / SNAP_GRID_SIZE) * SNAP_GRID_SIZE; targetPosition.z = Math.round(targetPosition.z / SNAP_GRID_SIZE) * SNAP_GRID_SIZE; return { targetPosition }; }
+        function setCurrentInteractionMode(mode) {
+            if (!['translate', 'rotate', 'scale'].includes(mode)) return;
+            currentInteractionMode = mode;
+            if (transformControls.object && selectedBoxes.length === 1) {
+                 transformControls.setMode(currentInteractionMode);
+            }
+            updateInteractionModeButton();
+        }
+
+        function getNewBoxTargetPosition() {
+            const raycaster = new THREE.Raycaster();
+            raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
+            const floorPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+            const intersectionPoint = new THREE.Vector3();
+            let targetPosition;
+            if (raycaster.ray.intersectPlane(floorPlane, intersectionPoint)) {
+                const camDirHorizontal = camera.getWorldDirection(new THREE.Vector3()).setY(0).normalize();
+                targetPosition = intersectionPoint.add(camDirHorizontal.multiplyScalar(5));
+                targetPosition.y = 0;
+            } else {
+                const camPos = camera.getWorldPosition(new THREE.Vector3());
+                const camDir = camera.getWorldDirection(new THREE.Vector3());
+                targetPosition = new THREE.Vector3(camPos.x + camDir.x * 10, 0, camPos.z + camDir.z * 10);
+            }
+            targetPosition.x = Math.round(targetPosition.x / SNAP_GRID_SIZE) * SNAP_GRID_SIZE;
+            targetPosition.z = Math.round(targetPosition.z / SNAP_GRID_SIZE) * SNAP_GRID_SIZE;
+            return { targetPosition };
+        }
 
         function setupUI() {
-            document.querySelector('.top-bar').style.transform = 'translateY(0)'; document.querySelector('.top-bar').style.opacity = '1';
-            updateModeButtonAndGizmo(); // Initial call
-
-            document.getElementById('addBoxBtn').addEventListener('click', () => { const { targetPosition } = getNewBoxTargetPosition(); const newBoxData = createBoxData({ position: targetPosition }); const addedBox = addBoxToScene(newBoxData, true); deselectAll(); selectedBoxes.push(addedBox); updateSelectionState(); if(currentView === '3d') focusOnBox(addedBox); recordAction(); });
-            document.getElementById('toggleModeBtn').addEventListener('click', (e) => {
-                if (selectedBoxes.length > 1) { // Multi-select, only translate is relevant from button
-                    currentAppMode = 'translate';
-                } else if (currentAppMode === 'translate') currentAppMode = 'rotate';
-                else if (currentAppMode === 'rotate') currentAppMode = 'scale';
-                else currentAppMode = 'translate'; // scale -> translate
-                updateSelectionState(); // This will call updateModeButtonAndGizmo
+            document.querySelector('.top-bar').style.transform = 'translateY(0)';
+            document.querySelector('.top-bar').style.opacity = '1';
+            document.getElementById('addBoxBtn').addEventListener('click', () => {
+                 const { targetPosition } = getNewBoxTargetPosition();
+                 const newBoxData = createBoxData({ position: targetPosition });
+                 const addedBox = addBoxToScene(newBoxData, true);
+                 deselectAll(); selectedBoxes.push(addedBox); updateSelectionState();
+                 if(currentView === '3d') focusOnBox(addedBox);
+                 recordAction();
             });
-            document.getElementById('findBtn').addEventListener('click', () => { const searchTerm = document.getElementById('findCodeInput').value.trim(); let foundBox = null; if (searchTerm) { const searchTermUpper = searchTerm.toUpperCase(); foundBox = boxes.find(b => (b.id.substring(0, 6).toUpperCase() === searchTermUpper) || (b.name && b.name.toUpperCase() === searchTermUpper)); } if (foundBox) { deselectAll(); selectedBoxes.push(foundBox); updateSelectionState(); if(currentView === '3d') focusOnBox(foundBox); else if (currentView === 'list') { const li = document.querySelector(`#listViewContainer li[data-box-id="${foundBox.id}"]`); if (li) li.scrollIntoView({behavior: "smooth", block: "center"});} document.getElementById('findCodeInput').value = ''; } else { alert(searchTerm ? 'Box not found!' : 'Please enter ID or Name.'); } });
+            document.getElementById('toggleModeBtn').addEventListener('click', cycleInteractionMode);
+            document.getElementById('findBtn').addEventListener('click', () => {
+                const searchTerm = document.getElementById('findCodeInput').value.trim();
+                let foundBox = null;
+                if (searchTerm) {
+                    const searchTermUpper = searchTerm.toUpperCase();
+                    foundBox = boxes.find(b => (b.id.substring(0, 6).toUpperCase() === searchTermUpper) || (b.name && b.name.toUpperCase() === searchTermUpper));
+                }
+                if (foundBox) {
+                    if (currentView === 'list') toggleView(); // Switch to 3D if in list
+                    deselectAll(); selectedBoxes.push(foundBox); updateSelectionState(); focusOnBox(foundBox);
+                    document.getElementById('findCodeInput').value = '';
+                } else { alert(searchTerm ? 'Box not found!' : 'Please enter ID or Name.'); }
+            });
             document.getElementById('findCodeInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); document.getElementById('findBtn').click(); } });
-            document.getElementById('exportBtn').addEventListener('click', () => { const exportData = JSON.stringify({boxes: boxes.map(b => ({...b, threeGroup: undefined})), settings}, null, 2); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([exportData], {type: 'application/json'})); a.download = 'box_organizer_data.json'; a.click(); URL.revokeObjectURL(a.href); });
+            document.getElementById('exportBtn').addEventListener('click', () => { const exportData = JSON.stringify({version: "1.1", settings: appSettings, boxes: boxes.map(b => ({...b, threeGroup: undefined}))}, null, 2); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([exportData], {type: 'application/json'})); a.download = 'box_organizer_data.json'; a.click(); URL.revokeObjectURL(a.href); });
             document.getElementById('importFile').addEventListener('change', handleImport);
             document.getElementById('printAllLabelsBtn').addEventListener('click', handlePrintAllLabels);
             document.getElementById('scanQRBtn').addEventListener('click', startQrScanning);
             document.getElementById('toggleListViewBtn').addEventListener('click', toggleView);
-            document.getElementById('openSettingsBtn').addEventListener('click', showSettingsModal);
+            document.getElementById('settingsBtn').addEventListener('click', showSettingsModal);
 
             renderer.domElement.addEventListener('mousemove', onMouseMove);
             renderer.domElement.addEventListener('click', onCanvasClick);
             window.addEventListener('keydown', onKeyDown);
 
             document.getElementById('closeHelpModalBtn').addEventListener('click', hideHelpModal);
-            const helpModalEl = document.getElementById('helpModal'); if(helpModalEl) helpModalEl.addEventListener('click', (event) => { if (event.target === helpModalEl) hideHelpModal(); });
-            document.getElementById('closeSettingsModalBtn').addEventListener('click', hideSettingsModal);
-            const settingsModalEl = document.getElementById('settingsModal'); if(settingsModalEl) settingsModalEl.addEventListener('click', (event) => { if (event.target === settingsModalEl) hideSettingsModal(); });
-            document.getElementById('showDeleteConfirmCheckbox').addEventListener('change', (e) => { settings.showDeleteConfirmation = e.target.checked; saveSettings(); });
-
-
-            qrVideoElement = document.getElementById('qrVideoFeed'); qrScanCanvasElement = document.getElementById('qrScanCanvas');
+            document.getElementById('helpModal').addEventListener('click', (event) => { if (event.target.id === 'helpModal') hideHelpModal(); });
+            qrVideoElement = document.getElementById('qrVideoFeed');
+            qrScanCanvasElement = document.getElementById('qrScanCanvas');
             if(qrScanCanvasElement) qrScanCanvasCtx = qrScanCanvasElement.getContext('2d', { willReadFrequently: true });
-            const closeQrBtn = document.getElementById('closeQrScannerBtn'); if(closeQrBtn) closeQrBtn.addEventListener('click', () => stopQrScanning());
+            document.getElementById('closeQrScannerBtn').addEventListener('click', () => stopQrScanning());
+            document.getElementById('qrScannerModal').addEventListener('click', (event) => { if (event.target.id === 'qrScannerModal') stopQrScanning();});
+            document.getElementById('confirmCancelBtn').addEventListener('click', () => hideCustomConfirm(false));
+            document.getElementById('confirmOkBtn').addEventListener('click', () => hideCustomConfirm(true));
+            document.getElementById('customConfirmModal').addEventListener('click', (event) => { if(event.target.id === 'customConfirmModal') hideCustomConfirm(false); });
+            document.getElementById('closeSettingsModalBtn').addEventListener('click', hideSettingsModal);
+            document.getElementById('settingsModal').addEventListener('click', (event) => { if(event.target.id === 'settingsModal') hideSettingsModal(); });
+            document.getElementById('showDeleteConfirmSetting').addEventListener('change', (e) => { appSettings.showDeleteConfirmation = e.target.checked; saveSettings(); });
         }
 
         function updateSelectionState() {
-            releaseMultiSelectPivot(); // Always release before re-evaluating
+            releaseMultiSelectPivot();
             boxes.forEach(box => { if(box.threeGroup) { applyBoxStateFromData(box); box.threeGroup.children.forEach(c => { if (c.isMesh && c.material.emissive.getHex() !== 0x000000) new TWEEN.Tween(c.material.emissive).to({ r: 0, g: 0, b: 0 }, 100).start(); }); } });
-
-            const listItems = document.querySelectorAll('#listViewContainer li');
-            listItems.forEach(li => li.classList.remove('selected-list-item'));
-
             if (currentView === 'list') {
-                if (selectedBoxes.length === 1) {
-                    updateInfoPanel(); infoPanelEl.classList.remove('hidden');
-                    const selectedLi = document.querySelector(`#listViewContainer li[data-box-id="${selectedBoxes[0].id}"]`);
-                    if(selectedLi) selectedLi.classList.add('selected-list-item');
-                } else {
-                    infoPanelEl.classList.add('hidden');
-                }
                 transformControls.detach();
-            } else { // 3D View
-                if (selectedBoxes.length === 0) {
-                     transformControls.detach(); infoPanelEl.classList.add('hidden');
-                } else if (selectedBoxes.length === 1) {
+                if (selectedBoxes.length === 1) { updateInfoPanel(); infoPanelEl.classList.remove('hidden'); }
+                else { infoPanelEl.classList.add('hidden'); }
+                const listItems = document.querySelectorAll('#listViewContainer li');
+                listItems.forEach(li => li.style.outline = 'none');
+                if(selectedBoxes.length === 1) { const selectedLi = document.querySelector(`#listViewContainer li[data-box-id="${selectedBoxes[0].id}"]`); if(selectedLi) selectedLi.style.outline = `2px solid var(--primary-color)`; }
+            } else {
+                if (selectedBoxes.length === 0) { transformControls.detach(); infoPanelEl.classList.add('hidden'); }
+                else if (selectedBoxes.length === 1) {
                     const selectedBoxData = selectedBoxes[0];
                     if (selectedBoxData.threeGroup) {
                         transformControls.attach(selectedBoxData.threeGroup);
+                        if (transformControls.mode !== currentInteractionMode) transformControls.setMode(currentInteractionMode);
                         selectedBoxData.threeGroup.children.forEach(c => { if (c.isMesh) new TWEEN.Tween(c.material.emissive).to({ r: 0.2, g: 0.5, b: 0.8 }, 200).start(); });
                     }
                     updateInfoPanel(); infoPanelEl.classList.remove('hidden');
-                } else { // Multi-select in 3D
+                } else {
                     const selectionBBox = new THREE.Box3(); selectedBoxes.forEach(box => selectionBBox.expandByPoint(box.position)); selectionBBox.getCenter(multiSelectPivot.position);
-                    selectedBoxes.forEach(box => { if(box.threeGroup.parent !== scene) scene.add(box.threeGroup); }); // Ensure parented to scene
-                    [...multiSelectPivot.children].forEach(child => multiSelectPivot.detach(child));
-                    selectedBoxes.forEach(box => multiSelectPivot.attach(box.threeGroup));
-                    transformControls.attach(multiSelectPivot);
+                    selectedBoxes.forEach(box => multiSelectPivot.attach(box.threeGroup)); transformControls.setMode('translate'); transformControls.attach(multiSelectPivot);
                     selectedBoxes.forEach(boxData => { if (boxData.threeGroup) { boxData.threeGroup.children.forEach(c => { if (c.isMesh) new TWEEN.Tween(c.material.emissive).to({ r: 0.2, g: 0.5, b: 0.8 }, 200).start(); }); } });
                     updateMultiSelectInfoPanel(); infoPanelEl.classList.remove('hidden');
                 }
             }
-            updateModeButtonAndGizmo(); // Central place to update button and gizmo mode
+            updateInteractionModeButton();
         }
 
-        function updateInfoPanel() { if (selectedBoxes.length !== 1) return; const selectedBoxData = selectedBoxes[0]; const recordAndTimestamp = () => { if(selectedBoxData) selectedBoxData.lastModified = new Date().toISOString(); updateInfoPanel(); recordAction(); }; infoPanelEl.innerHTML = `<h3 id="infoPanelTitleArea"><span id="infoPanelTitle"></span> <span id="infoPanelIdChip" class="box-id-chip"></span></h3><div><label for="boxNameInput">Name</label><input type="text" id="boxNameInput"></div><div><label for="boxColorInput">Color</label><input type="color" id="boxColorInput"></div><div><label for="descriptionInput">Description</label><textarea id="descriptionInput" rows="3"></textarea></div><div id="tagsContainer"><h4 class="section-header">Tags</h4><div class="tag-container"><input type="text" id="tagInput" placeholder="Add a tag..."></div></div><div id="weightContainer"><h4 class="section-header">Weight</h4><div style="display: flex; gap: 8px;"><input type="number" id="weightInput" min="0" step="0.1" style="flex-grow: 1;"><select id="weightUnitSelect"><option value="kg">kg</option><option value="lbs">lbs</option></select></div></div><div id="iconContainer"><h4 class="section-header">Icon</h4><div id="iconPicker"></div></div><div id="itemListContainer"><h4 class="section-header">Items</h4><ul id="itemList"></ul><form id="addItemForm" onsubmit="return false;"><input type="text" id="newItemNameInput" placeholder="Item name..." required><input type="number" id="newItemQtyInput" value="1" min="1" style="width: 60px;"><button type="submit" id="addItemBtn"><i class="bi bi-plus-lg"></i> Add</button></form></div><p id="lastModifiedText" style="font-size: 0.8em; color: var(--text-muted-color); text-align: center; margin-top: 20px;"></p><button id="deleteBoxBtn"><i class="bi bi-trash"></i> Delete Box</button>`; document.getElementById('infoPanelTitle').textContent = selectedBoxData.name || "Box Properties"; document.getElementById('infoPanelIdChip').textContent = selectedBoxData.id.substring(0,6).toUpperCase(); document.getElementById('boxNameInput').value = selectedBoxData.name; document.getElementById('boxColorInput').value = selectedBoxData.color; document.getElementById('descriptionInput').value = selectedBoxData.description || ''; document.getElementById('weightInput').value = selectedBoxData.weight || 0; document.getElementById('weightUnitSelect').value = selectedBoxData.weightUnit || 'kg'; document.getElementById('lastModifiedText').textContent = `Last Modified: ${new Date(selectedBoxData.lastModified).toLocaleString()}`; document.getElementById('boxNameInput').onchange = (e) => { if(selectedBoxData) {selectedBoxData.name = e.target.value; recordAndTimestamp(); if (currentView === 'list') populateListView();}}; document.getElementById('boxColorInput').onchange = (e) => { if(selectedBoxData) {selectedBoxData.color = e.target.value; applyBoxStateFromData(selectedBoxData); recordAndTimestamp(); if (currentView === 'list') populateListView();}}; document.getElementById('descriptionInput').onchange = (e) => { if(selectedBoxData) {selectedBoxData.description = e.target.value; recordAndTimestamp();}}; document.getElementById('weightInput').onchange = (e) => { if(selectedBoxData) {selectedBoxData.weight = parseFloat(e.target.value) || 0; recordAndTimestamp();}}; document.getElementById('weightUnitSelect').onchange = (e) => { if(selectedBoxData) {selectedBoxData.weightUnit = e.target.value; recordAndTimestamp();}}; document.getElementById('tagInput').onkeydown = handleTagInput; document.getElementById('addItemForm').onsubmit = (e) => { handleAddItem(e); recordAndTimestamp(); }; const itemListEl = document.getElementById('itemList'); itemListEl.ondragstart = handleItemDragStart; itemListEl.ondragover = handleItemDragOver; itemListEl.ondrop = (e) => { handleItemDrop(e); recordAndTimestamp(); }; itemListEl.ondragleave = clearItemDropIndicators; document.getElementById('deleteBoxBtn').onclick = handleDeleteSelection; renderTags(); renderItemList(); renderIconPicker(); }
-        function updateMultiSelectInfoPanel() { infoPanelEl.innerHTML = `<h3>${selectedBoxes.length} Boxes Selected</h3><p style="text-align:center; color: var(--text-muted-color); margin-top: 10px;">Multi-box operations available via Transform Gizmo (Move only) and Delete key.</p><button id="deleteBoxBtn"><i class="bi bi-trash"></i> Delete Selected</button>`; document.getElementById('deleteBoxBtn').onclick = handleDeleteSelection; }
+        function updateInfoPanel() { if (selectedBoxes.length !== 1) return; const selectedBoxData = selectedBoxes[0]; const recordAndTimestamp = () => { if(selectedBoxData) selectedBoxData.lastModified = new Date().toISOString(); updateInfoPanel(); recordAction(); }; infoPanelEl.innerHTML = `<h3 id="infoPanelTitleArea"><span id="infoPanelTitle"></span> <span id="infoPanelIdChip" class="box-id-chip"></span></h3><div><label for="boxNameInput">Name</label><input type="text" id="boxNameInput"></div><div><label for="boxColorInput">Color</label><input type="color" id="boxColorInput"></div><div><label for="descriptionInput">Description</label><textarea id="descriptionInput" rows="3"></textarea></div><div id="tagsContainer"><h4 class="section-header">Tags</h4><div class="tag-container"><input type="text" id="tagInput" placeholder="Add a tag..."></div></div><div id="weightContainer"><h4 class="section-header">Weight</h4><div style="display: flex; gap: 8px;"><input type="number" id="weightInput" min="0" step="0.1" style="flex-grow: 1;"><select id="weightUnitSelect"><option value="kg">kg</option><option value="lbs">lbs</option></select></div></div><div id="iconContainer"><h4 class="section-header">Icon</h4><div id="iconPicker"></div></div><div id="itemListContainer"><h4 class="section-header">Items</h4><ul id="itemList"></ul><form id="addItemForm" onsubmit="return false;"><input type="text" id="newItemNameInput" placeholder="Item name..." required><input type="number" id="newItemQtyInput" value="1" min="1" style="width: 60px;"><button type="submit" id="addItemBtn"><i class="bi bi-plus-lg"></i> Add</button></form></div><p id="lastModifiedText" style="font-size: 0.8em; color: var(--text-muted-color); text-align: center; margin-top: 20px;"></p><button id="deleteBoxBtn"><i class="bi bi-trash"></i> Delete Box</button>`; document.getElementById('infoPanelTitle').textContent = selectedBoxData.name || "Box Properties"; document.getElementById('infoPanelIdChip').textContent = selectedBoxData.id.substring(0,6).toUpperCase(); document.getElementById('boxNameInput').value = selectedBoxData.name; document.getElementById('boxColorInput').value = selectedBoxData.color; document.getElementById('descriptionInput').value = selectedBoxData.description || ''; document.getElementById('weightInput').value = selectedBoxData.weight || 0; document.getElementById('weightUnitSelect').value = selectedBoxData.weightUnit || 'kg'; document.getElementById('lastModifiedText').textContent = `Last Modified: ${new Date(selectedBoxData.lastModified).toLocaleString()}`; document.getElementById('boxNameInput').onchange = (e) => { if(selectedBoxData) {selectedBoxData.name = e.target.value; recordAndTimestamp(); if (currentView === 'list') populateListView();}}; document.getElementById('boxColorInput').onchange = (e) => { if(selectedBoxData) {selectedBoxData.color = e.target.value; applyBoxStateFromData(selectedBoxData); recordAndTimestamp(); if (currentView === 'list') populateListView();}}; document.getElementById('descriptionInput').onchange = (e) => { if(selectedBoxData) {selectedBoxData.description = e.target.value; recordAndTimestamp(); if (currentView === 'list') populateListView();}}; document.getElementById('weightInput').onchange = (e) => { if(selectedBoxData) {selectedBoxData.weight = parseFloat(e.target.value) || 0; recordAndTimestamp();}}; document.getElementById('weightUnitSelect').onchange = (e) => { if(selectedBoxData) {selectedBoxData.weightUnit = e.target.value; recordAndTimestamp();}}; document.getElementById('tagInput').onkeydown = handleTagInput; document.getElementById('addItemForm').onsubmit = (e) => { handleAddItem(e); recordAndTimestamp(); }; const itemListEl = document.getElementById('itemList'); itemListEl.ondragstart = handleItemDragStart; itemListEl.ondragover = handleItemDragOver; itemListEl.ondrop = (e) => { handleItemDrop(e); recordAndTimestamp(); }; itemListEl.ondragleave = clearItemDropIndicators; document.getElementById('deleteBoxBtn').onclick = handleDeleteSelection; renderTags(); renderItemList(); renderIconPicker(); }
+        function updateMultiSelectInfoPanel() { infoPanelEl.innerHTML = `<h3>${selectedBoxes.length} Boxes Selected</h3><button id="deleteBoxBtn"><i class="bi bi-trash"></i> Delete Selected</button>`; document.getElementById('deleteBoxBtn').onclick = handleDeleteSelection; }
         function renderTags() { if (selectedBoxes.length !== 1) return; const selectedBoxData = selectedBoxes[0]; const tagContainer = document.querySelector('#tagsContainer .tag-container'); const tagInput = document.getElementById('tagInput'); [...tagContainer.children].filter(child => child !== tagInput).forEach(child => child.remove()); selectedBoxData.tags.forEach(tagText => { const tagEl = document.createElement('span'); tagEl.className = 'tag'; tagEl.textContent = tagText; const removeEl = document.createElement('span'); removeEl.className = 'tag-remove bi bi-x'; removeEl.onclick = () => { selectedBoxData.tags = selectedBoxData.tags.filter(t => t !== tagText); selectedBoxData.lastModified = new Date().toISOString(); recordAction(); renderTags(); }; tagEl.appendChild(removeEl); tagContainer.insertBefore(tagEl, tagInput); }); }
-        function handleTagInput(e) { if (e.key === 'Enter' && selectedBoxes.length === 1) { e.preventDefault(); const tagValue = e.target.value.trim(); if (tagValue && !selectedBoxes[0].tags.includes(tagValue)) { selectedBoxes[0].tags.push(tagValue); selectedBoxData.lastModified = new Date().toISOString(); recordAction(); renderTags(); } e.target.value = ''; } }
+        function handleTagInput(e) { if (e.key === 'Enter' && selectedBoxes.length === 1) { e.preventDefault(); const tagValue = e.target.value.trim(); if (tagValue && !selectedBoxes[0].tags.includes(tagValue)) { selectedBoxes[0].tags.push(tagValue); selectedBoxes[0].lastModified = new Date().toISOString(); recordAction(); renderTags(); } e.target.value = ''; } }
 
-        function releaseMultiSelectPivot() { if (transformControls.object === multiSelectPivot) { transformControls.detach(); } while(multiSelectPivot.children.length > 0) { const child = multiSelectPivot.children[0]; multiSelectPivot.detach(child); if(!child.parent) scene.add(child); /* Re-attach to scene if accidentally fully detached */ } }
-        function deselectAll() { releaseMultiSelectPivot(); selectedBoxes = []; updateSelectionState(); } // updateSelectionState handles UI changes
+        function releaseMultiSelectPivot() { if (multiSelectPivot.children.length > 0) { multiSelectPivot.updateWorldMatrix(true, true); const children = [...multiSelectPivot.children]; for(const child of children) { const boxData = boxes.find(b => b.threeGroup === child); if (boxData) { child.getWorldPosition(boxData.position); scene.attach(child); } } } }
+        function deselectAll() { releaseMultiSelectPivot(); selectedBoxes = []; if (currentView === 'list') { infoPanelEl.classList.add('hidden'); populateListView(); } updateSelectionState(); }
         function renderItemList() { if (selectedBoxes.length !== 1) return; const selectedBoxData = selectedBoxes[0]; const itemListEl = document.getElementById('itemList'); itemListEl.innerHTML = ''; selectedBoxData.items.forEach((item, index) => { const li = document.createElement('li'); li.dataset.itemId = item.id; li.draggable = true; const handle = document.createElement('span'); handle.className = 'drag-handle bi bi-grip-vertical'; const nameInput = document.createElement('input'); nameInput.type = 'text'; nameInput.className = 'item-name-input'; nameInput.value = item.name; nameInput.onchange = (e) => { item.name = e.target.value; selectedBoxData.lastModified = new Date().toISOString(); recordAction(); }; const qtyInput = document.createElement('input'); qtyInput.type = 'number'; qtyInput.className = 'item-qty-input'; qtyInput.value = item.qty; qtyInput.min = 1; qtyInput.onchange = (e) => { item.qty = parseInt(e.target.value) || 1; selectedBoxData.lastModified = new Date().toISOString(); recordAction(); }; const deleteBtn = document.createElement('button'); deleteBtn.className = 'delete-item-btn bi bi-x-lg'; deleteBtn.onclick = () => { selectedBoxData.items.splice(index, 1); renderItemList(); selectedBoxData.lastModified = new Date().toISOString(); recordAction(); if(currentView === 'list') populateListView(); }; li.append(handle, nameInput, qtyInput, deleteBtn); itemListEl.appendChild(li); }); }
         function handleAddItem(event) { event.preventDefault(); if (selectedBoxes.length !== 1) return; const selectedBoxData = selectedBoxes[0]; const nameInput = document.getElementById('newItemNameInput'); const qtyInput = document.getElementById('newItemQtyInput'); const name = nameInput.value.trim(); const qty = parseInt(qtyInput.value) || 1; if (name) { selectedBoxData.items.push({ id: THREE.MathUtils.generateUUID(), name, qty }); nameInput.value = ''; qtyInput.value = 1; renderItemList(); selectedBoxData.lastModified = new Date().toISOString(); recordAction(); if(currentView === 'list') populateListView(); } }
         function handleItemDragStart(e) { if (e.target.tagName === 'LI') { e.target.classList.add('dragging'); draggedItem = e.target.dataset.itemId; e.dataTransfer.effectAllowed = 'move'; } }
@@ -414,93 +548,79 @@
         function handleItemDragOver(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; const targetLi = e.target.closest('li'); const draggingLi = document.querySelector('#itemList li.dragging'); if (!targetLi || !draggingLi || targetLi === draggingLi) return; clearItemDropIndicators(); const rect = targetLi.getBoundingClientRect(); const midY = rect.top + rect.height / 2; if (e.clientY < midY) targetLi.classList.add('drop-indicator-top'); else targetLi.classList.add('drop-indicator-bottom'); }
         function handleItemDrop(e) { e.preventDefault(); const targetLi = e.target.closest('li'); if (!targetLi || !draggedItem || selectedBoxes.length !== 1) { clearItemDropIndicators(); draggedItem = null; return; } const selectedBoxData = selectedBoxes[0]; const items = selectedBoxData.items; const draggedIndex = items.findIndex(item => item.id === draggedItem); let targetIndex = Array.from(targetLi.parentElement.children).indexOf(targetLi); if (draggedIndex === -1) return; if (targetLi.classList.contains('drop-indicator-bottom')) targetIndex++; if (draggedIndex < targetIndex) targetIndex--; const [dragged] = items.splice(draggedIndex, 1); items.splice(targetIndex, 0, dragged); clearItemDropIndicators(); document.querySelector('#itemList li.dragging')?.classList.remove('dragging'); draggedItem = null; renderItemList(); selectedBoxData.lastModified = new Date().toISOString(); recordAction(); if(currentView === 'list') populateListView(); }
 
-        function handleDeleteSelection() {
+        async function handleDeleteSelection() {
             if (selectedBoxes.length === 0) return;
-            const doDelete = () => {
-                const boxesToRemove = [...selectedBoxes]; deselectAll();
-                boxesToRemove.forEach(boxToRemove => {
-                    if (boxToRemove.threeGroup && currentView === '3d') { new TWEEN.Tween(boxToRemove.threeGroup.scale).to({x:0.01, y:0.01, z:0.01}, 300).easing(TWEEN.Easing.Quadratic.In).onComplete(() => {scene.remove(boxToRemove.threeGroup); disposeThreeObject(boxToRemove.threeGroup);}).start(); }
-                    else if (boxToRemove.threeGroup) { scene.remove(boxToRemove.threeGroup); disposeThreeObject(boxToRemove.threeGroup); }
-                    boxes = boxes.filter(b => b.id !== boxToRemove.id);
-                });
-                recordAction(); if (currentView === 'list') populateListView();
-            };
-            if (settings.showDeleteConfirmation) {
-                const confirmDelete = confirm(`Are you sure you want to delete ${selectedBoxes.length} box(es)?`);
-                if (confirmDelete) doDelete();
-            } else {
-                doDelete();
+            let confirmed = !appSettings.showDeleteConfirmation;
+            if (appSettings.showDeleteConfirmation) {
+                try {
+                    const message = `Are you sure you want to delete ${selectedBoxes.length} box(es)? This action cannot be easily undone.`;
+                    const okButton = document.getElementById('confirmOkBtn');
+                    okButton.textContent = selectedBoxes.length > 1 ? "Delete Boxes" : "Delete Box";
+                    okButton.className = 'danger'; // Ensure it's red
+                    confirmed = await showCustomConfirm("Confirm Deletion", message);
+                } catch { confirmed = false; }
             }
+            if (!confirmed) return;
+            const boxesToRemove = [...selectedBoxes]; const currentSelectionIds = selectedBoxes.map(b => b.id); deselectAll();
+            boxesToRemove.forEach(boxToRemove => {
+                if (boxToRemove.threeGroup && currentView === '3d') { new TWEEN.Tween(boxToRemove.threeGroup.scale).to({x:0.01, y:0.01, z:0.01}, 300).easing(TWEEN.Easing.Quadratic.In).onComplete(() => {if (boxToRemove.threeGroup.parent) scene.remove(boxToRemove.threeGroup); disposeThreeObject(boxToRemove.threeGroup);}).start(); }
+                else if (boxToRemove.threeGroup) { if (boxToRemove.threeGroup.parent) scene.remove(boxToRemove.threeGroup); disposeThreeObject(boxToRemove.threeGroup); }
+                boxes = boxes.filter(b => b.id !== boxToRemove.id);
+            });
+            recordAction(); if (currentView === 'list') populateListView(); updateSelectionState();
         }
 
-        function onMouseMove(event) { if(currentView === 'list' || isUiBlockingKeyboard()) {hoverTooltipEl.classList.add('hidden'); return;} const mouse = new THREE.Vector2((event.clientX / window.innerWidth) * 2 - 1, -(event.clientY / window.innerHeight) * 2 + 1); const raycaster = new THREE.Raycaster(); raycaster.setFromCamera(mouse, camera); const collidableMeshes = boxes.flatMap(b => b.threeGroup ? [b.threeGroup.children[0], b.threeGroup.children[1]] : []); const intersects = raycaster.intersectObjects(collidableMeshes, false); let newHoveredBox = null; if (intersects.length > 0) { const parentGroup = intersects[0].object.parent; if (parentGroup && parentGroup.userData.id) newHoveredBox = boxes.find(b => b.id === parentGroup.userData.id); } if (hoveredBoxData !== newHoveredBox) hoveredBoxData = newHoveredBox; if (hoveredBoxData) { hoverTooltipEl.innerHTML = `<i class="${hoveredBoxData.icon || 'bi-box'}"></i> ${hoveredBoxData.name} <small>[${hoveredBoxData.id.substring(0,6).toUpperCase()}]</small>`; hoverTooltipEl.classList.remove('hidden'); hoverTooltipEl.style.left = (event.clientX + 15) + 'px'; hoverTooltipEl.style.top = (event.clientY + 15) + 'px'; } else { hoverTooltipEl.classList.add('hidden'); } }
-        function onCanvasClick(e) { if (currentView === 'list' || transformControls.dragging || isUiBlockingKeyboard()) return; if (hoveredBoxData) { if (e.shiftKey) { const index = selectedBoxes.findIndex(b => b.id === hoveredBoxData.id); if (index > -1) selectedBoxes.splice(index, 1); else selectedBoxes.push(hoveredBoxData); } else { deselectAll(); selectedBoxes.push(hoveredBoxData); } } else { deselectAll(); } updateSelectionState(); }
-
-        function isUiBlockingKeyboard() { const helpModal = document.getElementById('helpModal'); const qrScannerModal = document.getElementById('qrScannerModal'); const settingsModal = document.getElementById('settingsModal'); return (helpModal && helpModal.style.display !== 'none' && helpModal.style.display !== '') || (qrScannerModal && qrScannerModal.style.display !== 'none' && qrScannerModal.style.display !== '') || (settingsModal && settingsModal.style.display !== 'none' && settingsModal.style.display !== ''); }
+        function onMouseMove(event) { if(currentView === 'list') {hoverTooltipEl.classList.add('hidden'); return;} const mouse = new THREE.Vector2((event.clientX / window.innerWidth) * 2 - 1, -(event.clientY / window.innerHeight) * 2 + 1); const raycaster = new THREE.Raycaster(); raycaster.setFromCamera(mouse, camera); const collidableMeshes = boxes.flatMap(b => b.threeGroup ? [b.threeGroup.children[0], b.threeGroup.children[1]] : []); const intersects = raycaster.intersectObjects(collidableMeshes, false); let newHoveredBox = null; if (intersects.length > 0) { const parentGroup = intersects[0].object.parent; if (parentGroup && parentGroup.userData.id) newHoveredBox = boxes.find(b => b.id === parentGroup.userData.id); } if (hoveredBoxData !== newHoveredBox) hoveredBoxData = newHoveredBox; if (hoveredBoxData) { hoverTooltipEl.innerHTML = `<i class="${hoveredBoxData.icon || 'bi-box'}"></i> ${hoveredBoxData.name} <small>[${hoveredBoxData.id.substring(0,6).toUpperCase()}]</small>`; hoverTooltipEl.classList.remove('hidden'); hoverTooltipEl.style.left = (event.clientX + 15) + 'px'; hoverTooltipEl.style.top = (event.clientY + 15) + 'px'; } else { hoverTooltipEl.classList.add('hidden'); } }
+        function onCanvasClick(e) { if (currentView === 'list' || transformControls.dragging) return; if (hoveredBoxData) { if (e.shiftKey) { const index = selectedBoxes.findIndex(b => b.id === hoveredBoxData.id); if (index > -1) selectedBoxes.splice(index, 1); else selectedBoxes.push(hoveredBoxData); } else { deselectAll(); selectedBoxes.push(hoveredBoxData); } } else { deselectAll(); } updateSelectionState(); }
+        function isUiBlockingKeyboard() { const helpModal = document.getElementById('helpModal'); const qrScannerModal = document.getElementById('qrScannerModal'); const confirmModal = document.getElementById('customConfirmModal'); const settingsModal = document.getElementById('settingsModal'); return (helpModal && helpModal.style.display !== 'none') || (qrScannerModal && qrScannerModal.style.display !== 'none') || (confirmModal && confirmModal.style.display !== 'none') || (settingsModal && settingsModal.style.display !== 'none'); }
 
         function onKeyDown(e) {
             const activeElement = document.activeElement;
             const isInputFocused = activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA' || activeElement.isContentEditable);
             const isCtrlOrMeta = e.ctrlKey || e.metaKey;
-
-            if (isInputFocused) { // Allow most default input behaviors
-                if (isCtrlOrMeta && ['a', 'c', 'x', 'v', 'z', 'y'].includes(e.key.toLowerCase())) return;
-                if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'escape', 'tab'].includes(e.key.toLowerCase())) return; // Allow navigation, Esc, Tab
-                if (e.key.toLowerCase() === 'enter' && activeElement.id !== 'findCodeInput' && activeElement.id !== 'tagInput') return; // Allow Enter unless it's for our specific inputs
-                if (!isCtrlOrMeta && !(activeElement.id === 'findCodeInput' && e.key.toLowerCase() === 'enter') && !(activeElement.id === 'tagInput' && e.key.toLowerCase() === 'enter')) return; // Block global if not Ctrl/Meta and not Enter on specific inputs
-            }
-
             const uiIsBlocking = isUiBlockingKeyboard();
 
+            if (isInputFocused) {
+                if (isCtrlOrMeta && ['a', 'c', 'x', 'v', 'z', 'y'].includes(e.key.toLowerCase())) return;
+                if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'escape'].includes(e.key.toLowerCase())) return;
+                if (e.key.toLowerCase() === 'enter' && activeElement.id !== 'findCodeInput') return;
+                if (!isCtrlOrMeta && !(activeElement.id === 'findCodeInput' && e.key.toLowerCase() === 'enter')) return;
+            }
+
             if (isCtrlOrMeta) {
-                if (uiIsBlocking && !['/', '?'].includes(e.key.toLowerCase()) && !(e.key.toLowerCase() === ',' && document.getElementById('settingsModal').style.display !== 'none' ) ) { // Allow help/settings toggle even if a modal is open
-                    if(e.key.toLowerCase() !== 'escape') e.preventDefault(); return;
-                }
-                // Handle specific Ctrl shortcuts even if other UI is blocking (like help or settings toggle)
-                if (e.key.toLowerCase() === '/' || e.key.toLowerCase() === '?') {
-                    e.preventDefault(); const helpModal = document.getElementById('helpModal'); if (helpModal) { if (helpModal.style.display === 'none' || helpModal.style.display === '') showHelpModal(); else hideHelpModal(); } return;
-                }
-                if (e.key.toLowerCase() === ',') {
-                    e.preventDefault(); const settingsModal = document.getElementById('settingsModal'); if (settingsModal) { if (settingsModal.style.display === 'none' || settingsModal.style.display === '') showSettingsModal(); else hideSettingsModal(); } return;
-                }
-
-                if(uiIsBlocking) { e.preventDefault(); return; } // If still blocking after specific toggles, block others
-
+                if (uiIsBlocking && !['/', '?'].includes(e.key.toLowerCase())) { if(e.key.toLowerCase() !== 'escape') e.preventDefault(); return; }
                 e.preventDefault(); let stateToRestore = null;
                 switch (e.key.toLowerCase()) {
                     case 'n': { const { targetPosition } = getNewBoxTargetPosition(); const newBoxData = createBoxData({ position: targetPosition }); const addedBox = addBoxToScene(newBoxData, true); deselectAll(); selectedBoxes.push(addedBox); updateSelectionState(); if(currentView === '3d') focusOnBox(addedBox); recordAction(); break; }
                     case 'f': document.getElementById('findCodeInput').focus(); document.getElementById('findCodeInput').select(); break;
+                    case ',': showSettingsModal(); break;
                     case 'z': stateToRestore = actionManager.undo(); break;
                     case 'y': stateToRestore = actionManager.redo(); break;
                     case 'c': handleCopy(); break;
                     case 'x': handleCut(); break;
                     case 'v': handlePaste(); if (currentView === 'list') populateListView(); break;
+                    case '/': case '?': const helpModal = document.getElementById('helpModal'); if (helpModal) { if (helpModal.style.display === 'none' || helpModal.style.display === '') showHelpModal(); else hideHelpModal(); } break;
                 }
                 if (stateToRestore) { restoreState(stateToRestore); if (currentView === 'list') populateListView(); }
-
-            } else { // Not Ctrl/Meta
+            } else {
                 switch (e.key.toLowerCase()) {
-                    case 'escape': e.preventDefault(); const helpModal = document.getElementById('helpModal'); const qrScannerModal = document.getElementById('qrScannerModal'); const settingsModal = document.getElementById('settingsModal'); if (helpModal && helpModal.style.display !== 'none' && helpModal.style.display !== '') hideHelpModal(); else if (qrScannerModal && qrScannerModal.style.display !== 'none' && qrScannerModal.style.display !== '') stopQrScanning(); else if (settingsModal && settingsModal.style.display !== 'none' && settingsModal.style.display !== '') hideSettingsModal(); else if (selectedBoxes.length > 0) deselectAll(); else if (!infoPanelEl.classList.contains('hidden')) infoPanelEl.classList.add('hidden'); break;
-                    case 'm': if (!uiIsBlocking) { currentAppMode = 'translate'; updateSelectionState(); e.preventDefault(); } break;
-                    case 'r': if (!uiIsBlocking && selectedBoxes.length <= 1) { currentAppMode = 'rotate'; updateSelectionState(); e.preventDefault(); } break; // Rotate only for 0 or 1 selection (gizmo handles 1)
-                    case 's': if (!uiIsBlocking && selectedBoxes.length === 1) { currentAppMode = 'scale'; updateSelectionState(); e.preventDefault(); } break; // Scale only for 1 selection
-                    case 'tab':
-                        if (!uiIsBlocking) {
-                            e.preventDefault();
-                            if (currentAppMode === 'translate') currentAppMode = (selectedBoxes.length <=1) ? 'rotate' : 'translate'; // If multi, stay translate
-                            else if (currentAppMode === 'rotate') currentAppMode = (selectedBoxes.length === 1) ? 'scale' : 'translate'; // If multi or no selection, go to translate
-                            else currentAppMode = 'translate'; // scale -> translate
-                            if(selectedBoxes.length > 1 && currentAppMode !== 'translate') currentAppMode = 'translate'; // Force translate for multi-selection
-                            updateSelectionState();
-                        }
-                        break;
+                    case 'escape': e.preventDefault(); const helpM = document.getElementById('helpModal'); const qrM = document.getElementById('qrScannerModal'); const confM = document.getElementById('customConfirmModal'); const setM = document.getElementById('settingsModal'); if (helpM && helpM.style.display !== 'none') hideHelpModal(); else if (qrM && qrM.style.display !== 'none') stopQrScanning(); else if (confM && confM.style.display !== 'none') hideCustomConfirm(false); else if (setM && setM.style.display !== 'none') hideSettingsModal(); else if (selectedBoxes.length > 0) deselectAll(); else if (!infoPanelEl.classList.contains('hidden')) infoPanelEl.classList.add('hidden'); break;
+                    case 'm': if (!uiIsBlocking && currentView === '3d') { setCurrentInteractionMode('translate'); e.preventDefault(); } break;
+                    case 'r': if (!uiIsBlocking && currentView === '3d') { setCurrentInteractionMode('rotate'); e.preventDefault(); } break;
+                    case 's': if (!uiIsBlocking && currentView === '3d') { setCurrentInteractionMode('scale'); e.preventDefault(); } break;
+                    case 'tab': if (!uiIsBlocking && currentView === '3d' && selectedBoxes.length === 1) { e.preventDefault(); if (currentInteractionMode === 'translate') setCurrentInteractionMode('rotate'); else if (currentInteractionMode === 'rotate') setCurrentInteractionMode('translate'); } break;
                     case 'delete': case 'backspace': if (!uiIsBlocking && selectedBoxes.length > 0 && !isInputFocused) { e.preventDefault(); handleDeleteSelection(); } break;
                     case 'arrowup': case 'arrowdown': case 'arrowleft': case 'arrowright':
                         if (!uiIsBlocking && currentView === '3d' && selectedBoxes.length === 1) {
                             e.preventDefault(); const box = selectedBoxes[0];
-                            if (currentAppMode === 'translate') { const moveDirection = new THREE.Vector3(); const camDir = new THREE.Vector3(); camera.getWorldDirection(camDir); const forward = new THREE.Vector3(camDir.x, 0, camDir.z).normalize(); const right = new THREE.Vector3().crossVectors(new THREE.Vector3(0,1,0), forward).normalize(); if (e.key === 'ArrowUp') moveDirection.add(forward); if (e.key === 'ArrowDown') moveDirection.sub(forward); if (e.key === 'ArrowLeft') moveDirection.sub(right); if (e.key === 'ArrowRight') moveDirection.add(right); moveDirection.multiplyScalar(KEYBOARD_MOVE_INCREMENT); box.position.add(moveDirection); box.position.x = Math.round(box.position.x / SNAP_GRID_SIZE) * SNAP_GRID_SIZE; box.position.y = Math.max(0, Math.round(box.position.y / SNAP_GRID_SIZE) * SNAP_GRID_SIZE); box.position.z = Math.round(box.position.z / SNAP_GRID_SIZE) * SNAP_GRID_SIZE; }
-                            else if (currentAppMode === 'rotate') { if (e.key === 'ArrowLeft') box.rotation.y += KEYBOARD_ROTATE_INCREMENT; if (e.key === 'ArrowRight') box.rotation.y -= KEYBOARD_ROTATE_INCREMENT; if (e.key === 'ArrowUp') box.rotation.x += KEYBOARD_ROTATE_INCREMENT; if (e.key === 'ArrowDown') box.rotation.x -= KEYBOARD_ROTATE_INCREMENT; }
-                            // Note: Arrow key scaling is not implemented for simplicity.
+                            if (currentInteractionMode === 'translate') { const moveDirection = new THREE.Vector3(); const camDir = new THREE.Vector3(); camera.getWorldDirection(camDir); const forward = new THREE.Vector3(camDir.x, 0, camDir.z).normalize(); const right = new THREE.Vector3().crossVectors(new THREE.Vector3(0,1,0), forward).normalize(); if (e.key === 'ArrowUp') moveDirection.add(forward); if (e.key === 'ArrowDown') moveDirection.sub(forward); if (e.key === 'ArrowLeft') moveDirection.sub(right); if (e.key === 'ArrowRight') moveDirection.add(right); moveDirection.multiplyScalar(KEYBOARD_MOVE_INCREMENT); box.position.add(moveDirection); box.position.x = Math.round(box.position.x / SNAP_GRID_SIZE) * SNAP_GRID_SIZE; box.position.y = Math.max(0, Math.round(box.position.y / SNAP_GRID_SIZE) * SNAP_GRID_SIZE); box.position.z = Math.round(box.position.z / SNAP_GRID_SIZE) * SNAP_GRID_SIZE; }
+                            else if (currentInteractionMode === 'rotate') { if (e.key === 'ArrowLeft') box.rotation.y += KEYBOARD_ROTATE_INCREMENT; if (e.key === 'ArrowRight') box.rotation.y -= KEYBOARD_ROTATE_INCREMENT; if (e.key === 'ArrowUp') box.rotation.x += KEYBOARD_ROTATE_INCREMENT; if (e.key === 'ArrowDown') box.rotation.x -= KEYBOARD_ROTATE_INCREMENT; }
+                            // Arrow key scaling (optional):
+                            // else if (currentInteractionMode === 'scale') {
+                            //    if (e.key === 'ArrowUp') box.size.y += KEYBOARD_SCALE_INCREMENT;
+                            //    if (e.key === 'ArrowDown') box.size.y = Math.max(SNAP_GRID_SIZE, box.size.y - KEYBOARD_SCALE_INCREMENT);
+                            //    // Add X and Z scaling if desired
+                            // }
                             applyBoxStateFromData(box); box.lastModified = new Date().toISOString(); if (infoPanelEl && !infoPanelEl.classList.contains('hidden')) { const lastModifiedTextEl = document.getElementById('lastModifiedText'); if(lastModifiedTextEl) lastModifiedTextEl.textContent = `Last Modified: ${new Date(box.lastModified).toLocaleString()}`; } recordAction();
                         }
                         break;
@@ -508,117 +628,136 @@
             }
         }
 
-        function showHelpModal() { const helpModal = document.getElementById('helpModal'); if (helpModal) helpModal.style.display = 'flex'; }
-        function hideHelpModal() { const helpModal = document.getElementById('helpModal'); if (helpModal) helpModal.style.display = 'none'; }
-        function showSettingsModal() { const settingsModal = document.getElementById('settingsModal'); if (settingsModal) settingsModal.style.display = 'flex'; }
-        function hideSettingsModal() { const settingsModal = document.getElementById('settingsModal'); if (settingsModal) settingsModal.style.display = 'none'; }
-
-        function loadSettings() { const savedSettings = localStorage.getItem('boxOrganizerSettings'); if (savedSettings) { settings = JSON.parse(savedSettings); } document.getElementById('showDeleteConfirmCheckbox').checked = settings.showDeleteConfirmation; }
-        function saveSettings() { localStorage.setItem('boxOrganizerSettings', JSON.stringify(settings)); }
-
+        function showHelpModal() { const m = document.getElementById('helpModal'); if(m) m.style.display = 'flex';}
+        function hideHelpModal() { const m = document.getElementById('helpModal'); if(m) m.style.display = 'none';}
+        let confirmResolve = null;
+        function showCustomConfirm(title = "Confirm", message = "Are you sure?") {
+            return new Promise((resolve) => {
+                confirmResolve = resolve;
+                document.getElementById('confirmTitle').textContent = title;
+                document.getElementById('confirmMessage').textContent = message;
+                document.getElementById('customConfirmModal').style.display = 'flex';
+                // Re-assign listeners each time to ensure correct resolve
+                const okBtn = document.getElementById('confirmOkBtn');
+                const cancelBtn = document.getElementById('confirmCancelBtn');
+                okBtn.onclick = () => hideCustomConfirm(true);
+                cancelBtn.onclick = () => hideCustomConfirm(false);
+            });
+        }
+        function hideCustomConfirm(value) {
+            document.getElementById('customConfirmModal').style.display = 'none';
+            if (confirmResolve) { confirmResolve(value); confirmResolve = null; }
+        }
+        function showSettingsModal() { document.getElementById('showDeleteConfirmSetting').checked = appSettings.showDeleteConfirmation; document.getElementById('settingsModal').style.display = 'flex'; }
+        function hideSettingsModal() { document.getElementById('settingsModal').style.display = 'none'; }
 
         async function handlePrintAllLabels() {
             if (!boxes.length) { alert("No boxes to print labels for."); return; }
-            const busyIndicator = document.createElement('div'); busyIndicator.textContent = 'Generating PDF... Please wait.'; Object.assign(busyIndicator.style, { position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', padding: '20px', background: 'var(--surface-color)', border: '1px solid var(--border-color)', borderRadius: '8px', zIndex: '2000', color: 'var(--text-color)' }); document.body.appendChild(busyIndicator);
+            const busyIndicator = document.createElement('div');
+            busyIndicator.textContent = 'Generating PDF... Please wait.';
+            Object.assign(busyIndicator.style, { position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', padding: '20px', background: 'var(--surface-color)', border: '1px solid var(--border-color)', borderRadius: '8px', zIndex: '2000', color: 'var(--text-color)' });
+            document.body.appendChild(busyIndicator);
+
             try {
-                const { jsPDF } = window.jspdf; const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
-                const labelWidthMm = 63.5, labelHeightMm = 38.1; const pageMarginMm = 10, interLabelSpacingMm = 2;
-                const contentWidthMm = pdf.internal.pageSize.getWidth() - 2 * pageMarginMm; const contentHeightMm = pdf.internal.pageSize.getHeight() - 2 * pageMarginMm;
-                const labelsPerRow = Math.floor((contentWidthMm + interLabelSpacingMm) / (labelWidthMm + interLabelSpacingMm)); // Corrected calculation
-                const labelsPerCol = Math.floor((contentHeightMm + interLabelSpacingMm) / (labelHeightMm + interLabelSpacingMm)); // Corrected calculation
-                let x = pageMarginMm, y = pageMarginMm; let colCount = 0;
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+                const labelWidthMm = 63.5; const labelHeightMm = 38.1;
+                const pageMarginMm = 10; const interLabelSpacingMm = 2;
+                
+                let x = pageMarginMm; let y = pageMarginMm;
 
                 for (let i = 0; i < boxes.length; i++) {
                     const box = boxes[i];
-                    if (colCount >= labelsPerRow) { // New row
-                        colCount = 0; x = pageMarginMm; y += labelHeightMm + interLabelSpacingMm;
-                        if (y + labelHeightMm > pdf.internal.pageSize.getHeight() - pageMarginMm) { // New page
-                            pdf.addPage(); x = pageMarginMm; y = pageMarginMm;
+                    if (y + labelHeightMm > pdf.internal.pageSize.getHeight() - pageMarginMm) {
+                        x += labelWidthMm + interLabelSpacingMm; y = pageMarginMm;
+                        if (x + labelWidthMm > pdf.internal.pageSize.getWidth() - pageMarginMm) {
+                            if (i < boxes.length) { pdf.addPage(); x = pageMarginMm; y = pageMarginMm; }
+                            else break;
                         }
                     }
-                    const descText = box.description ? box.description.substring(0, 50) + (box.description.length > 50 ? '...' : '') : 'No description';
-                    const weightText = box.weight > 0 ? `${box.weight} ${box.weightUnit}` : 'N/A';
-
+                    
                     const labelDiv = document.createElement('div');
-                    Object.assign(labelDiv.style, { width: `${labelWidthMm}mm`, height: `${labelHeightMm}mm`, border: '0.1mm dotted #bbb', padding: '2mm', boxSizing: 'border-box', position: 'absolute', left: '-300mm', top: '-300mm', backgroundColor: 'white', color: '#222', fontFamily: 'Arial, sans-serif', overflow: 'hidden', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' });
-                    labelDiv.innerHTML = `
-                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1mm;">
-                            <h4 style="margin:0; font-size:3.5mm; line-height:1.1; word-break:break-word; flex-grow:1; max-height:8mm; overflow:hidden;">${box.name}</h4>
-                            <i class="${box.icon || 'bi-box-seam-fill'}" style="font-size:5mm; color:${box.color}; margin-left:1mm; flex-shrink:0;"></i>
-                        </div>
-                        <div style="font-size:2.2mm; color:#444; margin-bottom:1mm; max-height:9mm; overflow:hidden; line-height:1.2;">${descText}</div>
-                        <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-top:auto;">
-                            <div style="font-size:2mm; color:#555;">
-                                <div>ID: ${box.id.substring(0,8).toUpperCase()}</div>
-                                <div>Wt: ${weightText}</div>
-                            </div>
-                            <div id="qrcode-pdf-${box.id}" style="width:15mm; height:15mm; flex-shrink:0;"></div>
-                        </div>`;
+                    Object.assign(labelDiv.style, { width: `${labelWidthMm}mm`, height: `${labelHeightMm}mm`, border: '0.1mm dotted #bbb', padding: '2mm', boxSizing: 'border-box', position: 'absolute', left: '-300mm', top: '-300mm', backgroundColor: 'white', color: '#222', fontFamily: 'Arial, Helvetica, sans-serif', fontSize: '2.5mm', overflow: 'hidden', display: 'flex', flexDirection: 'row', alignItems: 'flex-start' });
+                    const descriptionText = (box.description || '').substring(0, 60) + ( (box.description || '').length > 60 ? '...' : '');
+                    const weightText = box.weight > 0 ? `Wt: ${box.weight}${box.weightUnit || 'kg'}` : '';
+                    labelDiv.innerHTML = `<div style="flex-grow: 1; display: flex; flex-direction: column; justify-content: space-between; height: 100%; padding-right:1.5mm; overflow:hidden;"><div><div style="display:flex; align-items:flex-start; justify-content:space-between;"><h4 style="margin:0; font-size:3.2mm; line-height:1.1; max-height:6.4mm; overflow:hidden; word-break:break-all; font-weight:bold;">${box.name}</h4><i class="${box.icon || 'bi-box-seam-fill'}" style="font-size:4.5mm; color:${box.color}; margin-left:1mm; flex-shrink:0;"></i></div><p style="font-size:2.2mm; margin:0.5mm 0; color:#444; max-height: 9mm; overflow:hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;">${descriptionText}</p></div><div style="display:flex; justify-content:space-between; align-items:flex-end;"><p style="font-size:2mm; margin:0.5mm 0 0 0; color:#555; white-space:nowrap;">ID: ${box.id.substring(0,8).toUpperCase()}</p><p style="font-size:2mm; margin:0.5mm 0 0 0; color:#555; white-space:nowrap; text-align:right;">${weightText}</p></div></div><div id="qrcode-pdf-${box.id}" style="width:17mm; height:17mm; align-self:center; flex-shrink:0; margin-left: 1mm;"></div>`;
                     document.body.appendChild(labelDiv);
-                    new QRCode(document.getElementById(`qrcode-pdf-${box.id}`), { text: box.id, width: Math.floor(15 * 3.78), height: Math.floor(15 * 3.78), correctLevel: QRCode.CorrectLevel.L });
-                    await new Promise(resolve => setTimeout(resolve, 70)); // Slightly more render time
-
-                    const canvas = await html2canvas(labelDiv, { scale: 3, backgroundColor: null, width: labelDiv.offsetWidth, height: labelDiv.offsetHeight, logging: false });
+                    new QRCode(document.getElementById(`qrcode-pdf-${box.id}`), { text: box.id, width: Math.floor(17 * 3.78), height: Math.floor(17 * 3.78), correctLevel: QRCode.CorrectLevel.M });
+                    await new Promise(resolve => setTimeout(resolve, 70));
+                    const canvas = await html2canvas(labelDiv, { scale: 3, backgroundColor: null, width: labelDiv.offsetWidth, height: labelDiv.offsetHeight });
                     const imgData = canvas.toDataURL('image/png');
                     document.body.removeChild(labelDiv);
-
                     pdf.addImage(imgData, 'PNG', x, y, labelWidthMm, labelHeightMm);
-                    x += labelWidthMm + interLabelSpacingMm; colCount++;
+                    y += labelHeightMm + interLabelSpacingMm;
                 }
                 pdf.output('dataurlnewwindow');
-            } catch (err) { console.error("Error PDF:", err); alert("Error generating PDF. Check console."); }
+            } catch (err) { console.error("Error PDF:", err); alert("An error occurred while generating the PDF. Please check the console."); }
             finally { if(document.body.contains(busyIndicator)) document.body.removeChild(busyIndicator); }
         }
 
         async function startQrScanning() { const modal = document.getElementById('qrScannerModal'); const resultEl = document.getElementById('qrScanResult'); if(!modal || !resultEl || !qrVideoElement) { console.error("QR Scanner UI elements not found"); return; } modal.style.display = 'flex'; resultEl.textContent = 'Requesting camera...'; try { videoStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } }); qrVideoElement.srcObject = videoStream; await qrVideoElement.play(); if(!qrScanCanvasElement || !qrScanCanvasCtx) { qrScanCanvasElement = document.getElementById('qrScanCanvas'); qrScanCanvasCtx = qrScanCanvasElement.getContext('2d', { willReadFrequently: true }); } qrScanCanvasElement.width = qrVideoElement.videoWidth; qrScanCanvasElement.height = qrVideoElement.videoHeight; resultEl.textContent = 'Align QR code...'; scanRequestId = requestAnimationFrame(tickQrScan); } catch (err) { console.error("Cam Err:", err); resultEl.textContent = 'Error: No camera.'; stopQrScanning(false); } }
-        function tickQrScan() { if (qrVideoElement && qrVideoElement.readyState === qrVideoElement.HAVE_ENOUGH_DATA) { qrScanCanvasCtx.drawImage(qrVideoElement, 0, 0, qrScanCanvasElement.width, qrScanCanvasElement.height); const imageData = qrScanCanvasCtx.getImageData(0, 0, qrScanCanvasElement.width, qrScanCanvasElement.height); const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "dontInvert" }); if (code && code.data) { document.getElementById('qrScanResult').textContent = `Found: ${code.data.substring(0,20)}...`; handleQrCodeResult(code.data); return; } } scanRequestId = requestAnimationFrame(tickQrScan); }
-        function handleQrCodeResult(decodedId) { stopQrScanning(); const foundBox = boxes.find(b => b.id === decodedId); if (foundBox) { deselectAll(); selectedBoxes.push(foundBox); updateSelectionState(); if(currentView === '3d') focusOnBox(foundBox); else {const li = document.querySelector(`#listViewContainer li[data-box-id="${foundBox.id}"]`); if (li) li.scrollIntoView({behavior: "smooth", block: "center"});} const findInput = document.getElementById('findCodeInput'); if (findInput) { findInput.value = `Found: ${foundBox.name}`; setTimeout(() => { if (findInput.value === `Found: ${foundBox.name}`) findInput.value = ''; }, 3000); } } else { alert(`Box ID "${decodedId}" not found.`); } }
+        function tickQrScan() { if (qrVideoElement && qrVideoElement.readyState === qrVideoElement.HAVE_ENOUGH_DATA) { qrScanCanvasCtx.drawImage(qrVideoElement, 0, 0, qrScanCanvasElement.width, qrScanCanvasElement.height); const imageData = qrScanCanvasCtx.getImageData(0, 0, qrScanCanvasElement.width, qrScanCanvasElement.height); const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "dontInvert" }); if (code && code.data) { document.getElementById('qrScanResult').textContent = `Found: ${code.data.substring(0,20)}...`; handleQrCodeResult(code.data); return; } } if (videoStream) { scanRequestId = requestAnimationFrame(tickQrScan); } }
+        function handleQrCodeResult(decodedId) { stopQrScanning(); const foundBox = boxes.find(b => b.id === decodedId); if (foundBox) { if (currentView === 'list') { toggleView(); } deselectAll(); selectedBoxes.push(foundBox); updateSelectionState(); focusOnBox(foundBox); const findInput = document.getElementById('findCodeInput'); if (findInput) { findInput.value = `Found: ${foundBox.name}`; setTimeout(() => { if (findInput.value === `Found: ${foundBox.name}`) findInput.value = ''; }, 3000); } } else { alert(`Box ID "${decodedId}" not found.`); } }
         function stopQrScanning(clearMessage = true) { if (scanRequestId) { cancelAnimationFrame(scanRequestId); scanRequestId = null; } if (videoStream) { videoStream.getTracks().forEach(track => track.stop()); videoStream = null; } if(qrVideoElement) qrVideoElement.srcObject = null; const modal = document.getElementById('qrScannerModal'); if(modal) modal.style.display = 'none'; if(clearMessage && document.getElementById('qrScanResult')) document.getElementById('qrScanResult').textContent = 'Align QR code...'; }
 
-        function toggleView() {
-            const listViewContainer = document.getElementById('listViewContainer'); const rendererEl = renderer.domElement; const topBar = document.querySelector('.top-bar'); const toggleBtn = document.getElementById('toggleListViewBtn');
-            if (currentView === '3d') {
-                currentView = 'list'; if(toggleBtn) toggleBtn.innerHTML = '<i class="bi bi-box"></i> 3D View'; if(rendererEl) rendererEl.style.display = 'none';
-                transformControls.detach(); if(orbitControls) orbitControls.enabled = false;
-                if(infoPanelEl && selectedBoxes.length === 0) infoPanelEl.classList.add('hidden'); else if (infoPanelEl && selectedBoxes.length === 1) infoPanelEl.classList.remove('hidden');
-                if(listViewContainer) { listViewContainer.style.display = 'block'; const topBarHeight = topBar ? topBar.offsetHeight : 70; listViewContainer.style.top = `${topBarHeight + 10}px`; populateListView(); }
-            } else {
-                currentView = '3d'; if(toggleBtn) toggleBtn.innerHTML = '<i class="bi bi-list-ul"></i> List View'; if(rendererEl) rendererEl.style.display = 'block'; if(listViewContainer) listViewContainer.style.display = 'none'; if(orbitControls) orbitControls.enabled = true;
-                updateSelectionState(); // Handles gizmo and info panel for 3D
-            }
-        }
-        function populateListView() { const container = document.getElementById('listViewContainer'); if(!container) return; container.innerHTML = ''; const ul = document.createElement('ul'); boxes.sort((a,b) => a.name.localeCompare(b.name)).forEach(box => { const li = document.createElement('li'); li.dataset.boxId = box.id; if(selectedBoxes.length === 1 && selectedBoxes[0].id === box.id) li.classList.add('selected-list-item'); li.innerHTML = `<div class="list-item-icon" style="color:${box.color};"><i class="${box.icon || 'bi-box-seam-fill'}"></i></div><div class="list-item-details"><strong>${box.name}</strong><p>ID: ${box.id.substring(0,8).toUpperCase()} | Items: ${box.items.length}</p></div><i class="bi bi-chevron-right list-item-arrow"></i>`; li.addEventListener('click', () => { deselectAll(); selectedBoxes.push(box); updateSelectionState(); }); ul.appendChild(li); }); container.appendChild(ul); }
+        function toggleView() { const listViewContainer = document.getElementById('listViewContainer'); const rendererEl = renderer.domElement; const topBar = document.querySelector('.top-bar'); const toggleBtn = document.getElementById('toggleListViewBtn'); if (currentView === '3d') { currentView = 'list'; if(toggleBtn) toggleBtn.innerHTML = '<i class="bi bi-box-fill"></i> 3D View'; if(rendererEl) rendererEl.style.display = 'none'; transformControls.detach(); if(orbitControls) orbitControls.enabled = false; if (selectedBoxes.length === 1) { updateInfoPanel(); infoPanelEl.classList.remove('hidden');} else { infoPanelEl.classList.add('hidden');} if(listViewContainer) { listViewContainer.style.display = 'block'; const topBarHeight = topBar ? topBar.getBoundingClientRect().height : 70; listViewContainer.style.top = `${topBarHeight + 10}px`; populateListView(); } } else { currentView = '3d'; if(toggleBtn) toggleBtn.innerHTML = '<i class="bi bi-list-ul"></i> List View'; if(rendererEl) rendererEl.style.display = 'block'; if(listViewContainer) listViewContainer.style.display = 'none'; if(orbitControls) orbitControls.enabled = true; } updateSelectionState(); updateInteractionModeButton(); }
+        function populateListView() { const container = document.getElementById('listViewContainer'); if(!container) return; container.innerHTML = ''; const ul = document.createElement('ul'); boxes.sort((a,b) => a.name.localeCompare(b.name)).forEach(box => { const li = document.createElement('li'); li.dataset.boxId = box.id; li.innerHTML = `<div class="list-item-icon" style="color:${box.color};"><i class="${box.icon || 'bi-box-seam-fill'}"></i></div><div class="list-item-details"><strong>${box.name}</strong><p>ID: ${box.id.substring(0,8).toUpperCase()} | Items: ${box.items.length}</p></div><i class="bi bi-chevron-right list-item-arrow"></i>`; li.addEventListener('click', () => { selectedBoxes = [box]; updateSelectionState(); }); ul.appendChild(li); }); container.appendChild(ul); updateSelectionState(); }
 
-        function handleCopy() { if (selectedBoxes.length > 0) { clipboard = selectedBoxes.map(box => { const cleanBox = { ...box, threeGroup: undefined }; cleanBox.position = box.position.clone(); cleanBox.size = box.size.clone(); cleanBox.rotation = box.rotation.clone(); return cleanBox; }); console.log(`Copied ${clipboard.length} box(es)`); } }
+        function handleCopy() { if (selectedBoxes.length > 0) { clipboard = selectedBoxes.map(box => { const cleanBox = { ...box, threeGroup: undefined }; cleanBox.position = box.position.clone(); cleanBox.size = box.size.clone(); cleanBox.rotation = box.rotation.clone(); return cleanBox; }); console.log(`Copied ${clipboard.length} box(es) to clipboard.`); } }
         function handleCut() { if (selectedBoxes.length > 0) { handleCopy(); handleDeleteSelection(); } }
-        function handlePaste() { if (clipboard.length === 0) return; const newSelection = []; const newClipboardData = []; if (clipboard.length === 1) { const originalBoxData = clipboard[0]; const newPosition = originalBoxData.position.clone().add(new THREE.Vector3(SNAP_GRID_SIZE, originalBoxData.size.y + SNAP_GRID_SIZE, SNAP_GRID_SIZE)); const newBoxData = createBoxData({...originalBoxData, id: THREE.MathUtils.generateUUID(), position: newPosition, rotation: originalBoxData.rotation.clone(), lastModified: new Date().toISOString() }); const addedBox = addBoxToScene(newBoxData, true); newSelection.push(addedBox); newClipboardData.push({...addedBox, threeGroup: undefined, rotation: addedBox.rotation.clone() }); } else { const originalCenter = new THREE.Vector3(); const selectionBBox = new THREE.Box3(); clipboard.forEach(boxData => { const boxBBox = new THREE.Box3().setFromCenterAndSize(boxData.position, boxData.size); selectionBBox.union(boxBBox); }); selectionBBox.getCenter(originalCenter); const selectionSize = new THREE.Vector3(); selectionBBox.getSize(selectionSize); const cameraDirection = new THREE.Vector3(); camera.getWorldDirection(cameraDirection); cameraDirection.y = 0; cameraDirection.normalize(); const dotX = Math.abs(cameraDirection.x); const dotZ = Math.abs(cameraDirection.z); let offsetVector; const padding = 1.0; if (dotZ > dotX) offsetVector = new THREE.Vector3(selectionSize.x + padding, 0, 0); else offsetVector = new THREE.Vector3(0, 0, selectionSize.z + padding); const newCenter = originalCenter.clone().add(offsetVector); clipboard.forEach(boxData => { const relativePos = boxData.position.clone().sub(originalCenter); const newPosition = newCenter.clone().add(relativePos); const newBoxData = createBoxData({...boxData, id: THREE.MathUtils.generateUUID(), position: newPosition, rotation: boxData.rotation.clone(), lastModified: new Date().toISOString() }); const addedBox = addBoxToScene(newBoxData, true); newSelection.push(addedBox); const cleanPastedBox = {...addedBox, threeGroup: undefined, rotation: addedBox.rotation.clone()}; cleanPastedBox.position = newPosition.clone(); newClipboardData.push(cleanPastedBox); }); } if (newSelection.length > 0) { deselectAll(); selectedBoxes = newSelection; updateSelectionState(); clipboard = newClipboardData; recordAction(); if(currentView === 'list') populateListView();} }
+        function handlePaste() { if (clipboard.length === 0) return; const newSelection = []; const newClipboardData = []; if (clipboard.length === 1) { const originalBoxData = clipboard[0]; const newPosition = originalBoxData.position.clone().add(new THREE.Vector3(0, originalBoxData.size.y + 0.5, 0)); const newBoxData = createBoxData({...originalBoxData, id: THREE.MathUtils.generateUUID(), position: newPosition, rotation: originalBoxData.rotation.clone(), lastModified: new Date().toISOString() }); const addedBox = addBoxToScene(newBoxData, true); newSelection.push(addedBox); newClipboardData.push({...addedBox, threeGroup: undefined, rotation: addedBox.rotation.clone() }); } else { const originalCenter = new THREE.Vector3(); const selectionBBox = new THREE.Box3(); clipboard.forEach(boxData => { const boxBBox = new THREE.Box3().setFromCenterAndSize(boxData.position, boxData.size); selectionBBox.union(boxBBox); }); selectionBBox.getCenter(originalCenter); const selectionSize = new THREE.Vector3(); selectionBBox.getSize(selectionSize); const cameraDirection = new THREE.Vector3(); camera.getWorldDirection(cameraDirection); cameraDirection.y = 0; cameraDirection.normalize(); const dotX = Math.abs(cameraDirection.x); const dotZ = Math.abs(cameraDirection.z); let offsetVector; const padding = 1.0; if (dotZ > dotX) offsetVector = new THREE.Vector3(selectionSize.x + padding, 0, 0); else offsetVector = new THREE.Vector3(0, 0, selectionSize.z + padding); const newCenter = originalCenter.clone().add(offsetVector); clipboard.forEach(boxData => { const relativePos = boxData.position.clone().sub(originalCenter); const newPosition = newCenter.clone().add(relativePos); const newBoxData = createBoxData({...boxData, id: THREE.MathUtils.generateUUID(), position: newPosition, rotation: boxData.rotation.clone(), lastModified: new Date().toISOString() }); const addedBox = addBoxToScene(newBoxData, true); newSelection.push(addedBox); const cleanPastedBox = {...addedBox, threeGroup: undefined, rotation: addedBox.rotation.clone()}; cleanPastedBox.position = newPosition.clone(); newClipboardData.push(cleanPastedBox); }); } if (newSelection.length > 0) { deselectAll(); selectedBoxes = newSelection; updateSelectionState(); clipboard = newClipboardData; recordAction(); if(currentView === 'list') populateListView();} }
         function createPlopEffect(position) { const ringGeometry = new THREE.TorusGeometry(1, 0.05, 8, 50); const ringMaterial = new THREE.MeshBasicMaterial({ color: 0x00aaff, transparent: true }); const ring = new THREE.Mesh(ringGeometry, ringMaterial); ring.rotation.x = Math.PI / 2; ring.position.copy(position); ring.position.y += 0.02; scene.add(ring); new TWEEN.Tween(ring.scale).to({ x: 6, y: 6, z: 6 }, 500).easing(TWEEN.Easing.Quadratic.Out).start(); new TWEEN.Tween(ring.material).to({ opacity: 0 }, 600).easing(TWEEN.Easing.Quadratic.Out).onComplete(() => { scene.remove(ring); ring.geometry.dispose(); ring.material.dispose(); }).start(); const particleCount = 50; const vertices = []; const velocities = []; for (let i = 0; i < particleCount; i++) { vertices.push(position.x, position.y + 0.1, position.z); const velX = (Math.random() - 0.5) * 3; const velY = Math.random() * 4; const velZ = (Math.random() - 0.5) * 3; velocities.push(new THREE.Vector3(velX, velY, velZ)); } const geometry = new THREE.BufferGeometry(); geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3)); const material = new THREE.PointsMaterial({ color: 0x55ddff, size: 0.1, transparent: true }); const particles = new THREE.Points(geometry, material); scene.add(particles); activeEffects.push({ particles, velocities, startTime: clock.getElapsedTime(), duration: 1.5 }); const flash = new THREE.PointLight(0x88ccff, 200, 100); flash.position.copy(position).add(new THREE.Vector3(0,1,0)); scene.add(flash); new TWEEN.Tween(flash).to({ intensity: 0 }, 250).easing(TWEEN.Easing.Quadratic.Out).onComplete(() => { scene.remove(flash); flash.dispose(); }).start(); }
         function createFloorAndGrid() { const floor = new THREE.Mesh(new THREE.PlaneGeometry(GRID_EXTENT * 2, GRID_EXTENT * 2), new THREE.MeshStandardMaterial({ color: 0x333840, roughness: 1, metalness: 0 })); floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor); const dotGeometry = new THREE.CircleGeometry(0.05 * (SNAP_GRID_SIZE / 0.5) , 12); dotGeometry.rotateX(-Math.PI / 2); const dotMaterial = new THREE.MeshBasicMaterial({ color: 0xFFFFFF, transparent: true, opacity: 0.05 }); const divisions = Math.floor(GRID_EXTENT / SNAP_GRID_SIZE) * 2 + 1; const instancedDots = new THREE.InstancedMesh(dotGeometry, dotMaterial, divisions * divisions); const dummy = new THREE.Object3D(); let i = 0; for (let r = -GRID_EXTENT; r <= GRID_EXTENT; r += SNAP_GRID_SIZE) { for (let c = -GRID_EXTENT; c <= GRID_EXTENT; c += SNAP_GRID_SIZE) { dummy.position.set(r, 0.01, c); dummy.updateMatrix(); instancedDots.setMatrixAt(i++, dummy.matrix); } } scene.add(instancedDots); }
         function createStarfield() { const starVertices = []; for (let i = 0; i < 10000; i++) { const x = THREE.MathUtils.randFloatSpread(2000); const y = THREE.MathUtils.randFloatSpread(2000); const z = THREE.MathUtils.randFloatSpread(2000); starVertices.push(x, y, z); } const starGeometry = new THREE.BufferGeometry(); starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starVertices, 3)); const starMaterial = new THREE.PointsMaterial({ color: 0x666666, size: 0.5, sizeAttenuation: true }); starField = new THREE.Points(starGeometry, starMaterial); scene.add(starField); }
         function createAmbientParticles() { const particleCount = 2000; const vertices = []; for (let i = 0; i < particleCount; i++) { const x = THREE.MathUtils.randFloatSpread(100); const y = THREE.MathUtils.randFloat(0, 50); const z = THREE.MathUtils.randFloatSpread(100); vertices.push(x, y, z); } const geometry = new THREE.BufferGeometry(); geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3)); const material = new THREE.PointsMaterial({ color: 0x666666, size: 0.1, transparent: true, opacity: 0.5, sizeAttenuation: false }); ambientParticles = new THREE.Points(geometry, material); scene.add(ambientParticles); }
         function disposeThreeObject(object) { if (!object) return; object.traverse(child => { if (child.geometry) child.geometry.dispose(); if (child.material) { if (Array.isArray(child.material)) { child.material.forEach(m => { if (m.map) m.map.dispose(); m.dispose(); }); } else { if (child.material.map) child.material.map.dispose(); child.material.dispose(); } } }); }
-        function focusOnBox(box) { const targetPos = box.position.clone(); targetPos.y += box.size.y / 2; const offset = new THREE.Vector3(box.size.x + 5, box.size.y + 5, box.size.z + 5).normalize().multiplyScalar(15); const cameraPos = targetPos.clone().add(offset); new TWEEN.Tween(camera.position).to(cameraPos, 800).easing(TWEEN.Easing.Quadratic.Out).start(); new TWEEN.Tween(orbitControls.target).to(targetPos, 800).easing(TWEEN.Easing.Quadratic.Out).start(); }
-        function recordAction() { actionManager.pushState(JSON.stringify({boxes: boxes.map(box => ({...box, threeGroup: undefined})), settings})); } // Include settings
-        function restoreState(stateJSON) {
+        function focusOnBox(box) { const targetPos = box.position.clone(); targetPos.y += box.size.y / 2; const offset = new THREE.Vector3(box.size.x + 5, box.size.y + 5, box.size.z + 5); const cameraPos = targetPos.clone().add(offset); new TWEEN.Tween(camera.position).to(cameraPos, 800).easing(TWEEN.Easing.Quadratic.Out).start(); new TWEEN.Tween(orbitControls.target).to(targetPos, 800).easing(TWEEN.Easing.Quadratic.Out).start(); }
+        function recordAction() { actionManager.pushState(JSON.stringify(boxes.map(box => ({...box, threeGroup: undefined})))); }
+        function restoreState(stateJSON, importedSettings = null) {
             deselectAll(); [...boxes].forEach(b => { if (b.threeGroup) { scene.remove(b.threeGroup); disposeThreeObject(b.threeGroup); } }); boxes = [];
-            let parsedData; try { parsedData = JSON.parse(stateJSON); } catch(e) { alert("Invalid data format."); return; }
-            const parsedBoxes = parsedData.boxes || parsedData; // For backward compatibility with old format
-            const parsedSettings = parsedData.settings;
+            const parsedState = JSON.parse(stateJSON);
+            let dataToProcess = parsedState;
 
-            if (Array.isArray(parsedBoxes)) {
-                parsedBoxes.forEach(boxData => {
-                    boxData.position = new THREE.Vector3(boxData.position?.x || 0, boxData.position?.y || 0, boxData.position?.z || 0);
-                    boxData.size = new THREE.Vector3(boxData.size?.x || 4, boxData.size?.y || 3, boxData.size?.z || 4);
-                    if (boxData.rotation && typeof boxData.rotation === 'object' && boxData.rotation._x !== undefined) {
-                        boxData.rotation = new THREE.Euler(boxData.rotation._x, boxData.rotation._y, boxData.rotation._z, boxData.rotation._order || 'XYZ');
-                    } else { boxData.rotation = new THREE.Euler(0,0,0); }
-                    addBoxToScene(boxData);
-                });
+            if (parsedState.version === "1.1" && parsedState.boxes) { // Check for new format
+                dataToProcess = parsedState.boxes;
+                if (parsedState.settings && importedSettings) { // If called from import, merge settings
+                    appSettings = {...appSettings, ...parsedState.settings};
+                    saveSettings(); // Save merged settings
+                    // Update UI based on new settings if needed (e.g., checkbox in settings modal)
+                    if(document.getElementById('showDeleteConfirmSetting')) {
+                        document.getElementById('showDeleteConfirmSetting').checked = appSettings.showDeleteConfirmation;
+                    }
+                }
             }
-            if (parsedSettings) { settings = {...settings, ...parsedSettings}; saveSettings(); loadSettings(); /* To update UI */ }
+
+
+            dataToProcess.forEach(boxData => {
+                boxData.position = new THREE.Vector3(boxData.position.x, boxData.position.y, boxData.position.z);
+                boxData.size = new THREE.Vector3(boxData.size.x, boxData.size.y, boxData.size.z);
+                if (boxData.rotation && typeof boxData.rotation === 'object' && boxData.rotation._x !== undefined) { boxData.rotation = new THREE.Euler(boxData.rotation._x, boxData.rotation._y, boxData.rotation._z, boxData.rotation._order || 'XYZ'); } else { boxData.rotation = new THREE.Euler(0,0,0); }
+                addBoxToScene(boxData);
+            });
             updateSelectionState(); if(currentView === 'list') populateListView();
         }
-        function handleImport(event) { if (!event.target.files[0]) return; const reader = new FileReader(); reader.onload = (e) => { try { restoreState(e.target.result); recordAction(); } catch (err) { alert('Error: Invalid JSON.'); console.error(err); } }; reader.readAsText(event.target.files[0]); event.target.value = ''; }
+        function handleImport(event) {
+            if (!event.target.files[0]) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const importedData = JSON.parse(e.target.result);
+                    if (importedData.version === "1.1" && importedData.boxes) {
+                        restoreState(JSON.stringify(importedData.boxes), importedData.settings); // Pass settings for merging
+                    } else {
+                        // Assume old format (just array of boxes)
+                        restoreState(e.target.result);
+                    }
+                    recordAction(); // Record after successful import and state restoration
+                } catch (err) {
+                    alert('Error: Invalid or corrupt JSON file.'); console.error(err);
+                }
+            };
+            reader.readAsText(event.target.files[0]); event.target.value = '';
+        }
         function renderIconPicker() { if (selectedBoxes.length !== 1) return; const selectedBoxData = selectedBoxes[0]; const picker = document.getElementById('iconPicker'); picker.innerHTML = ''; ICONS.forEach(iconClass => { const btn = document.createElement('button'); btn.className = `icon-btn`; if (iconClass === selectedBoxData.icon) btn.classList.add('selected'); btn.innerHTML = iconClass === 'none' ? '<i class="bi bi-slash-circle"></i>' : `<i class="${iconClass}"></i>`; btn.onclick = () => { updateBoxIcon(selectedBoxData, iconClass); renderIconPicker(); selectedBoxData.lastModified = new Date().toISOString(); recordAction(); if(currentView==='list') populateListView(); }; picker.appendChild(btn); }); }
         function updateBoxIcon(box, iconClass) { box.icon = iconClass; }
 
@@ -628,8 +767,10 @@
             if (starField) starField.rotation.y -= 0.00005;
             if (ambientParticles) { const positions = ambientParticles.geometry.attributes.position.array; for (let i = 1; i < positions.length; i += 3) { positions[i] -= 0.01; if (positions[i] < 0) positions[i] = 50; } ambientParticles.geometry.attributes.position.needsUpdate = true; }
             for (let i = activeEffects.length - 1; i >= 0; i--) { const effect = activeEffects[i]; const effectElapsed = elapsed - effect.startTime; if (effectElapsed > effect.duration) { scene.remove(effect.particles); effect.particles.geometry.dispose(); effect.particles.material.dispose(); activeEffects.splice(i, 1); } else { const positions = effect.particles.geometry.attributes.position.array; const gravity = 9.8; for (let j = 0; j < effect.velocities.length; j++) { effect.velocities[j].y -= gravity * delta; positions[j*3] += effect.velocities[j].x * delta; positions[j*3 + 1] += effect.velocities[j].y * delta; positions[j*3 + 2] += effect.velocities[j].z * delta; } effect.particles.material.opacity = 1.0 - (effectElapsed / effect.duration); effect.particles.geometry.attributes.position.needsUpdate = true; } }
-            if (composer && renderer.domElement.style.display !== 'none') composer.render();
-            else if (renderer.domElement.style.display !== 'none') renderer.render(scene, camera);
+            if (currentView === '3d') {
+                 if (composer && renderer.domElement.style.display !== 'none') composer.render();
+                 else if (renderer.domElement.style.display !== 'none') renderer.render(scene, camera);
+            }
         }
 
         init();
