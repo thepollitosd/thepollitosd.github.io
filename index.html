@@ -489,8 +489,11 @@
             if(qrScanCanvasElement) qrScanCanvasCtx = qrScanCanvasElement.getContext('2d', { willReadFrequently: true });
             document.getElementById('closeQrScannerBtn').addEventListener('click', () => stopQrScanning());
             document.getElementById('qrScannerModal').addEventListener('click', (event) => { if (event.target.id === 'qrScannerModal') stopQrScanning();});
-            document.getElementById('confirmCancelBtn').addEventListener('click', () => hideCustomConfirm(false));
-            document.getElementById('confirmOkBtn').addEventListener('click', () => hideCustomConfirm(true));
+            
+            // FIX: Removed redundant event listeners for confirmation buttons
+            // document.getElementById('confirmCancelBtn').addEventListener('click', () => hideCustomConfirm(false));
+            // document.getElementById('confirmOkBtn').addEventListener('click', () => hideCustomConfirm(true));
+
             document.getElementById('customConfirmModal').addEventListener('click', (event) => { if(event.target.id === 'customConfirmModal') hideCustomConfirm(false); });
             document.getElementById('closeSettingsModalBtn').addEventListener('click', hideSettingsModal);
             document.getElementById('settingsModal').addEventListener('click', (event) => { if(event.target.id === 'settingsModal') hideSettingsModal(); });
@@ -567,20 +570,19 @@
         function onCanvasClick(e) { if (currentView === 'list' || transformControls.dragging) return; if (hoveredBoxData) { if (e.shiftKey) { const index = selectedBoxes.findIndex(b => b.id === hoveredBoxData.id); if (index > -1) selectedBoxes.splice(index, 1); else selectedBoxes.push(hoveredBoxData); } else { deselectAll(); selectedBoxes.push(hoveredBoxData); } } else { deselectAll(); } updateSelectionState(); }
         function isUiBlockingKeyboard() { const helpModal = document.getElementById('helpModal'); const qrScannerModal = document.getElementById('qrScannerModal'); const confirmModal = document.getElementById('customConfirmModal'); const settingsModal = document.getElementById('settingsModal'); return (helpModal && helpModal.style.display !== 'none') || (qrScannerModal && qrScannerModal.style.display !== 'none') || (confirmModal && confirmModal.style.display !== 'none') || (settingsModal && settingsModal.style.display !== 'none'); }
 
+        // --- START: CORRECTED onKeyDown FUNCTION ---
         function onKeyDown(e) {
             const activeElement = document.activeElement;
             const isInputFocused = activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA' || activeElement.isContentEditable);
             const isCtrlOrMeta = e.ctrlKey || e.metaKey;
             const uiIsBlocking = isUiBlockingKeyboard();
-
-            if (isInputFocused) {
-                if (isCtrlOrMeta && ['a', 'c', 'x', 'v', 'z', 'y'].includes(e.key.toLowerCase())) return;
-                if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'escape'].includes(e.key.toLowerCase())) return;
-                if (e.key.toLowerCase() === 'enter' && activeElement.id !== 'findCodeInput') return;
-                if (!isCtrlOrMeta && !(activeElement.id === 'findCodeInput' && e.key.toLowerCase() === 'enter')) return;
-            }
-
+            
             if (isCtrlOrMeta) {
+                // Allow native copy/paste etc. in inputs, but prevent our shortcuts
+                if (isInputFocused && ['c', 'x', 'v', 'z', 'y', 'a'].includes(e.key.toLowerCase())) {
+                    return; 
+                }
+                
                 if (uiIsBlocking && !['/', '?'].includes(e.key.toLowerCase())) { if(e.key.toLowerCase() !== 'escape') e.preventDefault(); return; }
                 e.preventDefault(); let stateToRestore = null;
                 switch (e.key.toLowerCase()) {
@@ -596,15 +598,19 @@
                 }
                 if (stateToRestore) { restoreState(stateToRestore); if (currentView === 'list') populateListView(); }
             } else {
+                 if (isInputFocused && e.key.toLowerCase() !== 'escape' && !(activeElement.id === 'findCodeInput' && e.key === 'Enter')) {
+                    // If an input is focused, and it's not the Escape key, let the input handle it.
+                    return;
+                }
                 switch (e.key.toLowerCase()) {
                     case 'escape': e.preventDefault(); const helpM = document.getElementById('helpModal'); const qrM = document.getElementById('qrScannerModal'); const confM = document.getElementById('customConfirmModal'); const setM = document.getElementById('settingsModal'); if (helpM && helpM.style.display !== 'none') hideHelpModal(); else if (qrM && qrM.style.display !== 'none') stopQrScanning(); else if (confM && confM.style.display !== 'none') hideCustomConfirm(false); else if (setM && setM.style.display !== 'none') hideSettingsModal(); else if (selectedBoxes.length > 0) deselectAll(); else if (!infoPanelEl.classList.contains('hidden')) infoPanelEl.classList.add('hidden'); break;
-                    case 'm': if (!uiIsBlocking && currentView === '3d') { setCurrentInteractionMode('translate'); e.preventDefault(); } break;
-                    case 'r': if (!uiIsBlocking && currentView === '3d') { setCurrentInteractionMode('rotate'); e.preventDefault(); } break;
-                    case 's': if (!uiIsBlocking && currentView === '3d') { setCurrentInteractionMode('scale'); e.preventDefault(); } break;
-                    case 'tab': if (!uiIsBlocking && currentView === '3d' && selectedBoxes.length === 1) { e.preventDefault(); if (currentInteractionMode === 'translate') setCurrentInteractionMode('rotate'); else if (currentInteractionMode === 'rotate') setCurrentInteractionMode('translate'); } break;
+                    case 'm': if (!uiIsBlocking && currentView === '3d' && !isInputFocused) { setCurrentInteractionMode('translate'); e.preventDefault(); } break;
+                    case 'r': if (!uiIsBlocking && currentView === '3d' && !isInputFocused) { setCurrentInteractionMode('rotate'); e.preventDefault(); } break;
+                    case 's': if (!uiIsBlocking && currentView === '3d' && !isInputFocused) { setCurrentInteractionMode('scale'); e.preventDefault(); } break;
+                    case 'tab': if (!uiIsBlocking && currentView === '3d' && selectedBoxes.length === 1 && !isInputFocused) { e.preventDefault(); if (currentInteractionMode === 'translate') setCurrentInteractionMode('rotate'); else if (currentInteractionMode === 'rotate') setCurrentInteractionMode('translate'); } break;
                     case 'delete': case 'backspace': if (!uiIsBlocking && selectedBoxes.length > 0 && !isInputFocused) { e.preventDefault(); handleDeleteSelection(); } break;
                     case 'arrowup': case 'arrowdown': case 'arrowleft': case 'arrowright':
-                        if (!uiIsBlocking && currentView === '3d' && selectedBoxes.length === 1) {
+                        if (!uiIsBlocking && currentView === '3d' && selectedBoxes.length === 1 && !isInputFocused) {
                             e.preventDefault(); const box = selectedBoxes[0];
                             if (currentInteractionMode === 'translate') { const moveDirection = new THREE.Vector3(); const camDir = new THREE.Vector3(); camera.getWorldDirection(camDir); const forward = new THREE.Vector3(camDir.x, 0, camDir.z).normalize(); const right = new THREE.Vector3().crossVectors(new THREE.Vector3(0,1,0), forward).normalize(); if (e.key === 'ArrowUp') moveDirection.add(forward); if (e.key === 'ArrowDown') moveDirection.sub(forward); if (e.key === 'ArrowLeft') moveDirection.sub(right); if (e.key === 'ArrowRight') moveDirection.add(right); moveDirection.multiplyScalar(KEYBOARD_MOVE_INCREMENT); box.position.add(moveDirection); box.position.x = Math.round(box.position.x / SNAP_GRID_SIZE) * SNAP_GRID_SIZE; box.position.y = Math.max(0, Math.round(box.position.y / SNAP_GRID_SIZE) * SNAP_GRID_SIZE); box.position.z = Math.round(box.position.z / SNAP_GRID_SIZE) * SNAP_GRID_SIZE; }
                             else if (currentInteractionMode === 'rotate') { if (e.key === 'ArrowLeft') box.rotation.y += KEYBOARD_ROTATE_INCREMENT; if (e.key === 'ArrowRight') box.rotation.y -= KEYBOARD_ROTATE_INCREMENT; if (e.key === 'ArrowUp') box.rotation.x += KEYBOARD_ROTATE_INCREMENT; if (e.key === 'ArrowDown') box.rotation.x -= KEYBOARD_ROTATE_INCREMENT; }
@@ -614,6 +620,7 @@
                 }
             }
         }
+        // --- END: CORRECTED onKeyDown FUNCTION ---
 
         function showHelpModal() { const m = document.getElementById('helpModal'); if(m) m.style.display = 'flex';}
         function hideHelpModal() { const m = document.getElementById('helpModal'); if(m) m.style.display = 'none';}
