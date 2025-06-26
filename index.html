@@ -18,11 +18,7 @@
             --success-color: #198754;
         }
         body { margin: 0; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif; background-color: var(--bg-color); color: var(--text-color); overflow: hidden; cursor: default; }
-
-        .top-bar, .info-panel {
-            transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.3s ease-out;
-        }
-
+        .top-bar, .info-panel { transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.3s ease-out; }
         .top-bar { position: absolute; top: 15px; left: 15px; z-index: 100; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
         .ui-panel { background-color: var(--surface-color); border: 1px solid var(--border-color); padding: 12px 15px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); display: flex; gap: 10px; align-items: center; }
         button { padding: 9px 15px; border: 1px solid var(--border-color); border-radius: 6px; background-color: #484d53; color: var(--text-color); cursor: pointer; transition: background-color 0.2s, border-color 0.2s; font-size: 14px; font-weight: 500; display: inline-flex; align-items: center; gap: 6px;}
@@ -30,7 +26,6 @@
         button:active { background-color: #383c42; }
         button:disabled { background-color: #3c4045; color: var(--text-muted-color); cursor: not-allowed; }
         input[type="text"], input[type="color"], input[type="number"], textarea, select { padding: 9px 12px; border: 1px solid var(--border-color); border-radius: 6px; background-color: var(--input-bg-color); color: var(--text-color); font-size: 14px; box-sizing: border-box; font-family: inherit; }
-
         .info-panel { position: absolute; top: 15px; right: 15px; width: 340px; z-index: 100; background-color: var(--surface-color); border: 1px solid var(--border-color); padding: 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); max-height: calc(100vh - 100px); overflow-y: auto;}
         .hidden { opacity: 0 !important; transform: translateX(30px) !important; pointer-events: none !important; display: block !important; }
         .info-panel h3 { margin-top: 0; font-size: 1.4em; color: var(--text-color); border-bottom: 1px solid var(--border-color); padding-bottom: 10px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
@@ -235,7 +230,8 @@
         class ActionManager { constructor() { this.undoStack = []; this.redoStack = []; } pushState(state) { this.undoStack.push(state); this.redoStack = []; if (this.undoStack.length > 50) this.undoStack.shift(); } undo() { if (this.undoStack.length <= 1) return null; const currentState = this.undoStack.pop(); this.redoStack.push(currentState); return JSON.parse(JSON.stringify(this.undoStack[this.undoStack.length - 1])); } redo() { if (this.redoStack.length === 0) return null; const nextState = this.redoStack.pop(); this.undoStack.push(nextState); return JSON.parse(JSON.stringify(nextState)); } }
         const actionManager = new ActionManager();
 
-        // --- 3. HELPER FUNCTIONS ---
+        // --- 3. HELPER & CORE FUNCTIONS (DEFINED BEFORE USE) ---
+        
         function loadSettings() {
             const savedSettings = localStorage.getItem('boxOrganizerAppSettings');
             if (savedSettings) {
@@ -444,27 +440,6 @@
             targetPosition.z = Math.round(targetPosition.z / SNAP_GRID_SIZE) * SNAP_GRID_SIZE;
             return { targetPosition };
         }
-        async function handleDeleteSelection() {
-            if (selectedBoxes.length === 0) return;
-            let confirmed = !appSettings.showDeleteConfirmation;
-            if (appSettings.showDeleteConfirmation) {
-                try {
-                    const message = `Are you sure you want to delete ${selectedBoxes.length} box(es)? This action cannot be easily undone.`;
-                    const okButton = document.getElementById('confirmOkBtn');
-                    okButton.textContent = selectedBoxes.length > 1 ? "Delete Boxes" : "Delete Box";
-                    okButton.className = 'danger';
-                    confirmed = await showCustomConfirm("Confirm Deletion", message);
-                } catch { confirmed = false; }
-            }
-            if (!confirmed) return;
-            const boxesToRemove = [...selectedBoxes]; deselectAll();
-            boxesToRemove.forEach(boxToRemove => {
-                if (boxToRemove.threeGroup && currentView === '3d') { new TWEEN.Tween(boxToRemove.threeGroup.scale).to({x:0.01, y:0.01, z:0.01}, 300).easing(TWEEN.Easing.Quadratic.In).onComplete(() => {if (boxToRemove.threeGroup.parent) scene.remove(boxToRemove.threeGroup); disposeThreeObject(boxToRemove.threeGroup);}).start(); }
-                else if (boxToRemove.threeGroup) { if (boxToRemove.threeGroup.parent) scene.remove(boxToRemove.threeGroup); disposeThreeObject(boxToRemove.threeGroup); }
-                boxes = boxes.filter(b => b.id !== boxToRemove.id);
-            });
-            recordAction(); if (currentView === 'list') populateListView(); updateSelectionState();
-        }
         function updateSelectionState() {
             releaseMultiSelectPivot();
             boxes.forEach(box => { if(box.threeGroup) { applyBoxStateFromData(box); box.threeGroup.children.forEach(c => { if (c.isMesh && c.material.emissive.getHex() !== 0x000000) new TWEEN.Tween(c.material.emissive).to({ r: 0, g: 0, b: 0 }, 100).start(); }); } });
@@ -537,6 +512,8 @@
         function clearItemDropIndicators() { document.querySelectorAll('#itemList li').forEach(li => { li.classList.remove('drop-indicator-top', 'drop-indicator-bottom'); }); }
         function handleItemDragOver(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; const targetLi = e.target.closest('li'); const draggingLi = document.querySelector('#itemList li.dragging'); if (!targetLi || !draggingLi || targetLi === draggingLi) return; clearItemDropIndicators(); const rect = targetLi.getBoundingClientRect(); const midY = rect.top + rect.height / 2; if (e.clientY < midY) targetLi.classList.add('drop-indicator-top'); else targetLi.classList.add('drop-indicator-bottom'); }
         function handleItemDrop(e) { e.preventDefault(); const targetLi = e.target.closest('li'); if (!targetLi || !draggedItem || selectedBoxes.length !== 1) { clearItemDropIndicators(); draggedItem = null; return; } const selectedBoxData = selectedBoxes[0]; const items = selectedBoxData.items; const draggedIndex = items.findIndex(item => item.id === draggedItem); let targetIndex = Array.from(targetLi.parentElement.children).indexOf(targetLi); if (draggedIndex === -1) return; if (targetLi.classList.contains('drop-indicator-bottom')) targetIndex++; if (draggedIndex < targetIndex) targetIndex--; const [dragged] = items.splice(draggedIndex, 1); items.splice(targetIndex, 0, dragged); clearItemDropIndicators(); document.querySelector('#itemList li.dragging')?.classList.remove('dragging'); draggedItem = null; renderItemList(); selectedBoxData.lastModified = new Date().toISOString(); recordAction(); if(currentView === 'list') populateListView(); }
+        function toggleView() { const listViewContainer = document.getElementById('listViewContainer'); const rendererEl = renderer.domElement; const topBar = document.querySelector('.top-bar'); const toggleBtn = document.getElementById('toggleListViewBtn'); if (currentView === '3d') { currentView = 'list'; if(toggleBtn) toggleBtn.innerHTML = '<i class="bi bi-box-fill"></i> 3D View'; if(rendererEl) rendererEl.style.display = 'none'; transformControls.detach(); if(orbitControls) orbitControls.enabled = false; if (selectedBoxes.length === 1) { updateInfoPanel(); infoPanelEl.classList.remove('hidden');} else { infoPanelEl.classList.add('hidden');} if(listViewContainer) { listViewContainer.style.display = 'block'; const topBarHeight = topBar ? topBar.getBoundingClientRect().height : 70; listViewContainer.style.top = `${topBarHeight + 10}px`; populateListView(); } } else { currentView = '3d'; if(toggleBtn) toggleBtn.innerHTML = '<i class="bi bi-list-ul"></i> List View'; if(rendererEl) rendererEl.style.display = 'block'; if(listViewContainer) listViewContainer.style.display = 'none'; if(orbitControls) orbitControls.enabled = true; } updateSelectionState(); updateInteractionModeButton(); }
+        function populateListView() { const container = document.getElementById('listViewContainer'); if(!container) return; container.innerHTML = ''; const ul = document.createElement('ul'); boxes.sort((a,b) => a.name.localeCompare(b.name)).forEach(box => { const li = document.createElement('li'); li.dataset.boxId = box.id; li.innerHTML = `<div class="list-item-icon" style="color:${box.color};"><i class="${box.icon || 'bi-box-seam-fill'}"></i></div><div class="list-item-details"><strong>${box.name}</strong><p>ID: ${box.id.substring(0,8).toUpperCase()} | Items: ${box.items.length}</p></div><i class="bi bi-chevron-right list-item-arrow"></i>`; li.addEventListener('click', () => { selectedBoxes = [box]; updateSelectionState(); }); ul.appendChild(li); }); container.appendChild(ul); updateSelectionState(); }
         function handleCopy() { if (selectedBoxes.length > 0) { clipboard = selectedBoxes.map(box => { const cleanBox = { ...box, threeGroup: undefined }; cleanBox.position = box.position.clone(); cleanBox.size = box.size.clone(); cleanBox.rotation = box.rotation.clone(); return cleanBox; }); console.log(`Copied ${clipboard.length} box(es) to clipboard.`); } }
         function handleCut() { if (selectedBoxes.length > 0) { handleCopy(); handleDeleteSelection(); } }
         function handlePaste() { if (clipboard.length === 0) return; const newSelection = []; const newClipboardData = []; if (clipboard.length === 1) { const originalBoxData = clipboard[0]; const newPosition = originalBoxData.position.clone().add(new THREE.Vector3(0, originalBoxData.size.y + 0.5, 0)); const newBoxData = createBoxData({...originalBoxData, id: THREE.MathUtils.generateUUID(), position: newPosition, rotation: originalBoxData.rotation.clone(), lastModified: new Date().toISOString() }); const addedBox = addBoxToScene(newBoxData, true); newSelection.push(addedBox); newClipboardData.push({...addedBox, threeGroup: undefined, rotation: addedBox.rotation.clone() }); } else { const originalCenter = new THREE.Vector3(); const selectionBBox = new THREE.Box3(); clipboard.forEach(boxData => { const boxBBox = new THREE.Box3().setFromCenterAndSize(boxData.position, boxData.size); selectionBBox.union(boxBBox); }); selectionBBox.getCenter(originalCenter); const selectionSize = new THREE.Vector3(); selectionBBox.getSize(selectionSize); const cameraDirection = new THREE.Vector3(); camera.getWorldDirection(cameraDirection); cameraDirection.y = 0; cameraDirection.normalize(); const dotX = Math.abs(cameraDirection.x); const dotZ = Math.abs(cameraDirection.z); let offsetVector; const padding = 1.0; if (dotZ > dotX) offsetVector = new THREE.Vector3(selectionSize.x + padding, 0, 0); else offsetVector = new THREE.Vector3(0, 0, selectionSize.z + padding); const newCenter = originalCenter.clone().add(offsetVector); clipboard.forEach(boxData => { const relativePos = boxData.position.clone().sub(originalCenter); const newPosition = newCenter.clone().add(relativePos); const newBoxData = createBoxData({...boxData, id: THREE.MathUtils.generateUUID(), position: newPosition, rotation: boxData.rotation.clone(), lastModified: new Date().toISOString() }); const addedBox = addBoxToScene(newBoxData, true); newSelection.push(addedBox); const cleanPastedBox = {...addedBox, threeGroup: undefined, rotation: addedBox.rotation.clone()}; cleanPastedBox.position = newPosition.clone(); newClipboardData.push(cleanPastedBox); }); } if (newSelection.length > 0) { deselectAll(); selectedBoxes = newSelection; updateSelectionState(); clipboard = newClipboardData; recordAction(); if(currentView === 'list') populateListView();} }
@@ -597,7 +574,59 @@
             }
         }
         
-        // --- 5. MAIN EVENT HANDLERS ---
+        // --- 5. MAIN EVENT HANDLERS & SETUPUI ---
+        function setupUI() {
+            document.querySelector('.top-bar').style.transform = 'translateY(0)';
+            document.querySelector('.top-bar').style.opacity = '1';
+            document.getElementById('addBoxBtn').addEventListener('click', () => {
+                 const { targetPosition } = getNewBoxTargetPosition();
+                 const newBoxData = createBoxData({ position: targetPosition });
+                 const addedBox = addBoxToScene(newBoxData, true);
+                 deselectAll(); selectedBoxes.push(addedBox); updateSelectionState();
+                 if(currentView === '3d') focusOnBox(addedBox);
+                 recordAction();
+            });
+            document.getElementById('toggleModeBtn').addEventListener('click', cycleInteractionMode);
+            document.getElementById('findBtn').addEventListener('click', () => {
+                const searchTerm = document.getElementById('findCodeInput').value.trim();
+                let foundBox = null;
+                if (searchTerm) {
+                    const searchTermUpper = searchTerm.toUpperCase();
+                    foundBox = boxes.find(b => (b.id.substring(0, 6).toUpperCase() === searchTermUpper) || (b.name && b.name.toUpperCase() === searchTermUpper));
+                }
+                if (foundBox) {
+                    if (currentView === 'list') toggleView();
+                    deselectAll(); selectedBoxes.push(foundBox); updateSelectionState(); focusOnBox(foundBox);
+                    document.getElementById('findCodeInput').value = '';
+                } else { alert(searchTerm ? 'Box not found!' : 'Please enter ID or Name.'); }
+            });
+            document.getElementById('findCodeInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); document.getElementById('findBtn').click(); } });
+            document.getElementById('exportBtn').addEventListener('click', () => { const exportData = JSON.stringify({version: "1.1", settings: appSettings, boxes: boxes.map(b => ({...b, threeGroup: undefined}))}, null, 2); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([exportData], {type: 'application/json'})); a.download = 'box_organizer_data.json'; a.click(); URL.revokeObjectURL(a.href); });
+            document.getElementById('importFile').addEventListener('change', handleImport);
+            document.getElementById('printAllLabelsBtn').addEventListener('click', handlePrintAllLabels);
+            document.getElementById('scanQRBtn').addEventListener('click', startQrScanning);
+            document.getElementById('toggleListViewBtn').addEventListener('click', toggleView);
+            document.getElementById('settingsBtn').addEventListener('click', showSettingsModal);
+
+            renderer.domElement.addEventListener('mousemove', onMouseMove);
+            renderer.domElement.addEventListener('click', onCanvasClick);
+            window.addEventListener('keydown', onKeyDown);
+
+            document.getElementById('closeHelpModalBtn').addEventListener('click', hideHelpModal);
+            document.getElementById('helpModal').addEventListener('click', (event) => { if (event.target.id === 'helpModal') hideHelpModal(); });
+            qrVideoElement = document.getElementById('qrVideoFeed');
+            qrScanCanvasElement = document.getElementById('qrScanCanvas');
+            if(qrScanCanvasElement) qrScanCanvasCtx = qrScanCanvasElement.getContext('2d', { willReadFrequently: true });
+            document.getElementById('closeQrScannerBtn').addEventListener('click', () => stopQrScanning());
+            document.getElementById('qrScannerModal').addEventListener('click', (event) => { if (event.target.id === 'qrScannerModal') stopQrScanning();});
+            document.getElementById('confirmCancelBtn').addEventListener('click', () => hideCustomConfirm(false));
+            document.getElementById('confirmOkBtn').addEventListener('click', () => hideCustomConfirm(true));
+            document.getElementById('customConfirmModal').addEventListener('click', (event) => { if(event.target.id === 'customConfirmModal') hideCustomConfirm(false); });
+            document.getElementById('closeSettingsModalBtn').addEventListener('click', hideSettingsModal);
+            document.getElementById('settingsModal').addEventListener('click', (event) => { if(event.target.id === 'settingsModal') hideSettingsModal(); });
+            document.getElementById('showDeleteConfirmSetting').addEventListener('change', (e) => { appSettings.showDeleteConfirmation = e.target.checked; saveSettings(); });
+        }
+
         function onKeyDown(e) {
             const activeElement = document.activeElement;
             const isInputFocused = activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA' || activeElement.isContentEditable);
