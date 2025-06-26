@@ -60,8 +60,10 @@
         ::-webkit-scrollbar-track { background: var(--input-bg-color); border-radius: 10px; }
         ::-webkit-scrollbar-thumb { background-color: var(--border-color); border-radius: 10px; border: 2px solid var(--input-bg-color); }
         ::-webkit-scrollbar-thumb:hover { background-color: var(--text-muted-color); }
+        .info-panel-close-btn { background: none; border: none; color: var(--text-muted-color); font-size: 1.4em; cursor: pointer; padding: 0 5px; line-height: 1; transition: color 0.2s; margin-left: auto; }
+        .info-panel-close-btn:hover { color: var(--text-color); background-color: transparent; border-color: transparent; }
 
-        /* Modal Styles (Help, QR, Confirm, Settings) */
+        /* Modal Styles */
         .modal-overlay { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); justify-content: center; align-items: center; animation: fadeIn 0.3s ease-out; }
         .modal-content { background-color: var(--surface-color); padding: 25px; border: 1px solid var(--border-color); border-radius: 10px; width: 80%; color: var(--text-color); box-shadow: 0 5px 25px rgba(0,0,0,0.4); animation: slideInUp 0.4s cubic-bezier(0.2, 0.8, 0.2, 1); text-align: left; }
         #helpModal .modal-content { max-width: 650px; }
@@ -111,7 +113,7 @@
             <button onclick="document.getElementById('importFile').click()"><i class="bi bi-box-arrow-down"></i> Import</button>
         </div>
         <div class="ui-panel">
-            <button id="printAllLabelsBtn" title="Print All Box Labels (PDF)"><i class="bi bi-printer"></i> Labels</button>
+            <button id="printAllLabelsBtn" title="Print All Box Labels (HTML)"><i class="bi bi-printer"></i> Labels</button>
             <button id="scanQRBtn" title="Find Box by QR Code"><i class="bi bi-qr-code-scan"></i> Scan</button>
             <button id="toggleListViewBtn" title="Toggle List/3D View"><i class="bi bi-list-ul"></i> List View</button>
             <button id="settingsBtn" title="Settings"><i class="bi bi-gear-fill"></i></button>
@@ -201,6 +203,7 @@
         import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
         import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 
+        // --- 1. GLOBALS & CONSTANTS ---
         const GRID_EXTENT = 100, SNAP_GRID_SIZE = 0.5;
         const DEFAULT_BOX_COLOR = '#777777';
         const LID_THICKNESS = 0.15;
@@ -226,19 +229,20 @@
         let currentView = '3d';
 
         let appSettings = { showDeleteConfirmation: true };
+        let confirmResolve = null;
 
+        // --- 2. ACTION MANAGER ---
         class ActionManager { constructor() { this.undoStack = []; this.redoStack = []; } pushState(state) { this.undoStack.push(state); this.redoStack = []; if (this.undoStack.length > 50) this.undoStack.shift(); } undo() { if (this.undoStack.length <= 1) return null; const currentState = this.undoStack.pop(); this.redoStack.push(currentState); return JSON.parse(JSON.stringify(this.undoStack[this.undoStack.length - 1])); } redo() { if (this.redoStack.length === 0) return null; const nextState = this.redoStack.pop(); this.undoStack.push(nextState); return JSON.parse(JSON.stringify(nextState)); } }
         const actionManager = new ActionManager();
 
+        // --- 3. HELPER FUNCTIONS (MODALS, SETTINGS, PRINTING, ETC.) ---
         function loadSettings() {
             const savedSettings = localStorage.getItem('boxOrganizerAppSettings');
             if (savedSettings) {
                 try {
                     const parsed = JSON.parse(savedSettings);
                     appSettings = { ...appSettings, ...parsed };
-                } catch(e) {
-                    console.error("Error parsing saved settings:", e);
-                }
+                } catch(e) { console.error("Error parsing saved settings:", e); }
             }
             appSettings.showDeleteConfirmation = appSettings.showDeleteConfirmation !== undefined ? appSettings.showDeleteConfirmation : true;
         }
@@ -247,76 +251,80 @@
             localStorage.setItem('boxOrganizerAppSettings', JSON.stringify(appSettings));
         }
 
-        function init() {
-            loadSettings();
-            infoPanelEl = document.getElementById('infoPanel');
-            hoverTooltipEl = document.getElementById('hoverTooltip');
-            scene = new THREE.Scene();
-            camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.set(15, 20, 25);
-            renderer = new THREE.WebGLRenderer({ antialias: false });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(window.devicePixelRatio);
-            renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-            renderer.toneMapping = THREE.LinearToneMapping;
-            document.body.appendChild(renderer.domElement);
-            scene.add(new THREE.AmbientLight(0xffffff, 1.3));
-            const dirLight = new THREE.DirectionalLight(0xffffff, 2.2);
-            dirLight.position.set(30, 50, 40); dirLight.castShadow = true;
-            dirLight.shadow.mapSize.width = 2048; dirLight.shadow.mapSize.height = 2048;
-            dirLight.shadow.camera.top = 50; dirLight.shadow.camera.bottom = -50;
-            dirLight.shadow.camera.left = -50; dirLight.shadow.camera.right = 50;
-            dirLight.shadow.bias = -0.0005;
-            scene.add(dirLight);
-            createFloorAndGrid(); createStarfield(); createAmbientParticles();
-            orbitControls = new OrbitControls(camera, renderer.domElement);
-            orbitControls.enableDamping = true; orbitControls.maxPolarAngle = Math.PI / 2;
-            multiSelectPivot = new THREE.Object3D(); scene.add(multiSelectPivot);
-            transformControls = new TransformControls(camera, renderer.domElement);
-            transformControls.addEventListener('objectChange', onTransformObject);
-            transformControls.addEventListener('dragging-changed', e => {
-                orbitControls.enabled = !e.value;
-                if (!e.value && selectedBoxes.length > 0) {
-                    if (selectedBoxes.length > 1) {
-                        multiSelectPivot.updateWorldMatrix(true, true);
-                        for(const child of multiSelectPivot.children) {
-                            const boxData = boxes.find(b => b.threeGroup === child);
-                            if (boxData) child.getWorldPosition(boxData.position);
-                        }
-                    } else if (selectedBoxes.length === 1) {
-                        const box = selectedBoxes[0];
-                        if (box.threeGroup && transformControls.mode === 'rotate') {
-                            box.rotation.copy(box.threeGroup.rotation);
-                        }
-                    }
-                    recordAction();
-                }
+        function showHelpModal() { const m = document.getElementById('helpModal'); if(m) m.style.display = 'flex';}
+        function hideHelpModal() { const m = document.getElementById('helpModal'); if(m) m.style.display = 'none';}
+        
+        function showCustomConfirm(title = "Confirm", message = "Are you sure?") {
+            return new Promise((resolve) => {
+                confirmResolve = resolve;
+                document.getElementById('confirmTitle').textContent = title;
+                document.getElementById('confirmMessage').textContent = message;
+                document.getElementById('customConfirmModal').style.display = 'flex';
+                const okBtn = document.getElementById('confirmOkBtn');
+                const cancelBtn = document.getElementById('confirmCancelBtn');
+                okBtn.onclick = () => hideCustomConfirm(true);
+                cancelBtn.onclick = () => hideCustomConfirm(false);
             });
-            scene.add(transformControls);
-            setupPostProcessing();
-            setupUI();
-            updateInteractionModeButton();
-            recordAction();
-            animate();
+        }
+        function hideCustomConfirm(value) {
+            document.getElementById('customConfirmModal').style.display = 'none';
+            if (confirmResolve) { confirmResolve(value); confirmResolve = null; }
         }
 
-        function setupPostProcessing() {
-            composer = new EffectComposer(renderer);
-            const renderPass = new RenderPass(scene, camera);
-            composer.addPass(renderPass);
-            const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
-            bloomPass.threshold = 0.85; bloomPass.strength = 0.005; bloomPass.radius = 0.5;
-            composer.addPass(bloomPass);
-            window.addEventListener('resize', onWindowResize);
+        function showSettingsModal() { 
+            document.getElementById('showDeleteConfirmSetting').checked = appSettings.showDeleteConfirmation;
+            document.getElementById('settingsModal').style.display = 'flex'; 
+        }
+        function hideSettingsModal() { 
+            document.getElementById('settingsModal').style.display = 'none'; 
         }
 
-        function onWindowResize() {
-            const width = window.innerWidth; const height = window.innerHeight;
-            camera.aspect = width / height; camera.updateProjectionMatrix();
-            renderer.setSize(width, height); composer.setSize(width, height);
-            renderer.setPixelRatio(window.devicePixelRatio);
+        function generateQrDataURL(text) {
+            return new Promise((resolve, reject) => {
+                const tempContainer = document.createElement('div');
+                new QRCode(tempContainer, { text: text, width: 128, height: 128, correctLevel: QRCode.CorrectLevel.M });
+                setTimeout(() => {
+                    const img = tempContainer.querySelector('img');
+                    const canvas = tempContainer.querySelector('canvas');
+                    if (img && img.src) resolve(img.src);
+                    else if (canvas) resolve(canvas.toDataURL());
+                    else reject(new Error("QR Code generation failed."));
+                }, 100);
+            });
         }
 
+        async function handlePrintAllLabels() {
+            if (!boxes.length) { alert("No boxes to print labels for."); return; }
+            const busyIndicator = document.createElement('div');
+            busyIndicator.textContent = 'Preparing labels for printing...';
+            Object.assign(busyIndicator.style, { position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', padding: '20px', background: 'var(--surface-color)', border: '1px solid var(--border-color)', borderRadius: '8px', zIndex: '2000', color: 'var(--text-color)' });
+            document.body.appendChild(busyIndicator);
+            await new Promise(resolve => setTimeout(resolve, 50));
+            try {
+                let printableHTML = `<html><head><title>Box Labels</title><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"><style>body{margin:0;font-family:Arial,Helvetica,sans-serif}.label-sheet{width:210mm;min-height:290mm;padding:10mm;box-sizing:border-box;display:flex;flex-wrap:wrap;gap:2mm 2mm;page-break-after:always}.label{width:63.5mm;height:38.1mm;border:.1mm dotted #ccc;padding:2mm;box-sizing:border-box;overflow:hidden;display:flex;flex-direction:row;align-items:flex-start;background-color:#fff;color:#222;font-size:2.5mm}.label-content{flex-grow:1;display:flex;flex-direction:column;justify-content:space-between;height:100%;padding-right:1.5mm;overflow:hidden}.label-header{display:flex;align-items:flex-start;justify-content:space-between}.label-name{margin:0;font-size:3.2mm;line-height:1.1;font-weight:700;max-height:6.4mm;overflow:hidden;word-break:break-word;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}.label-icon{font-size:4.5mm;margin-left:1mm;flex-shrink:0}.label-description{font-size:2.2mm;margin:.5mm 0;color:#444;max-height:9mm;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical}.label-footer{display:flex;justify-content:space-between;align-items:flex-end;font-size:2mm;margin-top:auto;color:#555}.label-id,.label-weight{white-space:nowrap}.label-qrcode{width:17mm;height:17mm;align-self:center;flex-shrink:0;margin-left:1mm}.label-qrcode img{width:100%!important;height:100%!important}@media print{body{margin:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}.label-sheet{border:none;box-shadow:none;padding:0}}</style></head><body><div class="label-sheet">`;
+                for (const box of boxes) {
+                    const qrImgSrc = await generateQrDataURL(box.id);
+                    const descriptionText = (box.description || '').substring(0, 60) + ( (box.description || '').length > 60 ? '...' : '');
+                    const weightText = box.weight > 0 ? `Wt: ${box.weight}${box.weightUnit || 'kg'}` : '';
+                    printableHTML += `<div class="label"><div class="label-content"><div><div class="label-header"><h4 class="label-name">${box.name}</h4><i class="${box.icon || 'bi-box-seam-fill'} label-icon" style="color:${box.color};"></i></div><p class="label-description">${descriptionText}</p></div><div class="label-footer"><span class="label-id">ID: ${box.id.substring(0,8).toUpperCase()}</span><span class="label-weight">${weightText}</span></div></div><div class="label-qrcode"><img src="${qrImgSrc}" alt="QR Code for ${box.id}"></div></div>`;
+                }
+                printableHTML += `</div></body></html>`;
+                const printWindow = window.open('', '_blank');
+                if (printWindow) { printWindow.document.write(printableHTML); printWindow.document.close(); printWindow.onload = () => { printWindow.focus(); printWindow.print(); }; }
+                else { alert("Could not open print window. Check pop-up blocker."); }
+            } catch (err) { console.error("Error preparing labels:", err); alert("An error occurred preparing labels."); }
+            finally { if(document.body.contains(busyIndicator)) document.body.removeChild(busyIndicator); }
+        }
+
+        async function startQrScanning() { const modal = document.getElementById('qrScannerModal'); const resultEl = document.getElementById('qrScanResult'); if(!modal || !resultEl || !qrVideoElement) { console.error("QR Scanner UI elements not found"); return; } modal.style.display = 'flex'; resultEl.textContent = 'Requesting camera...'; try { videoStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } }); qrVideoElement.srcObject = videoStream; await qrVideoElement.play(); if(!qrScanCanvasElement || !qrScanCanvasCtx) { qrScanCanvasElement = document.getElementById('qrScanCanvas'); qrScanCanvasCtx = qrScanCanvasElement.getContext('2d', { willReadFrequently: true }); } qrScanCanvasElement.width = qrVideoElement.videoWidth; qrScanCanvasElement.height = qrVideoElement.videoHeight; resultEl.textContent = 'Align QR code...'; scanRequestId = requestAnimationFrame(tickQrScan); } catch (err) { console.error("Cam Err:", err); resultEl.textContent = 'Error: No camera.'; stopQrScanning(false); } }
+        function tickQrScan() { if (qrVideoElement && qrVideoElement.readyState === qrVideoElement.HAVE_ENOUGH_DATA) { qrScanCanvasCtx.drawImage(qrVideoElement, 0, 0, qrScanCanvasElement.width, qrScanCanvasElement.height); const imageData = qrScanCanvasCtx.getImageData(0, 0, qrScanCanvasElement.width, qrScanCanvasElement.height); const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "dontInvert" }); if (code && code.data) { document.getElementById('qrScanResult').textContent = `Found: ${code.data.substring(0,20)}...`; handleQrCodeResult(code.data); return; } } if (videoStream) { scanRequestId = requestAnimationFrame(tickQrScan); } }
+        function handleQrCodeResult(decodedId) { stopQrScanning(); const foundBox = boxes.find(b => b.id === decodedId); if (foundBox) { if (currentView === 'list') { toggleView(); } deselectAll(); selectedBoxes.push(foundBox); updateSelectionState(); focusOnBox(foundBox); const findInput = document.getElementById('findCodeInput'); if (findInput) { findInput.value = `Found: ${foundBox.name}`; setTimeout(() => { if (findInput.value === `Found: ${foundBox.name}`) findInput.value = ''; }, 3000); } } else { alert(`Box ID "${decodedId}" not found.`); } }
+        function stopQrScanning(clearMessage = true) { if (scanRequestId) { cancelAnimationFrame(scanRequestId); scanRequestId = null; } if (videoStream) { videoStream.getTracks().forEach(track => track.stop()); videoStream = null; } if(qrVideoElement) qrVideoElement.srcObject = null; const modal = document.getElementById('qrScannerModal'); if(modal) modal.style.display = 'none'; if(clearMessage && document.getElementById('qrScanResult')) document.getElementById('qrScanResult').textContent = 'Align QR code...'; }
+
+        function isUiBlockingKeyboard() { const helpModal = document.getElementById('helpModal'); const qrScannerModal = document.getElementById('qrScannerModal'); const confirmModal = document.getElementById('customConfirmModal'); const settingsModal = document.getElementById('settingsModal'); return (helpModal && helpModal.style.display === 'flex') || (qrScannerModal && qrScannerModal.style.display === 'flex') || (confirmModal && confirmModal.style.display === 'flex') || (settingsModal && settingsModal.style.display === 'flex'); }
+
+        // --- 4. CORE 3D & UI FUNCTIONS ---
+        // (functions from createBoxData to the end of UI update functions)
         function createBoxData(overrideData = {}) {
             return {
                 id: THREE.MathUtils.generateUUID(), name: "New Box", color: DEFAULT_BOX_COLOR,
@@ -326,7 +334,6 @@
                 lastModified: new Date().toISOString(), ...overrideData,
             };
         }
-
         function addBoxToScene(boxData, isNew = false) {
             const group = new THREE.Group(); group.userData.id = boxData.id;
             const baseMaterial = new THREE.MeshStandardMaterial({ color: boxData.color });
@@ -349,7 +356,6 @@
             if (currentView === 'list' && isNew) populateListView();
             return boxData;
         }
-
         function applyBoxStateFromData(boxData) {
             if (!boxData.threeGroup) return;
             const [baseMesh, lidMesh] = boxData.threeGroup.children;
@@ -359,7 +365,6 @@
             lidMesh.scale.set(boxData.size.x * 1.02, LID_THICKNESS, boxData.size.z * 1.02);
             lidMesh.position.y = boxData.size.y; lidMesh.material.color.set(new THREE.Color(boxData.color).multiplyScalar(0.8));
         }
-
         function onTransformObject() {
             if (selectedBoxes.length === 1) {
                 const selectedBoxData = selectedBoxes[0];
@@ -388,7 +393,6 @@
                  selectedBoxes.forEach(box => box.lastModified = new Date().toISOString());
             }
         }
-
         function updateInteractionModeButton() {
             const btn = document.getElementById('toggleModeBtn');
             if (!btn) return;
@@ -406,7 +410,6 @@
                 transformControls.setMode(currentInteractionMode);
             }
         }
-        
         function cycleInteractionMode() {
             if (currentView === 'list' || selectedBoxes.length === 0) return;
             switch (currentInteractionMode) {
@@ -415,7 +418,6 @@
                 case 'scale': setCurrentInteractionMode('translate'); break;
             }
         }
-
         function setCurrentInteractionMode(mode) {
             if (!['translate', 'rotate', 'scale'].includes(mode)) return;
             currentInteractionMode = mode;
@@ -424,7 +426,6 @@
             }
             updateInteractionModeButton();
         }
-
         function getNewBoxTargetPosition() {
             const raycaster = new THREE.Raycaster();
             raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
@@ -444,59 +445,27 @@
             targetPosition.z = Math.round(targetPosition.z / SNAP_GRID_SIZE) * SNAP_GRID_SIZE;
             return { targetPosition };
         }
-
-        function setupUI() {
-            document.querySelector('.top-bar').style.transform = 'translateY(0)';
-            document.querySelector('.top-bar').style.opacity = '1';
-            document.getElementById('addBoxBtn').addEventListener('click', () => {
-                 const { targetPosition } = getNewBoxTargetPosition();
-                 const newBoxData = createBoxData({ position: targetPosition });
-                 const addedBox = addBoxToScene(newBoxData, true);
-                 deselectAll(); selectedBoxes.push(addedBox); updateSelectionState();
-                 if(currentView === '3d') focusOnBox(addedBox);
-                 recordAction();
+        async function handleDeleteSelection() {
+            if (selectedBoxes.length === 0) return;
+            let confirmed = !appSettings.showDeleteConfirmation;
+            if (appSettings.showDeleteConfirmation) {
+                try {
+                    const message = `Are you sure you want to delete ${selectedBoxes.length} box(es)? This action cannot be easily undone.`;
+                    const okButton = document.getElementById('confirmOkBtn');
+                    okButton.textContent = selectedBoxes.length > 1 ? "Delete Boxes" : "Delete Box";
+                    okButton.className = 'danger';
+                    confirmed = await showCustomConfirm("Confirm Deletion", message);
+                } catch { confirmed = false; }
+            }
+            if (!confirmed) return;
+            const boxesToRemove = [...selectedBoxes]; deselectAll();
+            boxesToRemove.forEach(boxToRemove => {
+                if (boxToRemove.threeGroup && currentView === '3d') { new TWEEN.Tween(boxToRemove.threeGroup.scale).to({x:0.01, y:0.01, z:0.01}, 300).easing(TWEEN.Easing.Quadratic.In).onComplete(() => {if (boxToRemove.threeGroup.parent) scene.remove(boxToRemove.threeGroup); disposeThreeObject(boxToRemove.threeGroup);}).start(); }
+                else if (boxToRemove.threeGroup) { if (boxToRemove.threeGroup.parent) scene.remove(boxToRemove.threeGroup); disposeThreeObject(boxToRemove.threeGroup); }
+                boxes = boxes.filter(b => b.id !== boxToRemove.id);
             });
-            document.getElementById('toggleModeBtn').addEventListener('click', cycleInteractionMode);
-            document.getElementById('findBtn').addEventListener('click', () => {
-                const searchTerm = document.getElementById('findCodeInput').value.trim();
-                let foundBox = null;
-                if (searchTerm) {
-                    const searchTermUpper = searchTerm.toUpperCase();
-                    foundBox = boxes.find(b => (b.id.substring(0, 6).toUpperCase() === searchTermUpper) || (b.name && b.name.toUpperCase() === searchTermUpper));
-                }
-                if (foundBox) {
-                    if (currentView === 'list') toggleView();
-                    deselectAll(); selectedBoxes.push(foundBox); updateSelectionState(); focusOnBox(foundBox);
-                    document.getElementById('findCodeInput').value = '';
-                } else { alert(searchTerm ? 'Box not found!' : 'Please enter ID or Name.'); }
-            });
-            document.getElementById('findCodeInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); document.getElementById('findBtn').click(); } });
-            document.getElementById('exportBtn').addEventListener('click', () => { const exportData = JSON.stringify({version: "1.1", settings: appSettings, boxes: boxes.map(b => ({...b, threeGroup: undefined}))}, null, 2); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([exportData], {type: 'application/json'})); a.download = 'box_organizer_data.json'; a.click(); URL.revokeObjectURL(a.href); });
-            document.getElementById('importFile').addEventListener('change', handleImport);
-            document.getElementById('printAllLabelsBtn').addEventListener('click', handlePrintAllLabels);
-            document.getElementById('scanQRBtn').addEventListener('click', startQrScanning);
-            document.getElementById('toggleListViewBtn').addEventListener('click', toggleView);
-            document.getElementById('settingsBtn').addEventListener('click', showSettingsModal);
-
-            renderer.domElement.addEventListener('mousemove', onMouseMove);
-            renderer.domElement.addEventListener('click', onCanvasClick);
-            window.addEventListener('keydown', onKeyDown);
-
-            document.getElementById('closeHelpModalBtn').addEventListener('click', hideHelpModal);
-            document.getElementById('helpModal').addEventListener('click', (event) => { if (event.target.id === 'helpModal') hideHelpModal(); });
-            qrVideoElement = document.getElementById('qrVideoFeed');
-            qrScanCanvasElement = document.getElementById('qrScanCanvas');
-            if(qrScanCanvasElement) qrScanCanvasCtx = qrScanCanvasElement.getContext('2d', { willReadFrequently: true });
-            document.getElementById('closeQrScannerBtn').addEventListener('click', () => stopQrScanning());
-            document.getElementById('qrScannerModal').addEventListener('click', (event) => { if (event.target.id === 'qrScannerModal') stopQrScanning();});
-            document.getElementById('confirmCancelBtn').addEventListener('click', () => hideCustomConfirm(false));
-            document.getElementById('confirmOkBtn').addEventListener('click', () => hideCustomConfirm(true));
-            document.getElementById('customConfirmModal').addEventListener('click', (event) => { if(event.target.id === 'customConfirmModal') hideCustomConfirm(false); });
-            document.getElementById('closeSettingsModalBtn').addEventListener('click', hideSettingsModal);
-            document.getElementById('settingsModal').addEventListener('click', (event) => { if(event.target.id === 'settingsModal') hideSettingsModal(); });
-            document.getElementById('showDeleteConfirmSetting').addEventListener('change', (e) => { appSettings.showDeleteConfirmation = e.target.checked; saveSettings(); });
+            recordAction(); if (currentView === 'list') populateListView(); updateSelectionState();
         }
-
         function updateSelectionState() {
             releaseMultiSelectPivot();
             boxes.forEach(box => { if(box.threeGroup) { applyBoxStateFromData(box); box.threeGroup.children.forEach(c => { if (c.isMesh && c.material.emissive.getHex() !== 0x000000) new TWEEN.Tween(c.material.emissive).to({ r: 0, g: 0, b: 0 }, 100).start(); }); } });
@@ -526,12 +495,40 @@
             }
             updateInteractionModeButton();
         }
-
-        function updateInfoPanel() { if (selectedBoxes.length !== 1) return; const selectedBoxData = selectedBoxes[0]; const recordAndTimestamp = () => { if(selectedBoxData) selectedBoxData.lastModified = new Date().toISOString(); updateInfoPanel(); recordAction(); }; infoPanelEl.innerHTML = `<h3 id="infoPanelTitleArea"><span id="infoPanelTitle"></span> <span id="infoPanelIdChip" class="box-id-chip"></span></h3><div><label for="boxNameInput">Name</label><input type="text" id="boxNameInput"></div><div><label for="boxColorInput">Color</label><input type="color" id="boxColorInput"></div><div><label for="descriptionInput">Description</label><textarea id="descriptionInput" rows="3"></textarea></div><div id="tagsContainer"><h4 class="section-header">Tags</h4><div class="tag-container"><input type="text" id="tagInput" placeholder="Add a tag..."></div></div><div id="weightContainer"><h4 class="section-header">Weight</h4><div style="display: flex; gap: 8px;"><input type="number" id="weightInput" min="0" step="0.1" style="flex-grow: 1;"><select id="weightUnitSelect"><option value="kg">kg</option><option value="lbs">lbs</option></select></div></div><div id="iconContainer"><h4 class="section-header">Icon</h4><div id="iconPicker"></div></div><div id="itemListContainer"><h4 class="section-header">Items</h4><ul id="itemList"></ul><form id="addItemForm" onsubmit="return false;"><input type="text" id="newItemNameInput" placeholder="Item name..." required><input type="number" id="newItemQtyInput" value="1" min="1" style="width: 60px;"><button type="submit" id="addItemBtn"><i class="bi bi-plus-lg"></i> Add</button></form></div><p id="lastModifiedText" style="font-size: 0.8em; color: var(--text-muted-color); text-align: center; margin-top: 20px;"></p><button id="deleteBoxBtn"><i class="bi bi-trash"></i> Delete Box</button>`; document.getElementById('infoPanelTitle').textContent = selectedBoxData.name || "Box Properties"; document.getElementById('infoPanelIdChip').textContent = selectedBoxData.id.substring(0,6).toUpperCase(); document.getElementById('boxNameInput').value = selectedBoxData.name; document.getElementById('boxColorInput').value = selectedBoxData.color; document.getElementById('descriptionInput').value = selectedBoxData.description || ''; document.getElementById('weightInput').value = selectedBoxData.weight || 0; document.getElementById('weightUnitSelect').value = selectedBoxData.weightUnit || 'kg'; document.getElementById('lastModifiedText').textContent = `Last Modified: ${new Date(selectedBoxData.lastModified).toLocaleString()}`; document.getElementById('boxNameInput').onchange = (e) => { if(selectedBoxData) {selectedBoxData.name = e.target.value; recordAndTimestamp(); if (currentView === 'list') populateListView();}}; document.getElementById('boxColorInput').onchange = (e) => { if(selectedBoxData) {selectedBoxData.color = e.target.value; applyBoxStateFromData(selectedBoxData); recordAndTimestamp(); if (currentView === 'list') populateListView();}}; document.getElementById('descriptionInput').onchange = (e) => { if(selectedBoxData) {selectedBoxData.description = e.target.value; recordAndTimestamp(); if (currentView === 'list') populateListView();}}; document.getElementById('weightInput').onchange = (e) => { if(selectedBoxData) {selectedBoxData.weight = parseFloat(e.target.value) || 0; recordAndTimestamp();}}; document.getElementById('weightUnitSelect').onchange = (e) => { if(selectedBoxData) {selectedBoxData.weightUnit = e.target.value; recordAndTimestamp();}}; document.getElementById('tagInput').onkeydown = handleTagInput; document.getElementById('addItemForm').onsubmit = (e) => { handleAddItem(e); recordAndTimestamp(); }; const itemListEl = document.getElementById('itemList'); itemListEl.ondragstart = handleItemDragStart; itemListEl.ondragover = handleItemDragOver; itemListEl.ondrop = (e) => { handleItemDrop(e); recordAndTimestamp(); }; itemListEl.ondragleave = clearItemDropIndicators; document.getElementById('deleteBoxBtn').onclick = handleDeleteSelection; renderTags(); renderItemList(); renderIconPicker(); }
-        function updateMultiSelectInfoPanel() { infoPanelEl.innerHTML = `<h3>${selectedBoxes.length} Boxes Selected</h3><button id="deleteBoxBtn"><i class="bi bi-trash"></i> Delete Selected</button>`; document.getElementById('deleteBoxBtn').onclick = handleDeleteSelection; }
+        function updateInfoPanel() {
+            if (selectedBoxes.length !== 1) return;
+            const selectedBoxData = selectedBoxes[0];
+            const recordAndTimestamp = () => { if(selectedBoxData) {selectedBoxData.lastModified = new Date().toISOString(); updateInfoPanel(); recordAction();} };
+            infoPanelEl.innerHTML = `<h3 id="infoPanelTitleArea"><div style="display:flex;align-items:center;gap:10px;"><span id="infoPanelTitle"></span><span id="infoPanelIdChip" class="box-id-chip"></span></div><button id="closeInfoPanelBtn" class="info-panel-close-btn" title="Close Panel (Esc)"><i class="bi bi-x-lg"></i></button></h3><div><label for="boxNameInput">Name</label><input type="text" id="boxNameInput"></div><div><label for="boxColorInput">Color</label><input type="color" id="boxColorInput"></div><div><label for="descriptionInput">Description</label><textarea id="descriptionInput" rows="3"></textarea></div><div id="tagsContainer"><h4 class="section-header">Tags</h4><div class="tag-container"><input type="text" id="tagInput" placeholder="Add a tag..."></div></div><div id="weightContainer"><h4 class="section-header">Weight</h4><div style="display: flex; gap: 8px;"><input type="number" id="weightInput" min="0" step="0.1" style="flex-grow: 1;"><select id="weightUnitSelect"><option value="kg">kg</option><option value="lbs">lbs</option></select></div></div><div id="iconContainer"><h4 class="section-header">Icon</h4><div id="iconPicker"></div></div><div id="itemListContainer"><h4 class="section-header">Items</h4><ul id="itemList"></ul><form id="addItemForm" onsubmit="return false;"><input type="text" id="newItemNameInput" placeholder="Item name..." required><input type="number" id="newItemQtyInput" value="1" min="1" style="width: 60px;"><button type="submit" id="addItemBtn"><i class="bi bi-plus-lg"></i> Add</button></form></div><p id="lastModifiedText" style="font-size: 0.8em; color: var(--text-muted-color); text-align: center; margin-top: 20px;"></p><button id="deleteBoxBtn"><i class="bi bi-trash"></i> Delete Box</button>`;
+            document.getElementById('closeInfoPanelBtn').onclick = deselectAll;
+            document.getElementById('infoPanelTitle').textContent = selectedBoxData.name || "Box Properties";
+            document.getElementById('infoPanelIdChip').textContent = selectedBoxData.id.substring(0,6).toUpperCase();
+            document.getElementById('boxNameInput').value = selectedBoxData.name;
+            document.getElementById('boxColorInput').value = selectedBoxData.color;
+            document.getElementById('descriptionInput').value = selectedBoxData.description || '';
+            document.getElementById('weightInput').value = selectedBoxData.weight || 0;
+            document.getElementById('weightUnitSelect').value = selectedBoxData.weightUnit || 'kg';
+            document.getElementById('lastModifiedText').textContent = `Last Modified: ${new Date(selectedBoxData.lastModified).toLocaleString()}`;
+            document.getElementById('boxNameInput').onchange = (e) => { if(selectedBoxData) {selectedBoxData.name = e.target.value; recordAndTimestamp(); if (currentView === 'list') populateListView();}};
+            document.getElementById('boxColorInput').onchange = (e) => { if(selectedBoxData) {selectedBoxData.color = e.target.value; applyBoxStateFromData(selectedBoxData); recordAndTimestamp(); if (currentView === 'list') populateListView();}};
+            document.getElementById('descriptionInput').onchange = (e) => { if(selectedBoxData) {selectedBoxData.description = e.target.value; recordAndTimestamp(); if (currentView === 'list') populateListView();}};
+            document.getElementById('weightInput').onchange = (e) => { if(selectedBoxData) {selectedBoxData.weight = parseFloat(e.target.value) || 0; recordAndTimestamp();}};
+            document.getElementById('weightUnitSelect').onchange = (e) => { if(selectedBoxData) {selectedBoxData.weightUnit = e.target.value; recordAndTimestamp();}};
+            document.getElementById('tagInput').onkeydown = handleTagInput;
+            document.getElementById('addItemForm').onsubmit = (e) => { handleAddItem(e); recordAndTimestamp(); };
+            const itemListEl = document.getElementById('itemList');
+            itemListEl.ondragstart = handleItemDragStart; itemListEl.ondragover = handleItemDragOver; itemListEl.ondrop = (e) => { handleItemDrop(e); recordAndTimestamp(); };
+            itemListEl.ondragleave = clearItemDropIndicators;
+            document.getElementById('deleteBoxBtn').onclick = handleDeleteSelection;
+            renderTags(); renderItemList(); renderIconPicker();
+        }
+        function updateMultiSelectInfoPanel() {
+            infoPanelEl.innerHTML = `<h3>${selectedBoxes.length} Boxes Selected<button id="closeInfoPanelBtn" class="info-panel-close-btn" title="Close Panel (Esc)"><i class="bi bi-x-lg"></i></button></h3><button id="deleteBoxBtn"><i class="bi bi-trash"></i> Delete Selected</button>`;
+            document.getElementById('deleteBoxBtn').onclick = handleDeleteSelection;
+            document.getElementById('closeInfoPanelBtn').onclick = deselectAll;
+        }
         function renderTags() { if (selectedBoxes.length !== 1) return; const selectedBoxData = selectedBoxes[0]; const tagContainer = document.querySelector('#tagsContainer .tag-container'); const tagInput = document.getElementById('tagInput'); [...tagContainer.children].filter(child => child !== tagInput).forEach(child => child.remove()); selectedBoxData.tags.forEach(tagText => { const tagEl = document.createElement('span'); tagEl.className = 'tag'; tagEl.textContent = tagText; const removeEl = document.createElement('span'); removeEl.className = 'tag-remove bi bi-x'; removeEl.onclick = () => { selectedBoxData.tags = selectedBoxData.tags.filter(t => t !== tagText); selectedBoxData.lastModified = new Date().toISOString(); recordAction(); renderTags(); }; tagEl.appendChild(removeEl); tagContainer.insertBefore(tagEl, tagInput); }); }
         function handleTagInput(e) { if (e.key === 'Enter' && selectedBoxes.length === 1) { e.preventDefault(); const tagValue = e.target.value.trim(); if (tagValue && !selectedBoxes[0].tags.includes(tagValue)) { selectedBoxes[0].tags.push(tagValue); selectedBoxes[0].lastModified = new Date().toISOString(); recordAction(); renderTags(); } e.target.value = ''; } }
-
         function releaseMultiSelectPivot() { if (multiSelectPivot.children.length > 0) { multiSelectPivot.updateWorldMatrix(true, true); const children = [...multiSelectPivot.children]; for(const child of children) { const boxData = boxes.find(b => b.threeGroup === child); if (boxData) { child.getWorldPosition(boxData.position); scene.attach(child); } } } }
         function deselectAll() { releaseMultiSelectPivot(); selectedBoxes = []; if (currentView === 'list') { infoPanelEl.classList.add('hidden'); populateListView(); } updateSelectionState(); }
         function renderItemList() { if (selectedBoxes.length !== 1) return; const selectedBoxData = selectedBoxes[0]; const itemListEl = document.getElementById('itemList'); itemListEl.innerHTML = ''; selectedBoxData.items.forEach((item, index) => { const li = document.createElement('li'); li.dataset.itemId = item.id; li.draggable = true; const handle = document.createElement('span'); handle.className = 'drag-handle bi bi-grip-vertical'; const nameInput = document.createElement('input'); nameInput.type = 'text'; nameInput.className = 'item-name-input'; nameInput.value = item.name; nameInput.onchange = (e) => { item.name = e.target.value; selectedBoxData.lastModified = new Date().toISOString(); recordAction(); }; const qtyInput = document.createElement('input'); qtyInput.type = 'number'; qtyInput.className = 'item-qty-input'; qtyInput.value = item.qty; qtyInput.min = 1; qtyInput.onchange = (e) => { item.qty = parseInt(e.target.value) || 1; selectedBoxData.lastModified = new Date().toISOString(); recordAction(); }; const deleteBtn = document.createElement('button'); deleteBtn.className = 'delete-item-btn bi bi-x-lg'; deleteBtn.onclick = () => { selectedBoxData.items.splice(index, 1); renderItemList(); selectedBoxData.lastModified = new Date().toISOString(); recordAction(); if(currentView === 'list') populateListView(); }; li.append(handle, nameInput, qtyInput, deleteBtn); itemListEl.appendChild(li); }); }
@@ -540,150 +537,8 @@
         function clearItemDropIndicators() { document.querySelectorAll('#itemList li').forEach(li => { li.classList.remove('drop-indicator-top', 'drop-indicator-bottom'); }); }
         function handleItemDragOver(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; const targetLi = e.target.closest('li'); const draggingLi = document.querySelector('#itemList li.dragging'); if (!targetLi || !draggingLi || targetLi === draggingLi) return; clearItemDropIndicators(); const rect = targetLi.getBoundingClientRect(); const midY = rect.top + rect.height / 2; if (e.clientY < midY) targetLi.classList.add('drop-indicator-top'); else targetLi.classList.add('drop-indicator-bottom'); }
         function handleItemDrop(e) { e.preventDefault(); const targetLi = e.target.closest('li'); if (!targetLi || !draggedItem || selectedBoxes.length !== 1) { clearItemDropIndicators(); draggedItem = null; return; } const selectedBoxData = selectedBoxes[0]; const items = selectedBoxData.items; const draggedIndex = items.findIndex(item => item.id === draggedItem); let targetIndex = Array.from(targetLi.parentElement.children).indexOf(targetLi); if (draggedIndex === -1) return; if (targetLi.classList.contains('drop-indicator-bottom')) targetIndex++; if (draggedIndex < targetIndex) targetIndex--; const [dragged] = items.splice(draggedIndex, 1); items.splice(targetIndex, 0, dragged); clearItemDropIndicators(); document.querySelector('#itemList li.dragging')?.classList.remove('dragging'); draggedItem = null; renderItemList(); selectedBoxData.lastModified = new Date().toISOString(); recordAction(); if(currentView === 'list') populateListView(); }
-
-        async function handleDeleteSelection() {
-            if (selectedBoxes.length === 0) return;
-            let confirmed = !appSettings.showDeleteConfirmation;
-            if (appSettings.showDeleteConfirmation) {
-                try {
-                    const message = `Are you sure you want to delete ${selectedBoxes.length} box(es)? This action cannot be easily undone.`;
-                    const okButton = document.getElementById('confirmOkBtn');
-                    okButton.textContent = selectedBoxes.length > 1 ? "Delete Boxes" : "Delete Box";
-                    okButton.className = 'danger';
-                    confirmed = await showCustomConfirm("Confirm Deletion", message);
-                } catch { confirmed = false; }
-            }
-            if (!confirmed) return;
-            const boxesToRemove = [...selectedBoxes]; deselectAll();
-            boxesToRemove.forEach(boxToRemove => {
-                if (boxToRemove.threeGroup && currentView === '3d') { new TWEEN.Tween(boxToRemove.threeGroup.scale).to({x:0.01, y:0.01, z:0.01}, 300).easing(TWEEN.Easing.Quadratic.In).onComplete(() => {if (boxToRemove.threeGroup.parent) scene.remove(boxToRemove.threeGroup); disposeThreeObject(boxToRemove.threeGroup);}).start(); }
-                else if (boxToRemove.threeGroup) { if (boxToRemove.threeGroup.parent) scene.remove(boxToRemove.threeGroup); disposeThreeObject(boxToRemove.threeGroup); }
-                boxes = boxes.filter(b => b.id !== boxToRemove.id);
-            });
-            recordAction(); if (currentView === 'list') populateListView(); updateSelectionState();
-        }
-
-        function onMouseMove(event) { if(currentView === 'list') {hoverTooltipEl.classList.add('hidden'); return;} const mouse = new THREE.Vector2((event.clientX / window.innerWidth) * 2 - 1, -(event.clientY / window.innerHeight) * 2 + 1); const raycaster = new THREE.Raycaster(); raycaster.setFromCamera(mouse, camera); const collidableMeshes = boxes.flatMap(b => b.threeGroup ? [b.threeGroup.children[0], b.threeGroup.children[1]] : []); const intersects = raycaster.intersectObjects(collidableMeshes, false); let newHoveredBox = null; if (intersects.length > 0) { const parentGroup = intersects[0].object.parent; if (parentGroup && parentGroup.userData.id) newHoveredBox = boxes.find(b => b.id === parentGroup.userData.id); } if (hoveredBoxData !== newHoveredBox) hoveredBoxData = newHoveredBox; if (hoveredBoxData) { hoverTooltipEl.innerHTML = `<i class="${hoveredBoxData.icon || 'bi-box'}"></i> ${hoveredBoxData.name} <small>[${hoveredBoxData.id.substring(0,6).toUpperCase()}]</small>`; hoverTooltipEl.classList.remove('hidden'); hoverTooltipEl.style.left = (event.clientX + 15) + 'px'; hoverTooltipEl.style.top = (event.clientY + 15) + 'px'; } else { hoverTooltipEl.classList.add('hidden'); } }
-        function onCanvasClick(e) { if (currentView === 'list' || transformControls.dragging) return; if (hoveredBoxData) { if (e.shiftKey) { const index = selectedBoxes.findIndex(b => b.id === hoveredBoxData.id); if (index > -1) selectedBoxes.splice(index, 1); else selectedBoxes.push(hoveredBoxData); } else { deselectAll(); selectedBoxes.push(hoveredBoxData); } } else { deselectAll(); } updateSelectionState(); }
-        function isUiBlockingKeyboard() { const helpModal = document.getElementById('helpModal'); const qrScannerModal = document.getElementById('qrScannerModal'); const confirmModal = document.getElementById('customConfirmModal'); const settingsModal = document.getElementById('settingsModal'); return (helpModal && helpModal.style.display !== 'none') || (qrScannerModal && qrScannerModal.style.display !== 'none') || (confirmModal && confirmModal.style.display !== 'none') || (settingsModal && settingsModal.style.display !== 'none'); }
-
-        function onKeyDown(e) {
-            const activeElement = document.activeElement;
-            const isInputFocused = activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA' || activeElement.isContentEditable);
-            const isCtrlOrMeta = e.ctrlKey || e.metaKey;
-            const uiIsBlocking = isUiBlockingKeyboard();
-
-            if (isInputFocused) {
-                if (isCtrlOrMeta && ['a', 'c', 'x', 'v', 'z', 'y'].includes(e.key.toLowerCase())) return;
-                if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'escape'].includes(e.key.toLowerCase())) return;
-                if (e.key.toLowerCase() === 'enter' && activeElement.id !== 'findCodeInput') return;
-                if (!isCtrlOrMeta && !(activeElement.id === 'findCodeInput' && e.key.toLowerCase() === 'enter')) return;
-            }
-
-            if (isCtrlOrMeta) {
-                if (uiIsBlocking && !['/', '?'].includes(e.key.toLowerCase())) { if(e.key.toLowerCase() !== 'escape') e.preventDefault(); return; }
-                e.preventDefault(); let stateToRestore = null;
-                switch (e.key.toLowerCase()) {
-                    case 'n': { const { targetPosition } = getNewBoxTargetPosition(); const newBoxData = createBoxData({ position: targetPosition }); const addedBox = addBoxToScene(newBoxData, true); deselectAll(); selectedBoxes.push(addedBox); updateSelectionState(); if(currentView === '3d') focusOnBox(addedBox); recordAction(); break; }
-                    case 'f': document.getElementById('findCodeInput').focus(); document.getElementById('findCodeInput').select(); break;
-                    case ',': showSettingsModal(); break;
-                    case 'z': stateToRestore = actionManager.undo(); break;
-                    case 'y': stateToRestore = actionManager.redo(); break;
-                    case 'c': handleCopy(); break;
-                    case 'x': handleCut(); break;
-                    case 'v': handlePaste(); if (currentView === 'list') populateListView(); break;
-                    case '/': case '?': const helpModal = document.getElementById('helpModal'); if (helpModal) { if (helpModal.style.display === 'none' || helpModal.style.display === '') showHelpModal(); else hideHelpModal(); } break;
-                }
-                if (stateToRestore) { restoreState(stateToRestore); if (currentView === 'list') populateListView(); }
-            } else {
-                switch (e.key.toLowerCase()) {
-                    case 'escape': e.preventDefault(); const helpM = document.getElementById('helpModal'); const qrM = document.getElementById('qrScannerModal'); const confM = document.getElementById('customConfirmModal'); const setM = document.getElementById('settingsModal'); if (helpM && helpM.style.display !== 'none') hideHelpModal(); else if (qrM && qrM.style.display !== 'none') stopQrScanning(); else if (confM && confM.style.display !== 'none') hideCustomConfirm(false); else if (setM && setM.style.display !== 'none') hideSettingsModal(); else if (selectedBoxes.length > 0) deselectAll(); else if (!infoPanelEl.classList.contains('hidden')) infoPanelEl.classList.add('hidden'); break;
-                    case 'm': if (!uiIsBlocking && currentView === '3d') { setCurrentInteractionMode('translate'); e.preventDefault(); } break;
-                    case 'r': if (!uiIsBlocking && currentView === '3d') { setCurrentInteractionMode('rotate'); e.preventDefault(); } break;
-                    case 's': if (!uiIsBlocking && currentView === '3d') { setCurrentInteractionMode('scale'); e.preventDefault(); } break;
-                    case 'tab': if (!uiIsBlocking && currentView === '3d' && selectedBoxes.length === 1) { e.preventDefault(); if (currentInteractionMode === 'translate') setCurrentInteractionMode('rotate'); else if (currentInteractionMode === 'rotate') setCurrentInteractionMode('translate'); } break;
-                    case 'delete': case 'backspace': if (!uiIsBlocking && selectedBoxes.length > 0 && !isInputFocused) { e.preventDefault(); handleDeleteSelection(); } break;
-                    case 'arrowup': case 'arrowdown': case 'arrowleft': case 'arrowright':
-                        if (!uiIsBlocking && currentView === '3d' && selectedBoxes.length === 1) {
-                            e.preventDefault(); const box = selectedBoxes[0];
-                            if (currentInteractionMode === 'translate') { const moveDirection = new THREE.Vector3(); const camDir = new THREE.Vector3(); camera.getWorldDirection(camDir); const forward = new THREE.Vector3(camDir.x, 0, camDir.z).normalize(); const right = new THREE.Vector3().crossVectors(new THREE.Vector3(0,1,0), forward).normalize(); if (e.key === 'ArrowUp') moveDirection.add(forward); if (e.key === 'ArrowDown') moveDirection.sub(forward); if (e.key === 'ArrowLeft') moveDirection.sub(right); if (e.key === 'ArrowRight') moveDirection.add(right); moveDirection.multiplyScalar(KEYBOARD_MOVE_INCREMENT); box.position.add(moveDirection); box.position.x = Math.round(box.position.x / SNAP_GRID_SIZE) * SNAP_GRID_SIZE; box.position.y = Math.max(0, Math.round(box.position.y / SNAP_GRID_SIZE) * SNAP_GRID_SIZE); box.position.z = Math.round(box.position.z / SNAP_GRID_SIZE) * SNAP_GRID_SIZE; }
-                            else if (currentInteractionMode === 'rotate') { if (e.key === 'ArrowLeft') box.rotation.y += KEYBOARD_ROTATE_INCREMENT; if (e.key === 'ArrowRight') box.rotation.y -= KEYBOARD_ROTATE_INCREMENT; if (e.key === 'ArrowUp') box.rotation.x += KEYBOARD_ROTATE_INCREMENT; if (e.key === 'ArrowDown') box.rotation.x -= KEYBOARD_ROTATE_INCREMENT; }
-                            applyBoxStateFromData(box); box.lastModified = new Date().toISOString(); if (infoPanelEl && !infoPanelEl.classList.contains('hidden')) { const lastModifiedTextEl = document.getElementById('lastModifiedText'); if(lastModifiedTextEl) lastModifiedTextEl.textContent = `Last Modified: ${new Date(box.lastModified).toLocaleString()}`; } recordAction();
-                        }
-                        break;
-                }
-            }
-        }
-
-        function showHelpModal() { const m = document.getElementById('helpModal'); if(m) m.style.display = 'flex';}
-        function hideHelpModal() { const m = document.getElementById('helpModal'); if(m) m.style.display = 'none';}
-        let confirmResolve = null;
-        function showCustomConfirm(title = "Confirm", message = "Are you sure?") {
-            return new Promise((resolve) => {
-                confirmResolve = resolve;
-                document.getElementById('confirmTitle').textContent = title;
-                document.getElementById('confirmMessage').textContent = message;
-                document.getElementById('customConfirmModal').style.display = 'flex';
-                const okBtn = document.getElementById('confirmOkBtn');
-                const cancelBtn = document.getElementById('confirmCancelBtn');
-                okBtn.onclick = () => hideCustomConfirm(true);
-                cancelBtn.onclick = () => hideCustomConfirm(false);
-            });
-        }
-        function hideCustomConfirm(value) {
-            document.getElementById('customConfirmModal').style.display = 'none';
-            if (confirmResolve) { confirmResolve(value); confirmResolve = null; }
-        }
-        function showSettingsModal() { document.getElementById('showDeleteConfirmSetting').checked = appSettings.showDeleteConfirmation; document.getElementById('settingsModal').style.display = 'flex'; }
-        function hideSettingsModal() { document.getElementById('settingsModal').style.display = 'none'; }
-
-        function generateQrDataURL(text) {
-            return new Promise((resolve, reject) => {
-                const tempContainer = document.createElement('div');
-                new QRCode(tempContainer, { text: text, width: 128, height: 128, correctLevel: QRCode.CorrectLevel.M });
-                setTimeout(() => {
-                    const img = tempContainer.querySelector('img');
-                    const canvas = tempContainer.querySelector('canvas');
-                    if (img && img.src) resolve(img.src);
-                    else if (canvas) resolve(canvas.toDataURL());
-                    else reject(new Error("QR Code generation failed."));
-                }, 100);
-            });
-        }
-
-        async function handlePrintAllLabels() {
-            if (!boxes.length) { alert("No boxes to print labels for."); return; }
-            const busyIndicator = document.createElement('div');
-            busyIndicator.textContent = 'Preparing labels for printing...';
-            Object.assign(busyIndicator.style, { position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', padding: '20px', background: 'var(--surface-color)', border: '1px solid var(--border-color)', borderRadius: '8px', zIndex: '2000', color: 'var(--text-color)' });
-            document.body.appendChild(busyIndicator);
-
-            await new Promise(resolve => setTimeout(resolve, 50));
-
-            try {
-                let printableHTML = `<html><head><title>Box Labels</title><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"><style>body{margin:0;font-family:Arial,Helvetica,sans-serif}.label-sheet{width:210mm;min-height:290mm;padding:10mm;box-sizing:border-box;display:flex;flex-wrap:wrap;gap:2mm 2mm;page-break-after:always}.label{width:63.5mm;height:38.1mm;border:.1mm dotted #ccc;padding:2mm;box-sizing:border-box;overflow:hidden;display:flex;flex-direction:row;align-items:flex-start;background-color:#fff;color:#222;font-size:2.5mm}.label-content{flex-grow:1;display:flex;flex-direction:column;justify-content:space-between;height:100%;padding-right:1.5mm;overflow:hidden}.label-header{display:flex;align-items:flex-start;justify-content:space-between}.label-name{margin:0;font-size:3.2mm;line-height:1.1;font-weight:700;max-height:6.4mm;overflow:hidden;word-break:break-word;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}.label-icon{font-size:4.5mm;margin-left:1mm;flex-shrink:0}.label-description{font-size:2.2mm;margin:.5mm 0;color:#444;max-height:9mm;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical}.label-footer{display:flex;justify-content:space-between;align-items:flex-end;font-size:2mm;margin-top:auto;color:#555}.label-id,.label-weight{white-space:nowrap}.label-qrcode{width:17mm;height:17mm;align-self:center;flex-shrink:0;margin-left:1mm}.label-qrcode img{width:100%!important;height:100%!important}@media print{body{margin:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}.label-sheet{border:none;box-shadow:none;padding:0}}</style></head><body><div class="label-sheet">`;
-                for (const box of boxes) {
-                    const qrImgSrc = await generateQrDataURL(box.id);
-                    const descriptionText = (box.description || '').substring(0, 60) + ( (box.description || '').length > 60 ? '...' : '');
-                    const weightText = box.weight > 0 ? `Wt: ${box.weight}${box.weightUnit || 'kg'}` : '';
-                    printableHTML += `<div class="label"><div class="label-content"><div><div class="label-header"><h4 class="label-name">${box.name}</h4><i class="${box.icon || 'bi-box-seam-fill'} label-icon" style="color:${box.color};"></i></div><p class="label-description">${descriptionText}</p></div><div class="label-footer"><span class="label-id">ID: ${box.id.substring(0,8).toUpperCase()}</span><span class="label-weight">${weightText}</span></div></div><div class="label-qrcode"><img src="${qrImgSrc}" alt="QR Code for ${box.id}"></div></div>`;
-                }
-                printableHTML += `</div></body></html>`;
-                const printWindow = window.open('', '_blank');
-                if (printWindow) { printWindow.document.write(printableHTML); printWindow.document.close(); printWindow.onload = () => { printWindow.focus(); printWindow.print(); }; }
-                else { alert("Could not open print window. Check pop-up blocker."); }
-            } catch (err) { console.error("Error preparing labels:", err); alert("An error occurred preparing labels."); }
-            finally { if(document.body.contains(busyIndicator)) document.body.removeChild(busyIndicator); }
-        }
-
-        async function startQrScanning() { const modal = document.getElementById('qrScannerModal'); const resultEl = document.getElementById('qrScanResult'); if(!modal || !resultEl || !qrVideoElement) { console.error("QR Scanner UI elements not found"); return; } modal.style.display = 'flex'; resultEl.textContent = 'Requesting camera...'; try { videoStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } }); qrVideoElement.srcObject = videoStream; await qrVideoElement.play(); if(!qrScanCanvasElement || !qrScanCanvasCtx) { qrScanCanvasElement = document.getElementById('qrScanCanvas'); qrScanCanvasCtx = qrScanCanvasElement.getContext('2d', { willReadFrequently: true }); } qrScanCanvasElement.width = qrVideoElement.videoWidth; qrScanCanvasElement.height = qrVideoElement.videoHeight; resultEl.textContent = 'Align QR code...'; scanRequestId = requestAnimationFrame(tickQrScan); } catch (err) { console.error("Cam Err:", err); resultEl.textContent = 'Error: No camera.'; stopQrScanning(false); } }
-        function tickQrScan() { if (qrVideoElement && qrVideoElement.readyState === qrVideoElement.HAVE_ENOUGH_DATA) { qrScanCanvasCtx.drawImage(qrVideoElement, 0, 0, qrScanCanvasElement.width, qrScanCanvasElement.height); const imageData = qrScanCanvasCtx.getImageData(0, 0, qrScanCanvasElement.width, qrScanCanvasElement.height); const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "dontInvert" }); if (code && code.data) { document.getElementById('qrScanResult').textContent = `Found: ${code.data.substring(0,20)}...`; handleQrCodeResult(code.data); return; } } if (videoStream) { scanRequestId = requestAnimationFrame(tickQrScan); } }
-        function handleQrCodeResult(decodedId) { stopQrScanning(); const foundBox = boxes.find(b => b.id === decodedId); if (foundBox) { if (currentView === 'list') { toggleView(); } deselectAll(); selectedBoxes.push(foundBox); updateSelectionState(); focusOnBox(foundBox); const findInput = document.getElementById('findCodeInput'); if (findInput) { findInput.value = `Found: ${foundBox.name}`; setTimeout(() => { if (findInput.value === `Found: ${foundBox.name}`) findInput.value = ''; }, 3000); } } else { alert(`Box ID "${decodedId}" not found.`); } }
-        function stopQrScanning(clearMessage = true) { if (scanRequestId) { cancelAnimationFrame(scanRequestId); scanRequestId = null; } if (videoStream) { videoStream.getTracks().forEach(track => track.stop()); videoStream = null; } if(qrVideoElement) qrVideoElement.srcObject = null; const modal = document.getElementById('qrScannerModal'); if(modal) modal.style.display = 'none'; if(clearMessage && document.getElementById('qrScanResult')) document.getElementById('qrScanResult').textContent = 'Align QR code...'; }
-
         function toggleView() { const listViewContainer = document.getElementById('listViewContainer'); const rendererEl = renderer.domElement; const topBar = document.querySelector('.top-bar'); const toggleBtn = document.getElementById('toggleListViewBtn'); if (currentView === '3d') { currentView = 'list'; if(toggleBtn) toggleBtn.innerHTML = '<i class="bi bi-box-fill"></i> 3D View'; if(rendererEl) rendererEl.style.display = 'none'; transformControls.detach(); if(orbitControls) orbitControls.enabled = false; if (selectedBoxes.length === 1) { updateInfoPanel(); infoPanelEl.classList.remove('hidden');} else { infoPanelEl.classList.add('hidden');} if(listViewContainer) { listViewContainer.style.display = 'block'; const topBarHeight = topBar ? topBar.getBoundingClientRect().height : 70; listViewContainer.style.top = `${topBarHeight + 10}px`; populateListView(); } } else { currentView = '3d'; if(toggleBtn) toggleBtn.innerHTML = '<i class="bi bi-list-ul"></i> List View'; if(rendererEl) rendererEl.style.display = 'block'; if(listViewContainer) listViewContainer.style.display = 'none'; if(orbitControls) orbitControls.enabled = true; } updateSelectionState(); updateInteractionModeButton(); }
         function populateListView() { const container = document.getElementById('listViewContainer'); if(!container) return; container.innerHTML = ''; const ul = document.createElement('ul'); boxes.sort((a,b) => a.name.localeCompare(b.name)).forEach(box => { const li = document.createElement('li'); li.dataset.boxId = box.id; li.innerHTML = `<div class="list-item-icon" style="color:${box.color};"><i class="${box.icon || 'bi-box-seam-fill'}"></i></div><div class="list-item-details"><strong>${box.name}</strong><p>ID: ${box.id.substring(0,8).toUpperCase()} | Items: ${box.items.length}</p></div><i class="bi bi-chevron-right list-item-arrow"></i>`; li.addEventListener('click', () => { selectedBoxes = [box]; updateSelectionState(); }); ul.appendChild(li); }); container.appendChild(ul); updateSelectionState(); }
-
         function handleCopy() { if (selectedBoxes.length > 0) { clipboard = selectedBoxes.map(box => { const cleanBox = { ...box, threeGroup: undefined }; cleanBox.position = box.position.clone(); cleanBox.size = box.size.clone(); cleanBox.rotation = box.rotation.clone(); return cleanBox; }); console.log(`Copied ${clipboard.length} box(es) to clipboard.`); } }
         function handleCut() { if (selectedBoxes.length > 0) { handleCopy(); handleDeleteSelection(); } }
         function handlePaste() { if (clipboard.length === 0) return; const newSelection = []; const newClipboardData = []; if (clipboard.length === 1) { const originalBoxData = clipboard[0]; const newPosition = originalBoxData.position.clone().add(new THREE.Vector3(0, originalBoxData.size.y + 0.5, 0)); const newBoxData = createBoxData({...originalBoxData, id: THREE.MathUtils.generateUUID(), position: newPosition, rotation: originalBoxData.rotation.clone(), lastModified: new Date().toISOString() }); const addedBox = addBoxToScene(newBoxData, true); newSelection.push(addedBox); newClipboardData.push({...addedBox, threeGroup: undefined, rotation: addedBox.rotation.clone() }); } else { const originalCenter = new THREE.Vector3(); const selectionBBox = new THREE.Box3(); clipboard.forEach(boxData => { const boxBBox = new THREE.Box3().setFromCenterAndSize(boxData.position, boxData.size); selectionBBox.union(boxBBox); }); selectionBBox.getCenter(originalCenter); const selectionSize = new THREE.Vector3(); selectionBBox.getSize(selectionSize); const cameraDirection = new THREE.Vector3(); camera.getWorldDirection(cameraDirection); cameraDirection.y = 0; cameraDirection.normalize(); const dotX = Math.abs(cameraDirection.x); const dotZ = Math.abs(cameraDirection.z); let offsetVector; const padding = 1.0; if (dotZ > dotX) offsetVector = new THREE.Vector3(selectionSize.x + padding, 0, 0); else offsetVector = new THREE.Vector3(0, 0, selectionSize.z + padding); const newCenter = originalCenter.clone().add(offsetVector); clipboard.forEach(boxData => { const relativePos = boxData.position.clone().sub(originalCenter); const newPosition = newCenter.clone().add(relativePos); const newBoxData = createBoxData({...boxData, id: THREE.MathUtils.generateUUID(), position: newPosition, rotation: boxData.rotation.clone(), lastModified: new Date().toISOString() }); const addedBox = addBoxToScene(newBoxData, true); newSelection.push(addedBox); const cleanPastedBox = {...addedBox, threeGroup: undefined, rotation: addedBox.rotation.clone()}; cleanPastedBox.position = newPosition.clone(); newClipboardData.push(cleanPastedBox); }); } if (newSelection.length > 0) { deselectAll(); selectedBoxes = newSelection; updateSelectionState(); clipboard = newClipboardData; recordAction(); if(currentView === 'list') populateListView();} }
@@ -696,41 +551,40 @@
         function recordAction() { actionManager.pushState(JSON.stringify(boxes.map(box => ({...box, threeGroup: undefined})))); }
         function restoreState(stateJSON, importedSettings = null) {
             deselectAll(); [...boxes].forEach(b => { if (b.threeGroup) { scene.remove(b.threeGroup); disposeThreeObject(b.threeGroup); } }); boxes = [];
-            const parsedState = JSON.parse(stateJSON);
-            let dataToProcess = parsedState;
-            if (parsedState.version === "1.1" && parsedState.boxes) {
-                dataToProcess = parsedState.boxes;
-                if (parsedState.settings && importedSettings) {
-                    appSettings = {...appSettings, ...parsedState.settings};
-                    saveSettings();
-                    if(document.getElementById('showDeleteConfirmSetting')) {
-                        document.getElementById('showDeleteConfirmSetting').checked = appSettings.showDeleteConfirmation;
+            let dataToProcess;
+            try {
+                const parsedData = JSON.parse(stateJSON);
+                if (parsedData.version === "1.1" && parsedData.boxes) { // New format
+                    dataToProcess = parsedData.boxes;
+                    if (parsedData.settings && importedSettings) {
+                        appSettings = {...appSettings, ...parsedData.settings};
+                        saveSettings();
+                        if(document.getElementById('showDeleteConfirmSetting')) {
+                            document.getElementById('showDeleteConfirmSetting').checked = appSettings.showDeleteConfirmation;
+                        }
                     }
-                }
+                } else if(Array.isArray(parsedData)) { // Old format
+                    dataToProcess = parsedData;
+                } else { throw new Error("Unrecognized data format."); }
+
+                dataToProcess.forEach(boxData => {
+                    boxData.position = new THREE.Vector3(boxData.position.x, boxData.position.y, boxData.position.z);
+                    boxData.size = new THREE.Vector3(boxData.size.x, boxData.size.y, boxData.size.z);
+                    if (boxData.rotation && typeof boxData.rotation === 'object' && boxData.rotation._x !== undefined) { boxData.rotation = new THREE.Euler(boxData.rotation._x, boxData.rotation._y, boxData.rotation._z, boxData.rotation._order || 'XYZ'); } else { boxData.rotation = new THREE.Euler(0,0,0); }
+                    addBoxToScene(boxData);
+                });
+            } catch (err) {
+                 alert('Error: Invalid or corrupt JSON file.'); console.error(err);
+                 boxes = []; // Clear boxes on error
             }
-            dataToProcess.forEach(boxData => {
-                boxData.position = new THREE.Vector3(boxData.position.x, boxData.position.y, boxData.position.z);
-                boxData.size = new THREE.Vector3(boxData.size.x, boxData.size.y, boxData.size.z);
-                if (boxData.rotation && typeof boxData.rotation === 'object' && boxData.rotation._x !== undefined) { boxData.rotation = new THREE.Euler(boxData.rotation._x, boxData.rotation._y, boxData.rotation._z, boxData.rotation._order || 'XYZ'); } else { boxData.rotation = new THREE.Euler(0,0,0); }
-                addBoxToScene(boxData);
-            });
             updateSelectionState(); if(currentView === 'list') populateListView();
         }
         function handleImport(event) {
             if (!event.target.files[0]) return;
             const reader = new FileReader();
             reader.onload = (e) => {
-                try {
-                    const importedData = JSON.parse(e.target.result);
-                    if (importedData.version === "1.1" && importedData.boxes) {
-                        restoreState(JSON.stringify(importedData.boxes), importedData.settings);
-                    } else {
-                        restoreState(e.target.result);
-                    }
-                    recordAction();
-                } catch (err) {
-                    alert('Error: Invalid or corrupt JSON file.'); console.error(err);
-                }
+                restoreState(e.target.result, true); // Pass true to indicate it's from a file import to merge settings
+                recordAction();
             };
             reader.readAsText(event.target.files[0]); event.target.value = '';
         }
@@ -750,7 +604,9 @@
             }
         }
 
+        // --- 5. INITIALIZATION CALL ---
         init();
+
     </script>
 </body>
 </html>
