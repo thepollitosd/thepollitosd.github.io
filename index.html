@@ -235,7 +235,7 @@
         class ActionManager { constructor() { this.undoStack = []; this.redoStack = []; } pushState(state) { this.undoStack.push(state); this.redoStack = []; if (this.undoStack.length > 50) this.undoStack.shift(); } undo() { if (this.undoStack.length <= 1) return null; const currentState = this.undoStack.pop(); this.redoStack.push(currentState); return JSON.parse(JSON.stringify(this.undoStack[this.undoStack.length - 1])); } redo() { if (this.redoStack.length === 0) return null; const nextState = this.redoStack.pop(); this.undoStack.push(nextState); return JSON.parse(JSON.stringify(nextState)); } }
         const actionManager = new ActionManager();
 
-        // --- 3. HELPER FUNCTIONS (MODALS, SETTINGS, PRINTING, ETC.) ---
+        // --- 3. HELPER FUNCTIONS ---
         function loadSettings() {
             const savedSettings = localStorage.getItem('boxOrganizerAppSettings');
             if (savedSettings) {
@@ -324,7 +324,6 @@
         function isUiBlockingKeyboard() { const helpModal = document.getElementById('helpModal'); const qrScannerModal = document.getElementById('qrScannerModal'); const confirmModal = document.getElementById('customConfirmModal'); const settingsModal = document.getElementById('settingsModal'); return (helpModal && helpModal.style.display === 'flex') || (qrScannerModal && qrScannerModal.style.display === 'flex') || (confirmModal && confirmModal.style.display === 'flex') || (settingsModal && settingsModal.style.display === 'flex'); }
 
         // --- 4. CORE 3D & UI FUNCTIONS ---
-        // (functions from createBoxData to the end of UI update functions)
         function createBoxData(overrideData = {}) {
             return {
                 id: THREE.MathUtils.generateUUID(), name: "New Box", color: DEFAULT_BOX_COLOR,
@@ -500,6 +499,7 @@
             const selectedBoxData = selectedBoxes[0];
             const recordAndTimestamp = () => { if(selectedBoxData) {selectedBoxData.lastModified = new Date().toISOString(); updateInfoPanel(); recordAction();} };
             infoPanelEl.innerHTML = `<h3 id="infoPanelTitleArea"><div style="display:flex;align-items:center;gap:10px;"><span id="infoPanelTitle"></span><span id="infoPanelIdChip" class="box-id-chip"></span></div><button id="closeInfoPanelBtn" class="info-panel-close-btn" title="Close Panel (Esc)"><i class="bi bi-x-lg"></i></button></h3><div><label for="boxNameInput">Name</label><input type="text" id="boxNameInput"></div><div><label for="boxColorInput">Color</label><input type="color" id="boxColorInput"></div><div><label for="descriptionInput">Description</label><textarea id="descriptionInput" rows="3"></textarea></div><div id="tagsContainer"><h4 class="section-header">Tags</h4><div class="tag-container"><input type="text" id="tagInput" placeholder="Add a tag..."></div></div><div id="weightContainer"><h4 class="section-header">Weight</h4><div style="display: flex; gap: 8px;"><input type="number" id="weightInput" min="0" step="0.1" style="flex-grow: 1;"><select id="weightUnitSelect"><option value="kg">kg</option><option value="lbs">lbs</option></select></div></div><div id="iconContainer"><h4 class="section-header">Icon</h4><div id="iconPicker"></div></div><div id="itemListContainer"><h4 class="section-header">Items</h4><ul id="itemList"></ul><form id="addItemForm" onsubmit="return false;"><input type="text" id="newItemNameInput" placeholder="Item name..." required><input type="number" id="newItemQtyInput" value="1" min="1" style="width: 60px;"><button type="submit" id="addItemBtn"><i class="bi bi-plus-lg"></i> Add</button></form></div><p id="lastModifiedText" style="font-size: 0.8em; color: var(--text-muted-color); text-align: center; margin-top: 20px;"></p><button id="deleteBoxBtn"><i class="bi bi-trash"></i> Delete Box</button>`;
+            
             document.getElementById('closeInfoPanelBtn').onclick = deselectAll;
             document.getElementById('infoPanelTitle').textContent = selectedBoxData.name || "Box Properties";
             document.getElementById('infoPanelIdChip').textContent = selectedBoxData.id.substring(0,6).toUpperCase();
@@ -537,8 +537,6 @@
         function clearItemDropIndicators() { document.querySelectorAll('#itemList li').forEach(li => { li.classList.remove('drop-indicator-top', 'drop-indicator-bottom'); }); }
         function handleItemDragOver(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; const targetLi = e.target.closest('li'); const draggingLi = document.querySelector('#itemList li.dragging'); if (!targetLi || !draggingLi || targetLi === draggingLi) return; clearItemDropIndicators(); const rect = targetLi.getBoundingClientRect(); const midY = rect.top + rect.height / 2; if (e.clientY < midY) targetLi.classList.add('drop-indicator-top'); else targetLi.classList.add('drop-indicator-bottom'); }
         function handleItemDrop(e) { e.preventDefault(); const targetLi = e.target.closest('li'); if (!targetLi || !draggedItem || selectedBoxes.length !== 1) { clearItemDropIndicators(); draggedItem = null; return; } const selectedBoxData = selectedBoxes[0]; const items = selectedBoxData.items; const draggedIndex = items.findIndex(item => item.id === draggedItem); let targetIndex = Array.from(targetLi.parentElement.children).indexOf(targetLi); if (draggedIndex === -1) return; if (targetLi.classList.contains('drop-indicator-bottom')) targetIndex++; if (draggedIndex < targetIndex) targetIndex--; const [dragged] = items.splice(draggedIndex, 1); items.splice(targetIndex, 0, dragged); clearItemDropIndicators(); document.querySelector('#itemList li.dragging')?.classList.remove('dragging'); draggedItem = null; renderItemList(); selectedBoxData.lastModified = new Date().toISOString(); recordAction(); if(currentView === 'list') populateListView(); }
-        function toggleView() { const listViewContainer = document.getElementById('listViewContainer'); const rendererEl = renderer.domElement; const topBar = document.querySelector('.top-bar'); const toggleBtn = document.getElementById('toggleListViewBtn'); if (currentView === '3d') { currentView = 'list'; if(toggleBtn) toggleBtn.innerHTML = '<i class="bi bi-box-fill"></i> 3D View'; if(rendererEl) rendererEl.style.display = 'none'; transformControls.detach(); if(orbitControls) orbitControls.enabled = false; if (selectedBoxes.length === 1) { updateInfoPanel(); infoPanelEl.classList.remove('hidden');} else { infoPanelEl.classList.add('hidden');} if(listViewContainer) { listViewContainer.style.display = 'block'; const topBarHeight = topBar ? topBar.getBoundingClientRect().height : 70; listViewContainer.style.top = `${topBarHeight + 10}px`; populateListView(); } } else { currentView = '3d'; if(toggleBtn) toggleBtn.innerHTML = '<i class="bi bi-list-ul"></i> List View'; if(rendererEl) rendererEl.style.display = 'block'; if(listViewContainer) listViewContainer.style.display = 'none'; if(orbitControls) orbitControls.enabled = true; } updateSelectionState(); updateInteractionModeButton(); }
-        function populateListView() { const container = document.getElementById('listViewContainer'); if(!container) return; container.innerHTML = ''; const ul = document.createElement('ul'); boxes.sort((a,b) => a.name.localeCompare(b.name)).forEach(box => { const li = document.createElement('li'); li.dataset.boxId = box.id; li.innerHTML = `<div class="list-item-icon" style="color:${box.color};"><i class="${box.icon || 'bi-box-seam-fill'}"></i></div><div class="list-item-details"><strong>${box.name}</strong><p>ID: ${box.id.substring(0,8).toUpperCase()} | Items: ${box.items.length}</p></div><i class="bi bi-chevron-right list-item-arrow"></i>`; li.addEventListener('click', () => { selectedBoxes = [box]; updateSelectionState(); }); ul.appendChild(li); }); container.appendChild(ul); updateSelectionState(); }
         function handleCopy() { if (selectedBoxes.length > 0) { clipboard = selectedBoxes.map(box => { const cleanBox = { ...box, threeGroup: undefined }; cleanBox.position = box.position.clone(); cleanBox.size = box.size.clone(); cleanBox.rotation = box.rotation.clone(); return cleanBox; }); console.log(`Copied ${clipboard.length} box(es) to clipboard.`); } }
         function handleCut() { if (selectedBoxes.length > 0) { handleCopy(); handleDeleteSelection(); } }
         function handlePaste() { if (clipboard.length === 0) return; const newSelection = []; const newClipboardData = []; if (clipboard.length === 1) { const originalBoxData = clipboard[0]; const newPosition = originalBoxData.position.clone().add(new THREE.Vector3(0, originalBoxData.size.y + 0.5, 0)); const newBoxData = createBoxData({...originalBoxData, id: THREE.MathUtils.generateUUID(), position: newPosition, rotation: originalBoxData.rotation.clone(), lastModified: new Date().toISOString() }); const addedBox = addBoxToScene(newBoxData, true); newSelection.push(addedBox); newClipboardData.push({...addedBox, threeGroup: undefined, rotation: addedBox.rotation.clone() }); } else { const originalCenter = new THREE.Vector3(); const selectionBBox = new THREE.Box3(); clipboard.forEach(boxData => { const boxBBox = new THREE.Box3().setFromCenterAndSize(boxData.position, boxData.size); selectionBBox.union(boxBBox); }); selectionBBox.getCenter(originalCenter); const selectionSize = new THREE.Vector3(); selectionBBox.getSize(selectionSize); const cameraDirection = new THREE.Vector3(); camera.getWorldDirection(cameraDirection); cameraDirection.y = 0; cameraDirection.normalize(); const dotX = Math.abs(cameraDirection.x); const dotZ = Math.abs(cameraDirection.z); let offsetVector; const padding = 1.0; if (dotZ > dotX) offsetVector = new THREE.Vector3(selectionSize.x + padding, 0, 0); else offsetVector = new THREE.Vector3(0, 0, selectionSize.z + padding); const newCenter = originalCenter.clone().add(offsetVector); clipboard.forEach(boxData => { const relativePos = boxData.position.clone().sub(originalCenter); const newPosition = newCenter.clone().add(relativePos); const newBoxData = createBoxData({...boxData, id: THREE.MathUtils.generateUUID(), position: newPosition, rotation: boxData.rotation.clone(), lastModified: new Date().toISOString() }); const addedBox = addBoxToScene(newBoxData, true); newSelection.push(addedBox); const cleanPastedBox = {...addedBox, threeGroup: undefined, rotation: addedBox.rotation.clone()}; cleanPastedBox.position = newPosition.clone(); newClipboardData.push(cleanPastedBox); }); } if (newSelection.length > 0) { deselectAll(); selectedBoxes = newSelection; updateSelectionState(); clipboard = newClipboardData; recordAction(); if(currentView === 'list') populateListView();} }
@@ -554,7 +552,7 @@
             let dataToProcess;
             try {
                 const parsedData = JSON.parse(stateJSON);
-                if (parsedData.version === "1.1" && parsedData.boxes) { // New format
+                if (parsedData.version === "1.1" && parsedData.boxes) {
                     dataToProcess = parsedData.boxes;
                     if (parsedData.settings && importedSettings) {
                         appSettings = {...appSettings, ...parsedData.settings};
@@ -563,27 +561,22 @@
                             document.getElementById('showDeleteConfirmSetting').checked = appSettings.showDeleteConfirmation;
                         }
                     }
-                } else if(Array.isArray(parsedData)) { // Old format
-                    dataToProcess = parsedData;
-                } else { throw new Error("Unrecognized data format."); }
-
+                } else if(Array.isArray(parsedData)) { dataToProcess = parsedData; }
+                else { throw new Error("Unrecognized data format."); }
                 dataToProcess.forEach(boxData => {
                     boxData.position = new THREE.Vector3(boxData.position.x, boxData.position.y, boxData.position.z);
                     boxData.size = new THREE.Vector3(boxData.size.x, boxData.size.y, boxData.size.z);
                     if (boxData.rotation && typeof boxData.rotation === 'object' && boxData.rotation._x !== undefined) { boxData.rotation = new THREE.Euler(boxData.rotation._x, boxData.rotation._y, boxData.rotation._z, boxData.rotation._order || 'XYZ'); } else { boxData.rotation = new THREE.Euler(0,0,0); }
                     addBoxToScene(boxData);
                 });
-            } catch (err) {
-                 alert('Error: Invalid or corrupt JSON file.'); console.error(err);
-                 boxes = []; // Clear boxes on error
-            }
+            } catch (err) { alert('Error: Invalid or corrupt JSON file.'); console.error(err); boxes = []; }
             updateSelectionState(); if(currentView === 'list') populateListView();
         }
         function handleImport(event) {
             if (!event.target.files[0]) return;
             const reader = new FileReader();
             reader.onload = (e) => {
-                restoreState(e.target.result, true); // Pass true to indicate it's from a file import to merge settings
+                restoreState(e.target.result, true);
                 recordAction();
             };
             reader.readAsText(event.target.files[0]); event.target.value = '';
@@ -603,8 +596,57 @@
                  renderer.render(scene, camera);
             }
         }
+        
+        // --- 5. MAIN EVENT HANDLERS ---
+        function onKeyDown(e) {
+            const activeElement = document.activeElement;
+            const isInputFocused = activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA' || activeElement.isContentEditable);
+            const isCtrlOrMeta = e.ctrlKey || e.metaKey;
+            const uiIsBlocking = isUiBlockingKeyboard();
 
-        // --- 5. INITIALIZATION CALL ---
+            if (isInputFocused) {
+                if (isCtrlOrMeta && ['a', 'c', 'x', 'v', 'z', 'y'].includes(e.key.toLowerCase())) return;
+                if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'escape'].includes(e.key.toLowerCase())) return;
+                if (e.key.toLowerCase() === 'enter' && activeElement.id !== 'findCodeInput') return;
+                if (!isCtrlOrMeta && !(activeElement.id === 'findCodeInput' && e.key.toLowerCase() === 'enter')) return;
+            }
+
+            if (isCtrlOrMeta) {
+                if (uiIsBlocking && !['/', '?'].includes(e.key.toLowerCase())) { if(e.key.toLowerCase() !== 'escape') e.preventDefault(); return; }
+                e.preventDefault(); let stateToRestore = null;
+                switch (e.key.toLowerCase()) {
+                    case 'n': { const { targetPosition } = getNewBoxTargetPosition(); const newBoxData = createBoxData({ position: targetPosition }); const addedBox = addBoxToScene(newBoxData, true); deselectAll(); selectedBoxes.push(addedBox); updateSelectionState(); if(currentView === '3d') focusOnBox(addedBox); recordAction(); break; }
+                    case 'f': document.getElementById('findCodeInput').focus(); document.getElementById('findCodeInput').select(); break;
+                    case ',': showSettingsModal(); break;
+                    case 'z': stateToRestore = actionManager.undo(); break;
+                    case 'y': stateToRestore = actionManager.redo(); break;
+                    case 'c': handleCopy(); break;
+                    case 'x': handleCut(); break;
+                    case 'v': handlePaste(); if (currentView === 'list') populateListView(); break;
+                    case '/': case '?': const helpModal = document.getElementById('helpModal'); if (helpModal) { if (helpModal.style.display === 'none' || helpModal.style.display === '') showHelpModal(); else hideHelpModal(); } break;
+                }
+                if (stateToRestore) { restoreState(stateToRestore); if (currentView === 'list') populateListView(); }
+            } else {
+                switch (e.key.toLowerCase()) {
+                    case 'escape': e.preventDefault(); const helpM = document.getElementById('helpModal'); const qrM = document.getElementById('qrScannerModal'); const confM = document.getElementById('customConfirmModal'); const setM = document.getElementById('settingsModal'); if (helpM && helpM.style.display !== 'none') hideHelpModal(); else if (qrM && qrM.style.display !== 'none') stopQrScanning(); else if (confM && confM.style.display !== 'none') hideCustomConfirm(false); else if (setM && setM.style.display !== 'none') hideSettingsModal(); else if (selectedBoxes.length > 0) deselectAll(); else if (!infoPanelEl.classList.contains('hidden')) infoPanelEl.classList.add('hidden'); break;
+                    case 'm': if (!uiIsBlocking && currentView === '3d') { setCurrentInteractionMode('translate'); e.preventDefault(); } break;
+                    case 'r': if (!uiIsBlocking && currentView === '3d') { setCurrentInteractionMode('rotate'); e.preventDefault(); } break;
+                    case 's': if (!uiIsBlocking && currentView === '3d') { setCurrentInteractionMode('scale'); e.preventDefault(); } break;
+                    case 'tab': if (!uiIsBlocking && currentView === '3d' && selectedBoxes.length === 1) { e.preventDefault(); if (currentInteractionMode === 'translate') setCurrentInteractionMode('rotate'); else if (currentInteractionMode === 'rotate') setCurrentInteractionMode('translate'); } break;
+                    case 'delete': case 'backspace': if (!uiIsBlocking && selectedBoxes.length > 0 && !isInputFocused) { e.preventDefault(); handleDeleteSelection(); } break;
+                    case 'arrowup': case 'arrowdown': case 'arrowleft': case 'arrowright':
+                        if (!uiIsBlocking && currentView === '3d' && selectedBoxes.length === 1) {
+                            e.preventDefault(); const box = selectedBoxes[0];
+                            if (currentInteractionMode === 'translate') { const moveDirection = new THREE.Vector3(); const camDir = new THREE.Vector3(); camera.getWorldDirection(camDir); const forward = new THREE.Vector3(camDir.x, 0, camDir.z).normalize(); const right = new THREE.Vector3().crossVectors(new THREE.Vector3(0,1,0), forward).normalize(); if (e.key === 'ArrowUp') moveDirection.add(forward); if (e.key === 'ArrowDown') moveDirection.sub(forward); if (e.key === 'ArrowLeft') moveDirection.sub(right); if (e.key === 'ArrowRight') moveDirection.add(right); moveDirection.multiplyScalar(KEYBOARD_MOVE_INCREMENT); box.position.add(moveDirection); box.position.x = Math.round(box.position.x / SNAP_GRID_SIZE) * SNAP_GRID_SIZE; box.position.y = Math.max(0, Math.round(box.position.y / SNAP_GRID_SIZE) * SNAP_GRID_SIZE); box.position.z = Math.round(box.position.z / SNAP_GRID_SIZE) * SNAP_GRID_SIZE; }
+                            else if (currentInteractionMode === 'rotate') { if (e.key === 'ArrowLeft') box.rotation.y += KEYBOARD_ROTATE_INCREMENT; if (e.key === 'ArrowRight') box.rotation.y -= KEYBOARD_ROTATE_INCREMENT; if (e.key === 'ArrowUp') box.rotation.x += KEYBOARD_ROTATE_INCREMENT; if (e.key === 'ArrowDown') box.rotation.x -= KEYBOARD_ROTATE_INCREMENT; }
+                            applyBoxStateFromData(box); box.lastModified = new Date().toISOString(); if (infoPanelEl && !infoPanelEl.classList.contains('hidden')) { const lastModifiedTextEl = document.getElementById('lastModifiedText'); if(lastModifiedTextEl) lastModifiedTextEl.textContent = `Last Modified: ${new Date(box.lastModified).toLocaleString()}`; } recordAction();
+                        }
+                        break;
+                }
+            }
+        }
+        
+        // --- 6. INITIALIZATION CALL ---
         init();
 
     </script>
