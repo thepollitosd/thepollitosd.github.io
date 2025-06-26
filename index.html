@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Box Organizer Pro - Full Feature v2</title>
+    <title>Box Organizer Pro - Full Feature v3</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <style>
         :root { 
@@ -189,9 +189,9 @@
     <div id="listViewContainer"></div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/20.0.3/tween.umd.js"></script>
+    <!-- QR Code Generation (for HTML printing) -->
     <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- QR Code Scanning (from webcam) -->
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 
     <script type="importmap">{ "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js", "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/" } }</script>
@@ -239,14 +239,11 @@
             if (savedSettings) {
                 try {
                     const parsed = JSON.parse(savedSettings);
-                     // Merge, giving precedence to saved values but keeping defaults for new/missing ones
                     appSettings = { ...appSettings, ...parsed };
                 } catch(e) {
                     console.error("Error parsing saved settings:", e);
-                    // Keep default appSettings
                 }
             }
-             // Ensure critical defaults
             appSettings.showDeleteConfirmation = appSettings.showDeleteConfirmation !== undefined ? appSettings.showDeleteConfirmation : true;
         }
 
@@ -380,7 +377,7 @@
                     selectedBoxData.rotation.copy(group.rotation);
                 }
                 selectedBoxData.position.x = Math.round(group.position.x / SNAP_GRID_SIZE) * SNAP_GRID_SIZE;
-                selectedBoxData.position.y = Math.max(0, Math.round(group.position.y / SNAP_GRID_SIZE) * SNAP_GRID_SIZE); // Keep on or above ground
+                selectedBoxData.position.y = Math.max(0, Math.round(group.position.y / SNAP_GRID_SIZE) * SNAP_GRID_SIZE);
                 selectedBoxData.position.z = Math.round(group.position.z / SNAP_GRID_SIZE) * SNAP_GRID_SIZE;
                 applyBoxStateFromData(selectedBoxData);
                 selectedBoxData.lastModified = new Date().toISOString();
@@ -472,7 +469,7 @@
                     foundBox = boxes.find(b => (b.id.substring(0, 6).toUpperCase() === searchTermUpper) || (b.name && b.name.toUpperCase() === searchTermUpper));
                 }
                 if (foundBox) {
-                    if (currentView === 'list') toggleView(); // Switch to 3D if in list
+                    if (currentView === 'list') toggleView();
                     deselectAll(); selectedBoxes.push(foundBox); updateSelectionState(); focusOnBox(foundBox);
                     document.getElementById('findCodeInput').value = '';
                 } else { alert(searchTerm ? 'Box not found!' : 'Please enter ID or Name.'); }
@@ -556,7 +553,7 @@
                     const message = `Are you sure you want to delete ${selectedBoxes.length} box(es)? This action cannot be easily undone.`;
                     const okButton = document.getElementById('confirmOkBtn');
                     okButton.textContent = selectedBoxes.length > 1 ? "Delete Boxes" : "Delete Box";
-                    okButton.className = 'danger'; // Ensure it's red
+                    okButton.className = 'danger';
                     confirmed = await showCustomConfirm("Confirm Deletion", message);
                 } catch { confirmed = false; }
             }
@@ -615,12 +612,6 @@
                             e.preventDefault(); const box = selectedBoxes[0];
                             if (currentInteractionMode === 'translate') { const moveDirection = new THREE.Vector3(); const camDir = new THREE.Vector3(); camera.getWorldDirection(camDir); const forward = new THREE.Vector3(camDir.x, 0, camDir.z).normalize(); const right = new THREE.Vector3().crossVectors(new THREE.Vector3(0,1,0), forward).normalize(); if (e.key === 'ArrowUp') moveDirection.add(forward); if (e.key === 'ArrowDown') moveDirection.sub(forward); if (e.key === 'ArrowLeft') moveDirection.sub(right); if (e.key === 'ArrowRight') moveDirection.add(right); moveDirection.multiplyScalar(KEYBOARD_MOVE_INCREMENT); box.position.add(moveDirection); box.position.x = Math.round(box.position.x / SNAP_GRID_SIZE) * SNAP_GRID_SIZE; box.position.y = Math.max(0, Math.round(box.position.y / SNAP_GRID_SIZE) * SNAP_GRID_SIZE); box.position.z = Math.round(box.position.z / SNAP_GRID_SIZE) * SNAP_GRID_SIZE; }
                             else if (currentInteractionMode === 'rotate') { if (e.key === 'ArrowLeft') box.rotation.y += KEYBOARD_ROTATE_INCREMENT; if (e.key === 'ArrowRight') box.rotation.y -= KEYBOARD_ROTATE_INCREMENT; if (e.key === 'ArrowUp') box.rotation.x += KEYBOARD_ROTATE_INCREMENT; if (e.key === 'ArrowDown') box.rotation.x -= KEYBOARD_ROTATE_INCREMENT; }
-                            // Arrow key scaling (optional):
-                            // else if (currentInteractionMode === 'scale') {
-                            //    if (e.key === 'ArrowUp') box.size.y += KEYBOARD_SCALE_INCREMENT;
-                            //    if (e.key === 'ArrowDown') box.size.y = Math.max(SNAP_GRID_SIZE, box.size.y - KEYBOARD_SCALE_INCREMENT);
-                            //    // Add X and Z scaling if desired
-                            // }
                             applyBoxStateFromData(box); box.lastModified = new Date().toISOString(); if (infoPanelEl && !infoPanelEl.classList.contains('hidden')) { const lastModifiedTextEl = document.getElementById('lastModifiedText'); if(lastModifiedTextEl) lastModifiedTextEl.textContent = `Last Modified: ${new Date(box.lastModified).toLocaleString()}`; } recordAction();
                         }
                         break;
@@ -637,7 +628,6 @@
                 document.getElementById('confirmTitle').textContent = title;
                 document.getElementById('confirmMessage').textContent = message;
                 document.getElementById('customConfirmModal').style.display = 'flex';
-                // Re-assign listeners each time to ensure correct resolve
                 const okBtn = document.getElementById('confirmOkBtn');
                 const cancelBtn = document.getElementById('confirmCancelBtn');
                 okBtn.onclick = () => hideCustomConfirm(true);
@@ -654,45 +644,162 @@
         async function handlePrintAllLabels() {
             if (!boxes.length) { alert("No boxes to print labels for."); return; }
             const busyIndicator = document.createElement('div');
-            busyIndicator.textContent = 'Generating PDF... Please wait.';
+            busyIndicator.textContent = 'Preparing labels for printing... Please wait.';
             Object.assign(busyIndicator.style, { position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', padding: '20px', background: 'var(--surface-color)', border: '1px solid var(--border-color)', borderRadius: '8px', zIndex: '2000', color: 'var(--text-color)' });
             document.body.appendChild(busyIndicator);
 
-            try {
-                const { jsPDF } = window.jspdf;
-                const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
-                const labelWidthMm = 63.5; const labelHeightMm = 38.1;
-                const pageMarginMm = 10; const interLabelSpacingMm = 2;
-                
-                let x = pageMarginMm; let y = pageMarginMm;
+            await new Promise(resolve => setTimeout(resolve, 50));
 
-                for (let i = 0; i < boxes.length; i++) {
-                    const box = boxes[i];
-                    if (y + labelHeightMm > pdf.internal.pageSize.getHeight() - pageMarginMm) {
-                        x += labelWidthMm + interLabelSpacingMm; y = pageMarginMm;
-                        if (x + labelWidthMm > pdf.internal.pageSize.getWidth() - pageMarginMm) {
-                            if (i < boxes.length) { pdf.addPage(); x = pageMarginMm; y = pageMarginMm; }
-                            else break;
-                        }
-                    }
-                    
-                    const labelDiv = document.createElement('div');
-                    Object.assign(labelDiv.style, { width: `${labelWidthMm}mm`, height: `${labelHeightMm}mm`, border: '0.1mm dotted #bbb', padding: '2mm', boxSizing: 'border-box', position: 'absolute', left: '-300mm', top: '-300mm', backgroundColor: 'white', color: '#222', fontFamily: 'Arial, Helvetica, sans-serif', fontSize: '2.5mm', overflow: 'hidden', display: 'flex', flexDirection: 'row', alignItems: 'flex-start' });
+            try {
+                let printableHTML = `
+                    <html>
+                    <head>
+                        <title>Box Labels</title>
+                        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+                        <style>
+                            body { margin: 0; font-family: Arial, Helvetica, sans-serif; }
+                            .label-sheet {
+                                width: 210mm;
+                                height: 297mm;
+                                padding: 10mm;
+                                box-sizing: border-box;
+                                display: grid;
+                                grid-template-columns: repeat(3, 63.5mm); /* 3 labels per row */
+                                grid-auto-rows: 38.1mm; /* Label height */
+                                gap: 2mm 2mm; /* Spacing */
+                                page-break-after: always;
+                            }
+                            .label {
+                                width: 63.5mm;
+                                height: 38.1mm;
+                                border: 0.1mm dotted #ccc;
+                                padding: 2mm;
+                                box-sizing: border-box;
+                                overflow: hidden;
+                                display: flex;
+                                flex-direction: row;
+                                align-items: flex-start;
+                                background-color: white;
+                                color: #222;
+                                font-size: 2.5mm;
+                            }
+                            .label-content {
+                                flex-grow: 1;
+                                display: flex;
+                                flex-direction: column;
+                                justify-content: space-between;
+                                height: 100%;
+                                padding-right: 1.5mm;
+                                overflow: hidden;
+                            }
+                            .label-header {
+                                display: flex;
+                                align-items: flex-start;
+                                justify-content: space-between;
+                            }
+                            .label-name {
+                                margin:0; font-size:3.2mm; line-height:1.1; font-weight:bold;
+                                max-height:6.4mm;
+                                overflow:hidden;
+                                word-break:break-word;
+                                -webkit-box-orient: vertical;
+                                display: -webkit-box;
+                                -webkit-line-clamp: 2;
+                            }
+                            .label-icon {
+                                font-size:4.5mm; margin-left:1mm; flex-shrink:0;
+                            }
+                            .label-description {
+                                font-size:2.2mm; margin:0.5mm 0; color:#444;
+                                max-height: 9mm;
+                                overflow:hidden; text-overflow: ellipsis;
+                                display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+                            }
+                            .label-footer {
+                                display:flex; justify-content:space-between; align-items:flex-end;
+                                font-size:2mm; margin-top: auto;
+                                color:#555;
+                            }
+                            .label-id, .label-weight { white-space:nowrap; }
+                            .label-qrcode {
+                                width:17mm; height:17mm;
+                                align-self:center; flex-shrink:0; margin-left: 1mm;
+                            }
+                            .label-qrcode img { width: 100% !important; height: 100% !important; }
+
+                            @media print {
+                                body { margin: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                                .label-sheet { border: none; box-shadow: none; padding: 0; }
+                            }
+                        </style>
+                    </head>
+                    <body>
+                `;
+
+                printableHTML += `<div class="label-sheet">`;
+
+                for (const box of boxes) {
+                    // This section calculates if a new sheet is needed, but CSS page-break-after handles it more reliably.
+                    // Keep this for conceptual grid layout or if browser print preview needs it.
+                    // For pure HTML printing, the grid and page-break-after handle the layout and page breaks.
+                    // The 'labelsOnCurrentSheet' counter is mostly for internal tracking if one needs to add content per sheet.
+
+                    // Generate QR Code as Data URL
+                    const qrCodeContainer = document.createElement('div');
+                    new QRCode(qrCodeContainer, {
+                        text: box.id,
+                        width: 128,
+                        height: 128,
+                        correctLevel: QRCode.CorrectLevel.M
+                    });
+                    const qrImgSrc = qrCodeContainer.querySelector('img') ? qrCodeContainer.querySelector('img').src : (qrCodeContainer.querySelector('canvas') ? qrCodeContainer.querySelector('canvas').toDataURL() : '');
+
                     const descriptionText = (box.description || '').substring(0, 60) + ( (box.description || '').length > 60 ? '...' : '');
                     const weightText = box.weight > 0 ? `Wt: ${box.weight}${box.weightUnit || 'kg'}` : '';
-                    labelDiv.innerHTML = `<div style="flex-grow: 1; display: flex; flex-direction: column; justify-content: space-between; height: 100%; padding-right:1.5mm; overflow:hidden;"><div><div style="display:flex; align-items:flex-start; justify-content:space-between;"><h4 style="margin:0; font-size:3.2mm; line-height:1.1; max-height:6.4mm; overflow:hidden; word-break:break-all; font-weight:bold;">${box.name}</h4><i class="${box.icon || 'bi-box-seam-fill'}" style="font-size:4.5mm; color:${box.color}; margin-left:1mm; flex-shrink:0;"></i></div><p style="font-size:2.2mm; margin:0.5mm 0; color:#444; max-height: 9mm; overflow:hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;">${descriptionText}</p></div><div style="display:flex; justify-content:space-between; align-items:flex-end;"><p style="font-size:2mm; margin:0.5mm 0 0 0; color:#555; white-space:nowrap;">ID: ${box.id.substring(0,8).toUpperCase()}</p><p style="font-size:2mm; margin:0.5mm 0 0 0; color:#555; white-space:nowrap; text-align:right;">${weightText}</p></div></div><div id="qrcode-pdf-${box.id}" style="width:17mm; height:17mm; align-self:center; flex-shrink:0; margin-left: 1mm;"></div>`;
-                    document.body.appendChild(labelDiv);
-                    new QRCode(document.getElementById(`qrcode-pdf-${box.id}`), { text: box.id, width: Math.floor(17 * 3.78), height: Math.floor(17 * 3.78), correctLevel: QRCode.CorrectLevel.M });
-                    await new Promise(resolve => setTimeout(resolve, 70));
-                    const canvas = await html2canvas(labelDiv, { scale: 3, backgroundColor: null, width: labelDiv.offsetWidth, height: labelDiv.offsetHeight });
-                    const imgData = canvas.toDataURL('image/png');
-                    document.body.removeChild(labelDiv);
-                    pdf.addImage(imgData, 'PNG', x, y, labelWidthMm, labelHeightMm);
-                    y += labelHeightMm + interLabelSpacingMm;
+                    
+                    printableHTML += `
+                        <div class="label">
+                            <div class="label-content">
+                                <div>
+                                    <div class="label-header">
+                                        <h4 class="label-name">${box.name}</h4>
+                                        <i class="${box.icon || 'bi-box-seam-fill'} label-icon" style="color:${box.color};"></i>
+                                    </div>
+                                    <p class="label-description">${descriptionText}</p>
+                                </div>
+                                <div class="label-footer">
+                                    <span class="label-id">ID: ${box.id.substring(0,8).toUpperCase()}</span>
+                                    <span class="label-weight">${weightText}</span>
+                                </div>
+                            </div>
+                            <div class="label-qrcode">
+                                ${qrImgSrc ? `<img src="${qrImgSrc}" alt="QR Code for ${box.id}">` : 'QR Gen Error'}
+                            </div>
+                        </div>
+                    `;
                 }
-                pdf.output('dataurlnewwindow');
-            } catch (err) { console.error("Error PDF:", err); alert("An error occurred while generating the PDF. Please check the console."); }
-            finally { if(document.body.contains(busyIndicator)) document.body.removeChild(busyIndicator); }
+
+                printableHTML += `</div></body></html>`;
+
+                const printWindow = window.open('', '_blank', 'height=600,width=800,status=yes,toolbar=no,menubar=no,location=no');
+                if (printWindow) {
+                    printWindow.document.write(printableHTML);
+                    printWindow.document.close();
+                    
+                    printWindow.onload = function() {
+                        printWindow.focus();
+                        printWindow.print();
+                    };
+                } else {
+                    alert("Could not open print window. Please check your pop-up blocker settings.");
+                }
+
+            } catch (err) {
+                console.error("Error preparing labels for printing:", err);
+                alert("An error occurred while preparing labels. Please check the console.");
+            } finally {
+                if(document.body.contains(busyIndicator)) document.body.removeChild(busyIndicator);
+            }
         }
 
         async function startQrScanning() { const modal = document.getElementById('qrScannerModal'); const resultEl = document.getElementById('qrScanResult'); if(!modal || !resultEl || !qrVideoElement) { console.error("QR Scanner UI elements not found"); return; } modal.style.display = 'flex'; resultEl.textContent = 'Requesting camera...'; try { videoStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } }); qrVideoElement.srcObject = videoStream; await qrVideoElement.play(); if(!qrScanCanvasElement || !qrScanCanvasCtx) { qrScanCanvasElement = document.getElementById('qrScanCanvas'); qrScanCanvasCtx = qrScanCanvasElement.getContext('2d', { willReadFrequently: true }); } qrScanCanvasElement.width = qrVideoElement.videoWidth; qrScanCanvasElement.height = qrVideoElement.videoHeight; resultEl.textContent = 'Align QR code...'; scanRequestId = requestAnimationFrame(tickQrScan); } catch (err) { console.error("Cam Err:", err); resultEl.textContent = 'Error: No camera.'; stopQrScanning(false); } }
@@ -718,19 +825,16 @@
             const parsedState = JSON.parse(stateJSON);
             let dataToProcess = parsedState;
 
-            if (parsedState.version === "1.1" && parsedState.boxes) { // Check for new format
+            if (parsedState.version === "1.1" && parsedState.boxes) {
                 dataToProcess = parsedState.boxes;
-                if (parsedState.settings && importedSettings) { // If called from import, merge settings
+                if (parsedState.settings && importedSettings) {
                     appSettings = {...appSettings, ...parsedState.settings};
-                    saveSettings(); // Save merged settings
-                    // Update UI based on new settings if needed (e.g., checkbox in settings modal)
+                    saveSettings();
                     if(document.getElementById('showDeleteConfirmSetting')) {
                         document.getElementById('showDeleteConfirmSetting').checked = appSettings.showDeleteConfirmation;
                     }
                 }
             }
-
-
             dataToProcess.forEach(boxData => {
                 boxData.position = new THREE.Vector3(boxData.position.x, boxData.position.y, boxData.position.z);
                 boxData.size = new THREE.Vector3(boxData.size.x, boxData.size.y, boxData.size.z);
@@ -746,12 +850,11 @@
                 try {
                     const importedData = JSON.parse(e.target.result);
                     if (importedData.version === "1.1" && importedData.boxes) {
-                        restoreState(JSON.stringify(importedData.boxes), importedData.settings); // Pass settings for merging
+                        restoreState(JSON.stringify(importedData.boxes), importedData.settings);
                     } else {
-                        // Assume old format (just array of boxes)
                         restoreState(e.target.result);
                     }
-                    recordAction(); // Record after successful import and state restoration
+                    recordAction();
                 } catch (err) {
                     alert('Error: Invalid or corrupt JSON file.'); console.error(err);
                 }
