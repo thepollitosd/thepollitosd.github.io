@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Box Organizer Pro - Full Feature v3</title>
+    <title>Box Organizer Pro - Final</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <style>
         :root { 
@@ -138,7 +138,6 @@
                     <tr><td>Toggle Move/Rotate Tool</td><td><code>Tab</code></td></tr>
                     <tr><td>Create New Box</td><td><code>Ctrl + N</code></td></tr>
                     <tr><td>Search (Focus Input)</td><td><code>Ctrl + F</code></td></tr>
-                    <tr><td>Search (Execute)</td><td><code>Enter</code> (in search input)</td></tr>
                     <tr><td>Delete Selected</td><td><code>Delete</code> / <code>Backspace</code></td></tr>
                     <tr><td>Transform Selected Box</td><td><code>← ↑ → ↓</code> (Arrow Keys)</td></tr>
                     <tr><td>Undo / Redo</td><td><code>Ctrl + Z</code> / <code>Ctrl + Y</code></td></tr>
@@ -189,9 +188,7 @@
     <div id="listViewContainer"></div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/20.0.3/tween.umd.js"></script>
-    <!-- QR Code Generation (for HTML printing) -->
     <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
-    <!-- QR Code Scanning (from webcam) -->
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 
     <script type="importmap">{ "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js", "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/" } }</script>
@@ -220,7 +217,6 @@
         let currentInteractionMode = 'translate'; 
         const KEYBOARD_MOVE_INCREMENT = SNAP_GRID_SIZE;
         const KEYBOARD_ROTATE_INCREMENT = THREE.MathUtils.degToRad(5);
-        const KEYBOARD_SCALE_INCREMENT = 0.1; // For arrow key scaling if implemented
 
         let videoStream;
         let qrVideoElement;
@@ -558,7 +554,7 @@
                 } catch { confirmed = false; }
             }
             if (!confirmed) return;
-            const boxesToRemove = [...selectedBoxes]; const currentSelectionIds = selectedBoxes.map(b => b.id); deselectAll();
+            const boxesToRemove = [...selectedBoxes]; deselectAll();
             boxesToRemove.forEach(boxToRemove => {
                 if (boxToRemove.threeGroup && currentView === '3d') { new TWEEN.Tween(boxToRemove.threeGroup.scale).to({x:0.01, y:0.01, z:0.01}, 300).easing(TWEEN.Easing.Quadratic.In).onComplete(() => {if (boxToRemove.threeGroup.parent) scene.remove(boxToRemove.threeGroup); disposeThreeObject(boxToRemove.threeGroup);}).start(); }
                 else if (boxToRemove.threeGroup) { if (boxToRemove.threeGroup.parent) scene.remove(boxToRemove.threeGroup); disposeThreeObject(boxToRemove.threeGroup); }
@@ -641,165 +637,43 @@
         function showSettingsModal() { document.getElementById('showDeleteConfirmSetting').checked = appSettings.showDeleteConfirmation; document.getElementById('settingsModal').style.display = 'flex'; }
         function hideSettingsModal() { document.getElementById('settingsModal').style.display = 'none'; }
 
+        function generateQrDataURL(text) {
+            return new Promise((resolve, reject) => {
+                const tempContainer = document.createElement('div');
+                new QRCode(tempContainer, { text: text, width: 128, height: 128, correctLevel: QRCode.CorrectLevel.M });
+                setTimeout(() => {
+                    const img = tempContainer.querySelector('img');
+                    const canvas = tempContainer.querySelector('canvas');
+                    if (img && img.src) resolve(img.src);
+                    else if (canvas) resolve(canvas.toDataURL());
+                    else reject(new Error("QR Code generation failed."));
+                }, 100);
+            });
+        }
+
         async function handlePrintAllLabels() {
             if (!boxes.length) { alert("No boxes to print labels for."); return; }
             const busyIndicator = document.createElement('div');
-            busyIndicator.textContent = 'Preparing labels for printing... Please wait.';
+            busyIndicator.textContent = 'Preparing labels for printing...';
             Object.assign(busyIndicator.style, { position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', padding: '20px', background: 'var(--surface-color)', border: '1px solid var(--border-color)', borderRadius: '8px', zIndex: '2000', color: 'var(--text-color)' });
             document.body.appendChild(busyIndicator);
 
             await new Promise(resolve => setTimeout(resolve, 50));
 
             try {
-                let printableHTML = `
-                    <html>
-                    <head>
-                        <title>Box Labels</title>
-                        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-                        <style>
-                            body { margin: 0; font-family: Arial, Helvetica, sans-serif; }
-                            .label-sheet {
-                                width: 210mm;
-                                height: 297mm;
-                                padding: 10mm;
-                                box-sizing: border-box;
-                                display: grid;
-                                grid-template-columns: repeat(3, 63.5mm); /* 3 labels per row */
-                                grid-auto-rows: 38.1mm; /* Label height */
-                                gap: 2mm 2mm; /* Spacing */
-                                page-break-after: always;
-                            }
-                            .label {
-                                width: 63.5mm;
-                                height: 38.1mm;
-                                border: 0.1mm dotted #ccc;
-                                padding: 2mm;
-                                box-sizing: border-box;
-                                overflow: hidden;
-                                display: flex;
-                                flex-direction: row;
-                                align-items: flex-start;
-                                background-color: white;
-                                color: #222;
-                                font-size: 2.5mm;
-                            }
-                            .label-content {
-                                flex-grow: 1;
-                                display: flex;
-                                flex-direction: column;
-                                justify-content: space-between;
-                                height: 100%;
-                                padding-right: 1.5mm;
-                                overflow: hidden;
-                            }
-                            .label-header {
-                                display: flex;
-                                align-items: flex-start;
-                                justify-content: space-between;
-                            }
-                            .label-name {
-                                margin:0; font-size:3.2mm; line-height:1.1; font-weight:bold;
-                                max-height:6.4mm;
-                                overflow:hidden;
-                                word-break:break-word;
-                                -webkit-box-orient: vertical;
-                                display: -webkit-box;
-                                -webkit-line-clamp: 2;
-                            }
-                            .label-icon {
-                                font-size:4.5mm; margin-left:1mm; flex-shrink:0;
-                            }
-                            .label-description {
-                                font-size:2.2mm; margin:0.5mm 0; color:#444;
-                                max-height: 9mm;
-                                overflow:hidden; text-overflow: ellipsis;
-                                display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
-                            }
-                            .label-footer {
-                                display:flex; justify-content:space-between; align-items:flex-end;
-                                font-size:2mm; margin-top: auto;
-                                color:#555;
-                            }
-                            .label-id, .label-weight { white-space:nowrap; }
-                            .label-qrcode {
-                                width:17mm; height:17mm;
-                                align-self:center; flex-shrink:0; margin-left: 1mm;
-                            }
-                            .label-qrcode img { width: 100% !important; height: 100% !important; }
-
-                            @media print {
-                                body { margin: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-                                .label-sheet { border: none; box-shadow: none; padding: 0; }
-                            }
-                        </style>
-                    </head>
-                    <body>
-                `;
-
-                printableHTML += `<div class="label-sheet">`;
-
+                let printableHTML = `<html><head><title>Box Labels</title><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"><style>body{margin:0;font-family:Arial,Helvetica,sans-serif}.label-sheet{width:210mm;min-height:290mm;padding:10mm;box-sizing:border-box;display:flex;flex-wrap:wrap;gap:2mm 2mm;page-break-after:always}.label{width:63.5mm;height:38.1mm;border:.1mm dotted #ccc;padding:2mm;box-sizing:border-box;overflow:hidden;display:flex;flex-direction:row;align-items:flex-start;background-color:#fff;color:#222;font-size:2.5mm}.label-content{flex-grow:1;display:flex;flex-direction:column;justify-content:space-between;height:100%;padding-right:1.5mm;overflow:hidden}.label-header{display:flex;align-items:flex-start;justify-content:space-between}.label-name{margin:0;font-size:3.2mm;line-height:1.1;font-weight:700;max-height:6.4mm;overflow:hidden;word-break:break-word;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}.label-icon{font-size:4.5mm;margin-left:1mm;flex-shrink:0}.label-description{font-size:2.2mm;margin:.5mm 0;color:#444;max-height:9mm;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical}.label-footer{display:flex;justify-content:space-between;align-items:flex-end;font-size:2mm;margin-top:auto;color:#555}.label-id,.label-weight{white-space:nowrap}.label-qrcode{width:17mm;height:17mm;align-self:center;flex-shrink:0;margin-left:1mm}.label-qrcode img{width:100%!important;height:100%!important}@media print{body{margin:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}.label-sheet{border:none;box-shadow:none;padding:0}}</style></head><body><div class="label-sheet">`;
                 for (const box of boxes) {
-                    // This section calculates if a new sheet is needed, but CSS page-break-after handles it more reliably.
-                    // Keep this for conceptual grid layout or if browser print preview needs it.
-                    // For pure HTML printing, the grid and page-break-after handle the layout and page breaks.
-                    // The 'labelsOnCurrentSheet' counter is mostly for internal tracking if one needs to add content per sheet.
-
-                    // Generate QR Code as Data URL
-                    const qrCodeContainer = document.createElement('div');
-                    new QRCode(qrCodeContainer, {
-                        text: box.id,
-                        width: 128,
-                        height: 128,
-                        correctLevel: QRCode.CorrectLevel.M
-                    });
-                    const qrImgSrc = qrCodeContainer.querySelector('img') ? qrCodeContainer.querySelector('img').src : (qrCodeContainer.querySelector('canvas') ? qrCodeContainer.querySelector('canvas').toDataURL() : '');
-
+                    const qrImgSrc = await generateQrDataURL(box.id);
                     const descriptionText = (box.description || '').substring(0, 60) + ( (box.description || '').length > 60 ? '...' : '');
                     const weightText = box.weight > 0 ? `Wt: ${box.weight}${box.weightUnit || 'kg'}` : '';
-                    
-                    printableHTML += `
-                        <div class="label">
-                            <div class="label-content">
-                                <div>
-                                    <div class="label-header">
-                                        <h4 class="label-name">${box.name}</h4>
-                                        <i class="${box.icon || 'bi-box-seam-fill'} label-icon" style="color:${box.color};"></i>
-                                    </div>
-                                    <p class="label-description">${descriptionText}</p>
-                                </div>
-                                <div class="label-footer">
-                                    <span class="label-id">ID: ${box.id.substring(0,8).toUpperCase()}</span>
-                                    <span class="label-weight">${weightText}</span>
-                                </div>
-                            </div>
-                            <div class="label-qrcode">
-                                ${qrImgSrc ? `<img src="${qrImgSrc}" alt="QR Code for ${box.id}">` : 'QR Gen Error'}
-                            </div>
-                        </div>
-                    `;
+                    printableHTML += `<div class="label"><div class="label-content"><div><div class="label-header"><h4 class="label-name">${box.name}</h4><i class="${box.icon || 'bi-box-seam-fill'} label-icon" style="color:${box.color};"></i></div><p class="label-description">${descriptionText}</p></div><div class="label-footer"><span class="label-id">ID: ${box.id.substring(0,8).toUpperCase()}</span><span class="label-weight">${weightText}</span></div></div><div class="label-qrcode"><img src="${qrImgSrc}" alt="QR Code for ${box.id}"></div></div>`;
                 }
-
                 printableHTML += `</div></body></html>`;
-
-                const printWindow = window.open('', '_blank', 'height=600,width=800,status=yes,toolbar=no,menubar=no,location=no');
-                if (printWindow) {
-                    printWindow.document.write(printableHTML);
-                    printWindow.document.close();
-                    
-                    printWindow.onload = function() {
-                        printWindow.focus();
-                        printWindow.print();
-                    };
-                } else {
-                    alert("Could not open print window. Please check your pop-up blocker settings.");
-                }
-
-            } catch (err) {
-                console.error("Error preparing labels for printing:", err);
-                alert("An error occurred while preparing labels. Please check the console.");
-            } finally {
-                if(document.body.contains(busyIndicator)) document.body.removeChild(busyIndicator);
-            }
+                const printWindow = window.open('', '_blank');
+                if (printWindow) { printWindow.document.write(printableHTML); printWindow.document.close(); printWindow.onload = () => { printWindow.focus(); printWindow.print(); }; }
+                else { alert("Could not open print window. Check pop-up blocker."); }
+            } catch (err) { console.error("Error preparing labels:", err); alert("An error occurred preparing labels."); }
+            finally { if(document.body.contains(busyIndicator)) document.body.removeChild(busyIndicator); }
         }
 
         async function startQrScanning() { const modal = document.getElementById('qrScannerModal'); const resultEl = document.getElementById('qrScanResult'); if(!modal || !resultEl || !qrVideoElement) { console.error("QR Scanner UI elements not found"); return; } modal.style.display = 'flex'; resultEl.textContent = 'Requesting camera...'; try { videoStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } }); qrVideoElement.srcObject = videoStream; await qrVideoElement.play(); if(!qrScanCanvasElement || !qrScanCanvasCtx) { qrScanCanvasElement = document.getElementById('qrScanCanvas'); qrScanCanvasCtx = qrScanCanvasElement.getContext('2d', { willReadFrequently: true }); } qrScanCanvasElement.width = qrVideoElement.videoWidth; qrScanCanvasElement.height = qrVideoElement.videoHeight; resultEl.textContent = 'Align QR code...'; scanRequestId = requestAnimationFrame(tickQrScan); } catch (err) { console.error("Cam Err:", err); resultEl.textContent = 'Error: No camera.'; stopQrScanning(false); } }
@@ -824,7 +698,6 @@
             deselectAll(); [...boxes].forEach(b => { if (b.threeGroup) { scene.remove(b.threeGroup); disposeThreeObject(b.threeGroup); } }); boxes = [];
             const parsedState = JSON.parse(stateJSON);
             let dataToProcess = parsedState;
-
             if (parsedState.version === "1.1" && parsedState.boxes) {
                 dataToProcess = parsedState.boxes;
                 if (parsedState.settings && importedSettings) {
@@ -870,9 +743,10 @@
             if (starField) starField.rotation.y -= 0.00005;
             if (ambientParticles) { const positions = ambientParticles.geometry.attributes.position.array; for (let i = 1; i < positions.length; i += 3) { positions[i] -= 0.01; if (positions[i] < 0) positions[i] = 50; } ambientParticles.geometry.attributes.position.needsUpdate = true; }
             for (let i = activeEffects.length - 1; i >= 0; i--) { const effect = activeEffects[i]; const effectElapsed = elapsed - effect.startTime; if (effectElapsed > effect.duration) { scene.remove(effect.particles); effect.particles.geometry.dispose(); effect.particles.material.dispose(); activeEffects.splice(i, 1); } else { const positions = effect.particles.geometry.attributes.position.array; const gravity = 9.8; for (let j = 0; j < effect.velocities.length; j++) { effect.velocities[j].y -= gravity * delta; positions[j*3] += effect.velocities[j].x * delta; positions[j*3 + 1] += effect.velocities[j].y * delta; positions[j*3 + 2] += effect.velocities[j].z * delta; } effect.particles.material.opacity = 1.0 - (effectElapsed / effect.duration); effect.particles.geometry.attributes.position.needsUpdate = true; } }
-            if (currentView === '3d') {
-                 if (composer && renderer.domElement.style.display !== 'none') composer.render();
-                 else if (renderer.domElement.style.display !== 'none') renderer.render(scene, camera);
+            if (currentView === '3d' && composer && renderer.domElement.style.display !== 'none') {
+                 composer.render();
+            } else if (currentView === '3d' && renderer.domElement.style.display !== 'none') {
+                 renderer.render(scene, camera);
             }
         }
 
