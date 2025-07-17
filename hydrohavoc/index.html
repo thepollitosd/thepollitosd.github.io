@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>🌊 Hydro Havoc™</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: 'Comic Sans MS', cursive, sans-serif;
+      background: linear-gradient(to bottom, #74ebd5, #acb6e5);
+      color: #111;
+      margin: 0;
+      padding: 0;
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 2.5em;
+      margin-top: 1em;
+      color: #003366;
+    }
+
+    button {
+      background-color: #00bcd4;
+      border: none;
+      color: white;
+      padding: 15px 25px;
+      font-size: 1.5em;
+      margin: 20px auto;
+      cursor: pointer;
+      border-radius: 10px;
+      transition: 0.3s;
+    }
+
+    button:hover {
+      background-color: #0097a7;
+    }
+
+    .card-container {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin: 20px;
+      gap: 15px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 10px;
+      padding: 20px;
+      width: 250px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      transition: transform 0.3s ease;
+    }
+
+    .card:hover {
+      transform: scale(1.05);
+    }
+
+    .difficulty {
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+
+    .end-message {
+      font-size: 1.2em;
+      margin-top: 30px;
+      color: #004d40;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🌊 HYDRO HAVOC™</h1>
+  <p><em>Sink your pride. Soak your soul.</em></p>
+  <button onclick="drawCards()">💦 Soak Me!</button>
+
+  <div class="card-container" id="cards"></div>
+  <div class="end-message" id="endMessage"></div>
+
+  <script>
+    const deck = {
+      Easy: [
+        "Blow bubbles underwater while humming.",
+        "Pretend to be a fish and swim dramatically.",
+        "Walk into the water like you're in a shampoo commercial.",
+        "Dolphin impression (clicks, flips, squeaks).",
+        "Float on your back while reciting the Pledge.",
+        "Try to sneeze underwater.",
+        "Talk like a pirate for 3 minutes.",
+        "Wave at every lifeguard like they’re your cousin.",
+        "Pose like a superhero in slow-mo into the water.",
+        "Narrate someone’s swimming like Nat Geo."
+      ],
+      Medium: [
+        "Rizz someone up with a water pick-up line.",
+        "Scream obnoxiously down the slide.",
+        "Whisper 'I'm a mermaid' across the pool.",
+        "Moan down the slide — you know the one.",
+        "Loudly ask a group if they’ve seen your pet dolphin.",
+        "Greet a staff member in an evil villain voice.",
+        "Laugh creepily every time someone gets splashed.",
+        "Salute dramatically before diving.",
+        "Pretend the water is lava in the shallow end.",
+        "Break up with a pool floatie emotionally."
+      ],
+      Hard: [
+        "Stare at an employee for 10 seconds with no emotion.",
+        "Water twerk battle. Winner gets eternal glory.",
+        "Baywatch slo-mo run across the deck.",
+        "Swim up to someone and ask about sea monsters.",
+        "Do a poetic belly flop.",
+        "Call splashers “Poseidon” every time.",
+        "Fake-lifeguard mode: give dramatic safety tips.",
+        "Pretend you’re drowning, then say “just goggles.”",
+        "Narrate your actions in David Attenborough voice.",
+        "Ask “how deep is this?” then vanish underwater."
+      ],
+      Extreme: [
+        "Cannonball while yelling 'FOR THE KINGDOM!'",
+        "Reenact a rain breakup scene — in the pool.",
+        "Ask a staff member about your “emotional support sea cucumber.”",
+        "Wear goggles upside down like it’s normal.",
+        "Goat scream dive.",
+        "Slide with completely straight face.",
+        "Pool ring proposal. “Say yes or I sink.”",
+        "Villain backstory whispered to a floatie.",
+        "Ask someone if they worship King Neptune.",
+        "Titanic scene, fully committed."
+      ],
+      Bonus: [
+        "Water aerobics class leader — command the people.",
+        "Whisper “You’re in the Matrix” to a stranger and swim away.",
+        "Host a cooking show using pool water.",
+        "Shakespeare monologue down the slide.",
+        "Set up fake Olympic dive, then awkward belly flop.",
+        "Underwater job interview: “Where do you see yourself in 5 years?”",
+        "Swim in slow-mo with romantic narration.",
+        "Pool fashion show with towel cape & sass.",
+        "High-five every lifeguard, say “You're doing amazing.”",
+        "Dolphin whisperer for 3 minutes — serious face.",
+        "Hair flip commercial moment (even bald = elite).",
+        "Synchronized swimming duel with flair.",
+        "Float face-down like your dreams are gone.",
+        "Search for “Gerald the goldfish.”",
+        "Rescue a pool noodle like it’s drowning.",
+        "Yell “MARCO” outside the pool and act shocked.",
+        "Demand splash ratings — get petty if it's under 9.",
+        "Narrate pool chaos like Olympic commentator.",
+        "Floatie throne + royal speech.",
+        "Whisper “The prophecy is true…” then vanish."
+      ]
+    };
+
+    const used = {
+      Easy: [],
+      Medium: [],
+      Hard: [],
+      Extreme: [],
+      Bonus: []
+    };
+
+    function drawFromCategory(category) {
+      const available = deck[category].filter(card => !used[category].includes(card));
+      if (available.length === 0) return null;
+      const card = available[Math.floor(Math.random() * available.length)];
+      used[category].push(card);
+      return card;
+    }
+
+    function drawCards() {
+      const container = document.getElementById('cards');
+      const endMessage = document.getElementById('endMessage');
+      container.innerHTML = '';
+      endMessage.textContent = '';
+
+      const results = {
+        Easy: drawFromCategory('Easy'),
+        Medium: drawFromCategory('Medium'),
+        Hard: drawFromCategory('Hard'),
+        Extreme: drawFromCategory('Extreme'),
+        Bonus: drawFromCategory('Bonus')
+      };
+
+      let allDrawn = true;
+
+      for (let level in results) {
+        const task = results[level];
+        if (task) {
+          const card = document.createElement('div');
+          card.className = 'card';
+          card.innerHTML = `<div class="difficulty">${level}</div><div>${task}</div>`;
+          container.appendChild(card);
+        } else {
+          allDrawn = false;
+        }
+      }
+
+      if (!Object.values(results).some(task => task)) {
+        endMessage.textContent = "🎉 You’ve completed every Hydro Havoc dare! Time to dry off, legend.";
+      }
+    }
+  </script>
+</body>
+</html>
