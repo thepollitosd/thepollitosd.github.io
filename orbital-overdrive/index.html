@@ -127,6 +127,7 @@
             font-family: 'Space Grotesk', monospace; font-weight: 600; color: #475569;
             display: flex; align-items: center; justify-content: center; min-height: 42px;
             transition: all 0.1s;
+            cursor: pointer;
         }
         .key-btn:active { transform: translateY(2px); border-bottom-width: 1px; }
         .key-noble { background: #eff6ff; color: #2563eb; border-color: #bfdbfe; }
@@ -401,9 +402,10 @@
                 }
             }
 
+            // ADDED 5p to the ORDER
             let order = [
                 {n:"1s",max:2},{n:"2s",max:2},{n:"2p",max:6},{n:"3s",max:2},{n:"3p",max:6},
-                {n:"4s",max:2},{n:"3d",max:10},{n:"4p",max:6},{n:"5s",max:2},{n:"4d",max:10}
+                {n:"4s",max:2},{n:"3d",max:10},{n:"4p",max:6},{n:"5s",max:2},{n:"4d",max:10},{n:"5p",max:6}
             ];
             
             if (noble) {
@@ -514,7 +516,9 @@
                     }
                     break;
                 case 'count_valence':
-                    while(state.element.v === null) state.element = elements[Math.floor(Math.random() * elements.length)];
+                    // HOTFIX: Safer selection logic
+                    const vPool = elements.filter(e => e.v !== null);
+                    state.element = vPool[Math.floor(Math.random() * vPool.length)];
                     badge.innerHTML = `<div class="w-2.5 h-2.5 rounded-full bg-teal-500"></div> Valence`;
                     promptContent.innerHTML = `<div class="text-6xl font-black text-slate-800 mb-1">${state.element.s}</div><div class="text-lg text-slate-500">${state.element.n}</div>`;
                     document.getElementById('numeric-ui').classList.remove('hidden');
@@ -642,7 +646,9 @@
         function renderDiagramInput() {
             const grid = document.getElementById('orbital-diagram-grid');
             grid.innerHTML = '';
-            const order = [ {n:"1s",c:1}, {n:"2s",c:1}, {n:"2p",c:3}, {n:"3s",c:1}, {n:"3p",c:3}, {n:"4s",c:1}, {n:"3d",c:5} ];
+            // ADDED 4p, 5s, 4d, 5p here
+            const order = [ {n:"1s",c:1}, {n:"2s",c:1}, {n:"2p",c:3}, {n:"3s",c:1}, {n:"3p",c:3}, 
+                            {n:"4s",c:1}, {n:"3d",c:5}, {n:"4p",c:3}, {n:"5s",c:1}, {n:"4d",c:5}, {n:"5p",c:3} ];
             state.diagram = [];
             
             const lastPart = getCorrectConfig(state.element.z, 'normal').parts.slice(-1)[0];
@@ -676,7 +682,9 @@
         function renderDiagramPreview(z) {
             const container = document.getElementById('diagram-preview');
             container.innerHTML = '';
-            const order = [ {n:"1s",c:1}, {n:"2s",c:1}, {n:"2p",c:3}, {n:"3s",c:1}, {n:"3p",c:3}, {n:"4s",c:1}, {n:"3d",c:5} ];
+            // ADDED 4p, 5s, 4d, 5p here as well
+            const order = [ {n:"1s",c:1}, {n:"2s",c:1}, {n:"2p",c:3}, {n:"3s",c:1}, {n:"3p",c:3}, 
+                            {n:"4s",c:1}, {n:"3d",c:5}, {n:"4p",c:3}, {n:"5s",c:1}, {n:"4d",c:5}, {n:"5p",c:3} ];
             let electrons = z;
             order.forEach(grp => {
                 if(electrons <= 0) return;
