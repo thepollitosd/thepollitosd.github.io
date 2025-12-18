@@ -35,6 +35,12 @@
 
         .font-mono-display { font-family: 'Space Grotesk', monospace; }
 
+        /* Scrollbar styling for panels */
+        .custom-scroll::-webkit-scrollbar { width: 6px; }
+        .custom-scroll::-webkit-scrollbar-track { background: transparent; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        .custom-scroll::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
         .ptable-wrapper {
             width: 100%;
             height: 100%;
@@ -154,14 +160,220 @@
             display: flex;
             justify-content: center;
         }
+
+        /* Dashboard Styles */
+        #dashboard {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(248, 250, 252, 0.98);
+            backdrop-filter: blur(8px);
+            z-index: 100;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+        }
+        .mode-card {
+            background: white; border: 1px solid #e2e8f0; border-radius: 12px;
+            padding: 1rem; cursor: pointer; transition: all 0.2s;
+            display: flex; flex-direction: column; align-items: center; gap: 0.5rem;
+            text-align: center;
+        }
+        .mode-card:hover {
+            transform: translateY(-4px); box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1);
+            border-color: var(--accent-blue);
+        }
+        .mode-icon { font-size: 2rem; }
+        
+        #timer-bar-container {
+            width: 100%; height: 4px; background: #e2e8f0; position: absolute; bottom: 0; left: 0;
+        }
+        #timer-bar {
+            height: 100%; background: var(--accent-blue); width: 100%; transition: width 1s linear;
+        }
+
+        /* Nav Tab Active State */
+        .dash-nav-btn { position: relative; color: #94a3b8; transition: color 0.2s; }
+        .dash-nav-btn.active { color: #2563eb; }
+        .dash-nav-btn.active::after {
+            content: ''; position: absolute; bottom: -4px; left: 50%; transform: translateX(-50%);
+            width: 4px; height: 4px; background: #2563eb; border-radius: 50%;
+        }
+        .dash-section { display: none; animation: fadeIn 0.3s ease-out; }
+        .dash-section.active { display: flex; }
     </style>
 </head>
 <body class="p-2 md:p-4 h-screen flex flex-col" oncontextmenu="return false;">
 
+    <!-- DASHBOARD OVERLAY -->
+    <div id="dashboard" class="p-4">
+        
+        <!-- Header / Nav -->
+        <div class="absolute top-8 text-center w-full">
+            <div class="inline-block w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center text-white font-bold text-2xl shadow-lg shadow-blue-200 mb-2">O</div>
+            <h1 class="text-3xl font-black text-slate-800 tracking-tighter">ORBITAL <span class="text-blue-600">OVERDRIVE</span></h1>
+        </div>
+
+        <!-- Content Containers -->
+        <div class="w-full max-w-4xl flex-grow flex flex-col justify-center items-center py-20 overflow-y-auto custom-scroll">
+            
+            <!-- HOME: Game Modes -->
+            <div id="dash-home" class="dash-section active w-full flex-col items-center">
+                <p class="text-slate-400 font-bold tracking-widest text-xs uppercase mb-6">Select Simulation Protocol</p>
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-4 w-full max-w-2xl mb-8">
+                    <button onclick="startGame('Classic')" class="mode-card group">
+                        <span class="mode-icon group-hover:scale-110 transition-transform">🎲</span>
+                        <span class="font-bold text-slate-700">Classic</span>
+                        <span class="text-xs text-slate-400">Mixed curriculum</span>
+                    </button>
+                    <button onclick="startGame('Architect')" class="mode-card group">
+                        <span class="mode-icon group-hover:scale-110 transition-transform">🏗️</span>
+                        <span class="font-bold text-slate-700">Architect</span>
+                        <span class="text-xs text-slate-400">Electron Configs</span>
+                    </button>
+                    <button onclick="startGame('Quantum')" class="mode-card group">
+                        <span class="mode-icon group-hover:scale-110 transition-transform">📦</span>
+                        <span class="font-bold text-slate-700">Quantum</span>
+                        <span class="text-xs text-slate-400">Orbital Diagrams</span>
+                    </button>
+                    <button onclick="startGame('Detective')" class="mode-card group">
+                        <span class="mode-icon group-hover:scale-110 transition-transform">🔍</span>
+                        <span class="font-bold text-slate-700">Detective</span>
+                        <span class="text-xs text-slate-400">Identify Elements</span>
+                    </button>
+                    <button onclick="startGame('Nuclear')" class="mode-card group">
+                        <span class="mode-icon group-hover:scale-110 transition-transform">⚛️</span>
+                        <span class="font-bold text-slate-700">Nuclear</span>
+                        <span class="text-xs text-slate-400">Valence & Isotopes</span>
+                    </button>
+                    <button onclick="startGame('Trivia')" class="mode-card group">
+                        <span class="mode-icon group-hover:scale-110 transition-transform">🧠</span>
+                        <span class="font-bold text-slate-700">Trivia</span>
+                        <span class="text-xs text-slate-400">Vocabulary</span>
+                    </button>
+                </div>
+
+                <!-- Settings -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 w-full max-w-md">
+                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Training Parameters</h3>
+                    <div class="flex items-center justify-between mb-4">
+                        <span class="text-sm font-bold text-slate-700">Time Limit</span>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="timer-toggle" class="sr-only peer" onchange="toggleTimerSettings()">
+                            <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                        </label>
+                    </div>
+                    <div id="timer-duration-setting" class="flex items-center justify-between opacity-50 pointer-events-none transition-opacity">
+                        <span class="text-sm font-bold text-slate-700">Duration</span>
+                        <div class="flex gap-2">
+                            <button onclick="setTimerDuration(15)" class="t-btn px-3 py-1 rounded border border-slate-200 text-xs font-bold bg-slate-50 hover:bg-white active:bg-blue-50" id="t-15">15s</button>
+                            <button onclick="setTimerDuration(30)" class="t-btn px-3 py-1 rounded border border-slate-200 text-xs font-bold bg-slate-50 hover:bg-white active:bg-blue-50" id="t-30">30s</button>
+                            <button onclick="setTimerDuration(60)" class="t-btn px-3 py-1 rounded border border-slate-200 text-xs font-bold bg-slate-50 hover:bg-white active:bg-blue-50" id="t-60">60s</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ABOUT -->
+            <div id="dash-about" class="dash-section w-full max-w-2xl flex-col gap-6">
+                <div class="bg-white p-8 rounded-3xl shadow-sm border border-slate-200">
+                    <h2 class="text-2xl font-bold text-slate-800 mb-4">About the Simulation</h2>
+                    <p class="text-slate-600 mb-4 leading-relaxed">
+                        Orbital Overdrive is an interactive training module designed for Honors Chemistry students to master the fundamental principles of atomic structure.
+                    </p>
+                    <p class="text-slate-600 mb-4 leading-relaxed">
+                        Through gamified drills, users practice writing electron configurations (Standard & Shorthand), constructing orbital diagrams according to Hund's Rule and the Pauli Exclusion Principle, and identifying periodic trends.
+                    </p>
+                    <div class="p-4 bg-slate-50 rounded-xl border border-slate-100">
+                        <h3 class="font-bold text-slate-700 mb-2 text-sm">Key Concepts Covered</h3>
+                        <ul class="list-disc list-inside text-sm text-slate-500 space-y-1">
+                            <li>Aufbau Principle & Orbital Filling</li>
+                            <li>Exceptional Configurations (Cr, Cu, Mo, Ag, Pd)</li>
+                            <li>Isotope Mass & Valence Electrons</li>
+                            <li>Periodic Groups & Families</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- HISTORY -->
+            <div id="dash-history" class="dash-section w-full max-w-2xl flex-col gap-4">
+                <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 relative overflow-hidden">
+                    <div class="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
+                    <div class="flex justify-between items-baseline mb-2">
+                        <h3 class="text-lg font-bold text-slate-800">v1.3 <span class="text-blue-500">b.2</span></h3>
+                        <span class="text-xs font-bold bg-blue-100 text-blue-600 px-2 py-1 rounded">CURRENT</span>
+                    </div>
+                    <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">ATOMIC DASHBOARD</p>
+                    <ul class="text-sm text-slate-600 space-y-1 list-disc list-inside">
+                        <li>Implemented Dashboard with Game Mode selection</li>
+                        <li>Added optional Timers (15s, 30s, 60s)</li>
+                        <li>UI Overhaul for menu navigation</li>
+                        <li>Integrated Version History & Dev Notes</li>
+                    </ul>
+                </div>
+
+                <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 opacity-75">
+                    <h3 class="text-lg font-bold text-slate-800 mb-1">v1.2 <span class="text-slate-400">b.1</span></h3>
+                    <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">MOLECULAR MIND</p>
+                    <ul class="text-sm text-slate-600 space-y-1 list-disc list-inside">
+                        <li>Massively expanded Vocabulary bank (25+ terms)</li>
+                        <li>Added new trivia categories for Quantum Rules</li>
+                        <li>Improved mobile scaling for diagrams</li>
+                    </ul>
+                </div>
+
+                <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 opacity-60">
+                    <h3 class="text-lg font-bold text-slate-800 mb-1">v1.1 <span class="text-slate-400">b.5</span></h3>
+                    <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">NEON STABILITY</p>
+                    <ul class="text-sm text-slate-600 space-y-1 list-disc list-inside">
+                        <li>Hotfix: Added missing 5p orbital to logic engine</li>
+                        <li>Hotfix: Prevented infinite loop in Valence mode</li>
+                        <li>Added identifying isotopes & counting neutrons</li>
+                        <li>Restored Period 5 elements (Rb to Xe)</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- DEV NOTES -->
+            <div id="dash-dev" class="dash-section w-full max-w-2xl flex-col gap-6">
+                <div class="bg-slate-900 p-8 rounded-3xl shadow-lg border border-slate-800 text-slate-300 font-mono text-sm leading-relaxed">
+                    <h2 class="text-xl font-bold text-white mb-4">// DEVELOPER LOG</h2>
+                    
+                    <div class="mb-6">
+                        <h3 class="text-blue-400 font-bold mb-2">> TECH_STACK</h3>
+                        <p>Built with vanilla HTML5/JS and TailwindCSS. No external frameworks used to ensure lightweight performance on school devices.</p>
+                    </div>
+
+                    <div class="mb-6">
+                        <h3 class="text-blue-400 font-bold mb-2">> LOGIC_ENGINE</h3>
+                        <p>Electron configurations are generated dynamically using an algorithm based on the Aufbau principle `(n + l rule)`. Exceptions for Cr, Mo, Cu, Ag, and Pd are hardcoded as override conditions within the `getCorrectConfig()` function.</p>
+                    </div>
+
+                    <div>
+                        <h3 class="text-blue-400 font-bold mb-2">> KNOWN_LIMITATIONS</h3>
+                        <p>1. f-block elements are currently excluded to maintain UI grid stability on mobile.</p>
+                        <p>2. Orbital diagrams use a simplified box model. Spin quantum numbers are visualized as arrows but strictly enforced only by count.</p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Dashboard Nav -->
+        <div class="absolute bottom-8 flex gap-8">
+            <button onclick="switchDash('home')" id="nav-home" class="dash-nav-btn active font-bold uppercase tracking-widest text-xs">Play</button>
+            <button onclick="switchDash('about')" id="nav-about" class="dash-nav-btn font-bold uppercase tracking-widest text-xs">About</button>
+            <button onclick="switchDash('history')" id="nav-history" class="dash-nav-btn font-bold uppercase tracking-widest text-xs">History</button>
+            <button onclick="switchDash('dev')" id="nav-dev" class="dash-nav-btn font-bold uppercase tracking-widest text-xs">Dev Notes</button>
+        </div>
+    </div>
+
+    <!-- MAIN GAME UI (Hidden by Dashboard initially) -->
     <nav class="flex-none flex flex-col md:flex-row justify-between items-center bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-200 mb-2 mx-auto w-full max-w-[1400px] gap-2">
         <div class="flex items-center gap-3">
-            <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-blue-200">O</div>
-            <div class="leading-tight">
+            <button onclick="showDashboard()" class="p-2 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors" title="Back to Menu">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+            </button>
+            <div class="leading-tight cursor-pointer" onclick="showDashboard()">
                 <h1 class="text-xl font-bold tracking-tight text-slate-800">ORBITAL <span class="text-blue-600">OVERDRIVE</span></h1>
                 <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Honors Chemistry</p>
             </div>
@@ -202,6 +414,9 @@
             
             <div id="prompt-card" class="bg-white p-4 md:p-6 rounded-2xl shadow-lg border border-blue-50 text-center relative overflow-hidden min-h-[160px] flex flex-col justify-center items-center transition-all flex-none">
                 <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500"></div>
+                <div id="timer-bar-container" class="hidden">
+                    <div id="timer-bar"></div>
+                </div>
                 
                 <div class="absolute top-3 left-0 w-full flex justify-between px-4 items-center">
                     <span id="prompt-label" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Target</span>
@@ -291,7 +506,7 @@
 
     <!-- VERSION FOOTER -->
     <div class="fixed bottom-1 right-2 text-[10px] font-mono text-slate-400 opacity-60 pointer-events-none select-none z-50">
-        ORBITAL_OS <span class="font-bold">v1.2</span> <span class="text-blue-400">b.1</span> [MOLECULAR MIND]
+        ORBITAL_OS <span class="font-bold">v1.3</span> <span class="text-blue-400">b.2</span> [ATOMIC DASHBOARD]
     </div>
 
     <script>
@@ -404,16 +619,24 @@
 
         let state = {
             element: null,
+            targetCategory: null,
+            vocabQ: null,
             mode: 'build_normal',
+            gameType: 'Classic', // Tracks dashboard selection
             streak: 0,
             score: 0,
             level: 1,
             userParts: [],
             userNum: "",
             diagram: [],
-            vocabQ: null,
             waitingNext: false,
-            isotopeNeutrons: 0
+            isotopeNeutrons: 0,
+            
+            // Timer Props
+            timerEnabled: false,
+            timerDuration: 30, // seconds
+            timeLeft: 30,
+            timerId: null
         };
 
         const huntCategories = {
@@ -425,6 +648,93 @@
             metalloid: { name: "Metalloid", z: [5, 14, 32, 33, 51, 52] }
         };
 
+        // --- DASHBOARD LOGIC ---
+        function toggleTimerSettings() {
+            const enabled = document.getElementById('timer-toggle').checked;
+            state.timerEnabled = enabled;
+            const settings = document.getElementById('timer-duration-setting');
+            if(enabled) settings.classList.remove('opacity-50', 'pointer-events-none');
+            else settings.classList.add('opacity-50', 'pointer-events-none');
+        }
+
+        function setTimerDuration(sec) {
+            state.timerDuration = sec;
+            // Update UI buttons
+            [15,30,60].forEach(s => {
+                const btn = document.getElementById(`t-${s}`);
+                if(s === sec) {
+                    btn.classList.remove('bg-slate-50', 'hover:bg-white');
+                    btn.classList.add('bg-blue-600', 'text-white', 'border-blue-600');
+                } else {
+                    btn.classList.add('bg-slate-50', 'hover:bg-white');
+                    btn.classList.remove('bg-blue-600', 'text-white', 'border-blue-600');
+                }
+            });
+        }
+
+        function showDashboard() {
+            clearInterval(state.timerId);
+            document.getElementById('dashboard').classList.remove('hidden');
+            document.getElementById('dashboard').classList.add('flex');
+        }
+
+        // New function to switch dashboard tabs
+        function switchDash(section) {
+            // Hide all sections
+            document.querySelectorAll('.dash-section').forEach(el => el.classList.remove('active'));
+            // Remove active state from nav buttons
+            document.querySelectorAll('.dash-nav-btn').forEach(el => el.classList.remove('active'));
+            
+            // Activate selected
+            document.getElementById(`dash-${section}`).classList.add('active');
+            document.getElementById(`nav-${section}`).classList.add('active');
+        }
+
+        function startGame(type) {
+            state.gameType = type;
+            state.score = 0;
+            state.streak = 0;
+            state.level = 1;
+            updateStats();
+            
+            document.getElementById('dashboard').classList.add('hidden');
+            document.getElementById('dashboard').classList.remove('flex');
+            
+            nextLevel();
+        }
+
+        function startTimer() {
+            clearInterval(state.timerId);
+            if(!state.timerEnabled) {
+                document.getElementById('timer-bar-container').classList.add('hidden');
+                return;
+            }
+
+            document.getElementById('timer-bar-container').classList.remove('hidden');
+            const bar = document.getElementById('timer-bar');
+            state.timeLeft = state.timerDuration;
+            
+            // Reset bar visual
+            bar.style.transition = 'none';
+            bar.style.width = '100%';
+            
+            // Force reflow
+            void bar.offsetWidth;
+
+            // Start animation
+            bar.style.transition = `width ${state.timerDuration}s linear`;
+            bar.style.width = '0%';
+
+            state.timerId = setInterval(() => {
+                state.timeLeft--;
+                if(state.timeLeft <= 0) {
+                    clearInterval(state.timerId);
+                    fail("Time's Up!");
+                }
+            }, 1000);
+        }
+
+        // --- Core Functions ---
         function getCorrectConfig(z, mode) {
             let electrons = z;
             let parts = [];
@@ -441,7 +751,6 @@
                 }
             }
 
-            // ADDED 5p to the ORDER
             let order = [
                 {n:"1s",max:2},{n:"2s",max:2},{n:"2p",max:6},{n:"3s",max:2},{n:"3p",max:6},
                 {n:"4s",max:2},{n:"3d",max:10},{n:"4p",max:6},{n:"5s",max:2},{n:"4d",max:10},{n:"5p",max:6}
@@ -509,8 +818,23 @@
             document.getElementById('ptable-container').classList.remove('mode-identify');
             document.getElementById('table-instruction').classList.add('hidden');
             
-            const modes = ['build_normal', 'build_short', 'build_diagram', 'identify_config', 'identify_diagram', 'count_valence', 'calc_neutrons', 'vocab'];
-            state.mode = modes[Math.floor(Math.random() * modes.length)];
+            // Mode Selection Logic based on Game Type
+            if (state.gameType === 'Classic') {
+                const modes = ['build_normal', 'build_short', 'build_diagram', 'identify_config', 'identify_diagram', 'count_valence', 'calc_neutrons', 'vocab'];
+                state.mode = modes[Math.floor(Math.random() * modes.length)];
+            } else if (state.gameType === 'Architect') {
+                state.mode = Math.random() > 0.5 ? 'build_normal' : 'build_short';
+            } else if (state.gameType === 'Quantum') {
+                state.mode = 'build_diagram';
+            } else if (state.gameType === 'Detective') {
+                const modes = ['identify_config', 'identify_diagram', 'hunt_alkali', 'hunt_alkaline', 'hunt_halogen', 'hunt_noble', 'hunt_transition', 'hunt_metalloid'];
+                state.mode = modes[Math.floor(Math.random() * modes.length)];
+            } else if (state.gameType === 'Nuclear') {
+                state.mode = Math.random() > 0.5 ? 'count_valence' : 'calc_neutrons';
+            } else if (state.gameType === 'Trivia') {
+                state.mode = 'vocab';
+            }
+
             state.waitingNext = false;
             state.userParts = [];
             state.userNum = "";
@@ -519,6 +843,9 @@
             const badge = document.getElementById('mode-badge');
             const promptContent = document.getElementById('prompt-content');
             
+            // Start Timer
+            startTimer();
+
             switch(state.mode) {
                 case 'build_normal':
                 case 'build_short':
@@ -555,9 +882,7 @@
                     }
                     break;
                 case 'count_valence':
-                    // HOTFIX: Safer selection logic
-                    const vPool = elements.filter(e => e.v !== null);
-                    state.element = vPool[Math.floor(Math.random() * vPool.length)];
+                    while(state.element.v === null) state.element = elements[Math.floor(Math.random() * elements.length)];
                     badge.innerHTML = `<div class="w-2.5 h-2.5 rounded-full bg-teal-500"></div> Valence`;
                     promptContent.innerHTML = `<div class="text-6xl font-black text-slate-800 mb-1">${state.element.s}</div><div class="text-lg text-slate-500">${state.element.n}</div>`;
                     document.getElementById('numeric-ui').classList.remove('hidden');
@@ -579,6 +904,26 @@
                     document.getElementById('submit-wrapper').classList.add('hidden');
                     renderVocabQuiz();
                     break;
+            }
+            
+            // Handle Hunts separately as they map to 'identify' type logic but different state mode string
+            if(state.mode.startsWith('hunt')) {
+                const t = state.mode.split('_')[1];
+                state.targetCategory = huntCategories[t];
+                
+                document.getElementById('input-area').classList.add('hidden');
+                document.getElementById('identify-hint').classList.remove('hidden');
+                document.getElementById('identify-hint').classList.add('flex');
+                document.getElementById('ptable-container').classList.add('mode-identify');
+                document.getElementById('table-instruction').classList.remove('hidden');
+                
+                badge.innerHTML = `<div class="w-2.5 h-2.5 rounded-full bg-emerald-500"></div> Hunt`;
+                document.getElementById('hunt-msg').innerHTML = `Find any <b>${state.targetCategory.name}</b>.`;
+                promptContent.innerHTML = `
+                    <div class="fade-in text-center flex flex-col items-center justify-center h-[80px]">
+                        <div class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">FIND A</div>
+                        <div class="text-2xl font-black text-slate-800 tracking-tight leading-none">${state.targetCategory.name}</div>
+                    </div>`;
             }
         }
 
@@ -755,8 +1100,16 @@
 
         function handleElementClick(el) {
             if(state.waitingNext) return;
-            if(!state.mode.startsWith('identify')) return;
-            if(el.z === state.element.z) success();
+            if(!state.mode.startsWith('identify') && !state.mode.startsWith('hunt')) return;
+            
+            let correct = false;
+            if(state.mode.startsWith('hunt')) {
+                if(state.targetCategory.z.includes(el.z)) { correct = true; state.element = el; }
+            } else {
+                if(el.z === state.element.z) correct = true;
+            }
+
+            if(correct) success();
             else fail("Wrong Element!");
         }
 
@@ -782,6 +1135,7 @@
         };
 
         function success() {
+            clearInterval(state.timerId);
             state.waitingNext = true;
             state.streak++;
             state.score += 100 + (state.streak * 10);
@@ -791,8 +1145,13 @@
             document.getElementById('input-area').classList.add('hidden');
             document.getElementById('identify-hint').classList.add('hidden');
             document.getElementById('info-panel').classList.remove('hidden');
-            document.getElementById('info-title').innerText = `${state.element.n} (${state.element.s})`;
-            document.getElementById('info-desc').innerText = state.element.d;
+            if(state.mode === 'vocab') {
+                document.getElementById('info-title').innerText = "Correct!";
+                document.getElementById('info-desc').innerText = "Excellent chemistry knowledge.";
+            } else {
+                document.getElementById('info-title').innerText = `${state.element.n} (${state.element.s})`;
+                document.getElementById('info-desc').innerText = state.element.d;
+            }
         }
 
         function fail(msg) {
@@ -824,7 +1183,7 @@
 
         window.nextLevel = () => {
             state.element = elements[Math.floor(Math.random() * elements.length)];
-            setMode();
+            setMode(); // Resets layout and starts new question
         };
 
         window.resetInput = () => {
@@ -837,7 +1196,7 @@
 
         window.onload = () => {
             renderPTable();
-            nextLevel();
+            setTimerDuration(30); // Default
         };
     </script>
 </body>
