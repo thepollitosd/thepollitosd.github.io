@@ -15,20 +15,19 @@
             --accent-shadow: rgba(59, 130, 246, 0.25);
         }
 
-        /* Anti-Cheat & UI Stability */
         *, *::before, *::after {
             -webkit-user-select: none;
             -moz-user-select: none;
             -ms-user-select: none;
             user-select: none;
-            -webkit-touch-callout: none;
+            box-sizing: border-box;
         }
 
         body {
             background-color: var(--bg-light);
             color: var(--text-main);
             font-family: 'Outfit', sans-serif;
-            overflow: hidden; /* Prevent body scroll, handle internally */
+            overflow-x: hidden;
             height: 100vh;
             background-image: radial-gradient(#e2e8f0 1px, transparent 1px);
             background-size: 20px 20px;
@@ -36,29 +35,26 @@
 
         .font-mono-display { font-family: 'Space Grotesk', monospace; }
 
-        /* Periodic Table Grid - Improved Scrolling */
         .ptable-wrapper {
             width: 100%;
             height: 100%;
-            overflow: auto; /* Allow scroll in all directions if needed */
+            overflow: auto;
             padding: 1rem;
-            /* Center content if it fits, start if it overflows */
-            display: grid;
-            place-items: center start; 
+            display: flex;
+            justify-content: flex-start;
+            align-items: flex-start;
         }
-        
-        /* Mobile: Ensure it aligns start so we can scroll right. Desktop: Center */
+
         @media (min-width: 1024px) {
-            .ptable-wrapper { place-items: center; }
+            .ptable-wrapper { justify-content: center; align-items: center; }
         }
 
         .ptable {
             display: grid;
-            /* Tighter sizing logic for desktop fit */
-            grid-template-columns: repeat(18, minmax(28px, 42px)); 
+            grid-template-columns: repeat(18, minmax(30px, 42px)); 
+            grid-template-rows: repeat(5, minmax(30px, 42px));
             gap: 3px;
-            /* Remove margins that cause overflow issues */
-            margin: 0; 
+            margin: auto;
         }
 
         .element {
@@ -71,22 +67,21 @@
             border-radius: 4px;
             cursor: pointer;
             transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-            border: 2px solid transparent;
+            border: 1px solid transparent;
             font-weight: 600;
-            user-select: none;
             position: relative;
             background: white;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
         }
 
-        .element span.symbol { font-size: 1.3em; line-height: 1; font-weight: 700; }
+        .element span.symbol { font-size: 1.2em; line-height: 1; font-weight: 800; }
         .element span.number { font-size: 0.6em; opacity: 0.6; position: absolute; top: 1px; left: 2px; }
 
-        .element:hover { transform: scale(1.4); z-index: 50; box-shadow: 0 10px 20px rgba(0,0,0,0.15); border-color: white; }
+        .element:hover { transform: scale(1.35); z-index: 50; box-shadow: 0 10px 20px rgba(0,0,0,0.15); border-color: white; }
         
         .element.target-highlight { 
-            transform: scale(1.25); z-index: 40; 
-            box-shadow: 0 0 0 4px var(--accent-blue);
+            transform: scale(1.2); z-index: 40; 
+            box-shadow: 0 0 0 3px var(--accent-blue);
             background-color: white !important;
             border-color: var(--accent-blue);
         }
@@ -96,24 +91,24 @@
             cursor: crosshair;
         }
 
-        /* Colors */
-        .block-s { background-color: #fee2e2; color: #dc2626; }
-        .block-p { background-color: #dbeafe; color: #2563eb; }
-        .block-d { background-color: #fef3c7; color: #d97706; }
-        .block-f { background-color: #f3e8ff; color: #7c3aed; }
+        .block-s { background-color: #fee2e2; color: #dc2626; border-color: #fecaca; }
+        .block-p { background-color: #dbeafe; color: #2563eb; border-color: #bfdbfe; }
+        .block-d { background-color: #fef3c7; color: #d97706; border-color: #fde68a; }
 
-        /* Game Elements */
         .orbital-box {
-            width: 38px; height: 38px; border: 2px solid #cbd5e1; border-radius: 6px;
-            display: inline-flex; justify-content: center; align-items: center; margin: 2px;
+            width: 32px; height: 32px; border: 2px solid #cbd5e1; border-radius: 6px;
+            display: inline-flex; justify-content: center; align-items: center; margin: 1px;
             background: white; transition: all 0.1s; cursor: pointer;
         }
+        @media (min-width: 640px) {
+            .orbital-box { width: 38px; height: 38px; }
+        }
         .orbital-box:hover { border-color: var(--accent-blue); background: #eff6ff; }
-        .spin-arrow { font-size: 22px; font-weight: 800; line-height: 1; }
+        .spin-arrow { font-size: 20px; font-weight: 800; line-height: 1; }
 
         .config-block {
             padding: 4px 10px; background: white; border: 2px solid #e2e8f0; border-radius: 8px;
-            margin: 2px; cursor: pointer; user-select: none; min-width: 45px; position: relative;
+            margin: 2px; cursor: pointer; position: relative;
             display: inline-flex; flex-direction: column; align-items: center;
         }
         .config-super { 
@@ -127,7 +122,6 @@
         .fade-in { animation: fadeIn 0.4s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* Keys */
         .key-btn {
             background: white; border: 1px solid #e2e8f0; border-bottom-width: 3px; border-radius: 0.5rem;
             font-family: 'Space Grotesk', monospace; font-weight: 600; color: #475569;
@@ -136,19 +130,33 @@
         }
         .key-btn:active { transform: translateY(2px); border-bottom-width: 1px; }
         .key-noble { background: #eff6ff; color: #2563eb; border-color: #bfdbfe; }
-        
-        .key-num { font-size: 1.25rem; font-weight: bold; color: #1e293b; }
-        .key-choice { font-size: 0.8rem; text-align: center; padding: 4px; line-height: 1.2; height: 100%; white-space: normal; }
 
-        /* Toast */
         #toast { transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.4s ease; }
         .toast-visible { transform: translate(-50%, 0) !important; opacity: 1 !important; }
         .toast-hidden { transform: translate(-50%, -150%) !important; opacity: 0 !important; }
+
+        .cursor-blink {
+            display: inline-block;
+            width: 2px;
+            height: 1.2em;
+            background: var(--accent-blue);
+            margin-left: 2px;
+            animation: blink 1s infinite;
+            vertical-align: middle;
+        }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+        .diagram-scroll-container {
+            width: 100%;
+            overflow-x: auto;
+            padding: 10px 0;
+            display: flex;
+            justify-content: center;
+        }
     </style>
 </head>
 <body class="p-2 md:p-4 h-screen flex flex-col" oncontextmenu="return false;">
 
-    <!-- Header -->
     <nav class="flex-none flex flex-col md:flex-row justify-between items-center bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-200 mb-2 mx-auto w-full max-w-[1400px] gap-2">
         <div class="flex items-center gap-3">
             <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-blue-200">O</div>
@@ -174,112 +182,104 @@
         </div>
     </nav>
 
-    <!-- Main Content -->
     <div class="flex-grow grid grid-cols-1 lg:grid-cols-12 gap-2 md:gap-4 max-w-[1400px] mx-auto w-full overflow-hidden">
         
-        <!-- Left: Interactive Periodic Table -->
+        <!-- PERIODIC TABLE AREA -->
         <div class="lg:col-span-7 bg-white rounded-2xl shadow-md border border-slate-100 flex flex-col order-2 lg:order-1 relative h-full overflow-hidden">
             <div class="flex-none flex justify-between items-end p-3 pb-0">
                 <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest">Periodic Table</h3>
                 <div id="table-instruction" class="text-xs font-bold text-blue-500 bg-blue-50 px-2 py-1 rounded hidden animate-pulse">Select Element</div>
             </div>
             
-            <div class="ptable-wrapper" id="ptable-wrapper">
-                <div id="ptable-container" class="ptable">
-                    <!-- JS Generated -->
-                </div>
+            <div class="ptable-wrapper">
+                <div id="ptable-container" class="ptable"></div>
             </div>
         </div>
 
-        <!-- Right: Game Dashboard -->
+        <!-- INTERACTION SIDEBAR -->
         <div class="lg:col-span-5 flex flex-col gap-2 md:gap-4 order-1 lg:order-2 h-full overflow-y-auto pb-4">
             
-            <!-- Question/Prompt Card -->
             <div id="prompt-card" class="bg-white p-4 md:p-6 rounded-2xl shadow-lg border border-blue-50 text-center relative overflow-hidden min-h-[160px] flex flex-col justify-center items-center transition-all flex-none">
                 <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500"></div>
                 
                 <div class="absolute top-3 left-0 w-full flex justify-between px-4 items-center">
                     <span id="prompt-label" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Target</span>
-                    <div id="mode-badge" class="flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-lg text-sm md:text-base font-bold text-slate-700 shadow-sm border border-slate-200">
+                    <div id="mode-badge" class="flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-lg text-sm font-bold text-slate-700 shadow-sm border border-slate-200">
                         <div class="w-2.5 h-2.5 rounded-full bg-blue-500"></div> Standard
                     </div>
                 </div>
 
-                <div id="prompt-content" class="w-full mt-6">
-                    <!-- Dynamic Content -->
-                </div>
+                <div id="prompt-content" class="w-full mt-6"></div>
             </div>
 
-            <!-- Description/Feedback Panel -->
+            <!-- SUCCESS PANEL -->
             <div id="info-panel" class="hidden bg-emerald-50 border border-emerald-100 p-4 rounded-xl fade-in flex-none">
                 <div class="flex gap-3">
                     <div class="text-2xl">💡</div>
-                    <div>
+                    <div class="flex-grow">
                         <h4 class="text-sm font-bold text-emerald-800" id="info-title">Fact</h4>
                         <p class="text-xs text-emerald-700 mt-1 leading-relaxed" id="info-desc">...</p>
+                        <button onclick="nextLevel()" class="w-full mt-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 rounded-lg text-sm shadow-sm transition-colors">
+                            Next Challenge →
+                        </button>
                     </div>
                 </div>
-                <button onclick="nextLevel()" class="w-full mt-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 rounded-lg text-sm shadow-sm transition-colors">
-                    Next Challenge →
-                </button>
             </div>
 
-            <!-- Input Area -->
-            <div id="input-area" class="bg-white p-4 rounded-2xl shadow-md border border-slate-100 flex-grow flex flex-col relative transition-all min-h-[200px]">
-                
+            <!-- THE TYPING / INPUT WINDOW -->
+            <div id="input-area" class="bg-white p-4 rounded-2xl shadow-md border border-slate-100 flex-grow flex flex-col relative transition-all min-h-[260px]">
                 <div class="flex justify-between items-center mb-2">
-                    <h4 class="text-xs font-bold text-slate-500 uppercase">Controls</h4>
+                    <h4 class="text-xs font-bold text-slate-500 uppercase">Input Window</h4>
                     <button onclick="resetInput()" id="btn-reset" class="text-[10px] font-bold text-red-400 hover:text-red-500 uppercase hover:bg-red-50 px-2 py-1 rounded">Reset</button>
                 </div>
 
-                <!-- Builder UI (Config) -->
+                <!-- 1. Configuration Builder -->
                 <div id="builder-ui" class="hidden flex-col gap-3 h-full">
-                    <div id="config-output" class="min-h-[50px] bg-slate-50 border-2 border-slate-200 border-dashed rounded-xl p-2 flex flex-wrap gap-1 items-center content-center justify-center">
-                        <span class="text-slate-400 text-xs italic">Construct configuration...</span>
-                    </div>
+                    <div id="config-output" class="min-h-[60px] bg-slate-50 border-2 border-slate-200 border-dashed rounded-xl p-3 flex flex-wrap gap-1 items-center content-center justify-center"></div>
                     <div class="grid grid-cols-5 gap-1.5" id="orbital-keypad"></div>
                 </div>
 
-                <!-- Numeric Keypad UI (Valence/Isotopes) -->
+                <!-- 2. Numeric Window -->
                 <div id="numeric-ui" class="hidden flex-col gap-3 h-full">
                     <div class="flex justify-center mb-2">
-                        <div id="numeric-display" class="text-3xl font-mono font-bold text-slate-800 min-h-[40px] border-b-2 border-slate-200 px-4">_</div>
+                        <div class="bg-slate-50 border-2 border-slate-200 rounded-xl px-6 py-2 flex items-center min-w-[120px] justify-center">
+                            <span id="numeric-display" class="text-4xl font-mono font-bold text-slate-800"></span>
+                            <span class="cursor-blink"></span>
+                        </div>
                     </div>
-                    <div class="grid grid-cols-3 gap-2 flex-grow" id="numeric-keys">
-                        <!-- JS Generated -->
-                    </div>
+                    <div class="grid grid-cols-3 gap-2 flex-grow" id="numeric-keys"></div>
                 </div>
 
-                <!-- Quiz UI (Vocab) -->
-                <div id="quiz-ui" class="hidden flex-col gap-2 h-full justify-center">
-                    <!-- JS Generated Options -->
-                </div>
+                <!-- 3. Vocabulary Quiz Window -->
+                <div id="quiz-ui" class="hidden flex-col gap-2 h-full justify-center"></div>
 
-                <!-- Diagram Mode UI -->
+                <!-- 4. Orbital Diagram Window -->
                 <div id="diagram-ui" class="hidden flex-col items-center">
-                    <div id="orbital-diagram-grid" class="flex flex-wrap gap-2 justify-center content-center min-h-[120px]"></div>
-                    <p class="text-xs text-slate-400 mt-2">Click: <span class="text-blue-500 font-bold">↑</span> / <span class="text-red-500 font-bold">↓</span></p>
+                    <div class="diagram-scroll-container">
+                         <div id="orbital-diagram-grid" class="flex flex-wrap gap-y-4 gap-x-2 justify-center max-w-full"></div>
+                    </div>
+                    <p class="text-[10px] text-slate-400 mt-2 italic font-medium uppercase tracking-widest text-center">Click boxes to add/remove electrons</p>
                 </div>
 
+                <!-- Common Submit -->
                 <div class="mt-auto pt-4" id="submit-wrapper">
-                    <button id="submit-btn" class="w-full py-3 bg-slate-900 text-white rounded-xl font-bold tracking-wide hover:bg-slate-800 active:scale-95 transition-all shadow-lg shadow-slate-200/50 flex items-center justify-center gap-2">
-                        <span>CONFIRM</span>
+                    <button id="submit-btn" class="w-full py-4 bg-slate-900 text-white rounded-xl font-bold tracking-wide hover:bg-slate-800 active:scale-95 transition-all shadow-lg flex items-center justify-center gap-2">
+                        <span>CONFIRM ANSWER</span>
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
                     </button>
                 </div>
             </div>
 
-            <!-- Identify Mode Hint -->
+            <!-- HUNT / IDENTIFY PROMPT -->
             <div id="identify-hint" class="hidden bg-slate-50 p-6 rounded-2xl border-2 border-dashed border-slate-200 text-center flex-col justify-center items-center h-full">
                 <div class="text-4xl mb-2">👆</div>
                 <h3 class="text-slate-800 font-bold">Select on Table</h3>
-                <p class="text-sm text-slate-500 mt-2" id="hunt-msg">Find the correct element.</p>
+                <p class="text-sm text-slate-500 mt-2" id="hunt-msg">Find the correct element to answer.</p>
             </div>
-
         </div>
     </div>
 
-    <!-- Toast Notification -->
+    <!-- TOAST NOTIFICATION -->
     <div id="toast" class="fixed top-24 left-1/2 px-6 py-4 bg-white rounded-full shadow-2xl border border-slate-100 flex items-center gap-3 z-[60] pointer-events-none toast-hidden">
         <div id="toast-icon" class="w-8 h-8 rounded-full bg-green-100 text-green-600 flex items-center justify-center font-bold">✓</div>
         <div>
@@ -289,99 +289,113 @@
     </div>
 
     <script>
-        // --- Data ---
+        // --- COMPLETE ELEMENTS LIST (1-54) ---
         const elements = [
+            // Period 1
             {z: 1, s: "H", n: "Hydrogen", b: "s", d: "Most abundant element in the universe.", v:1},
             {z: 2, s: "He", n: "Helium", b: "s", d: "Inert noble gas used in balloons.", v:2},
+            // Period 2
             {z: 3, s: "Li", n: "Lithium", b: "s", d: "Lightest metal, used in batteries.", v:1},
-            {z: 4, s: "Be", n: "Beryllium", b: "s", d: "Lightweight and stiff aerospace metal.", v:2},
+            {z: 4, s: "Be", n: "Beryllium", b: "s", d: "Lightweight aerospace metal.", v:2},
             {z: 5, s: "B", n: "Boron", b: "p", d: "Metalloid used in heat-resistant glass.", v:3},
-            {z: 6, s: "C", n: "Carbon", b: "p", d: "Basis of organic life (DNA, proteins).", v:4},
+            {z: 6, s: "C", n: "Carbon", b: "p", d: "Basis of organic life.", v:4},
             {z: 7, s: "N", n: "Nitrogen", b: "p", d: "78% of Earth's atmosphere.", v:5},
             {z: 8, s: "O", n: "Oxygen", b: "p", d: "Essential for respiration.", v:6},
             {z: 9, s: "F", n: "Fluorine", b: "p", d: "Most reactive element.", v:7},
             {z: 10, s: "Ne", n: "Neon", b: "p", d: "Noble gas that glows red-orange.", v:8},
+            // Period 3
             {z: 11, s: "Na", n: "Sodium", b: "s", d: "Explodes in water, forms salt.", v:1},
             {z: 12, s: "Mg", n: "Magnesium", b: "s", d: "Burns with bright white light.", v:2},
             {z: 13, s: "Al", n: "Aluminum", b: "p", d: "Most abundant metal in crust.", v:3},
             {z: 14, s: "Si", n: "Silicon", b: "p", d: "Foundation of computer chips.", v:4},
             {z: 15, s: "P", n: "Phosphorus", b: "p", d: "Essential for ATP and DNA.", v:5},
             {z: 16, s: "S", n: "Sulfur", b: "p", d: "Yellow solid, smells like rotten eggs.", v:6},
-            {z: 17, s: "Cl", n: "Chlorine", b: "p", d: "Toxic gas used to disinfect pools.", v:7},
+            {z: 17, s: "Cl", n: "Chlorine", b: "p", d: "Toxic gas used in pools.", v:7},
             {z: 18, s: "Ar", n: "Argon", b: "p", d: "3rd most abundant atmospheric gas.", v:8},
-            {z: 19, s: "K", n: "Potassium", b: "s", d: "Vital nutrient (bananas).", v:1},
+            // Period 4
+            {z: 19, s: "K", n: "Potassium", b: "s", d: "Vital nutrient for nerves.", v:1},
             {z: 20, s: "Ca", n: "Calcium", b: "s", d: "Essential for bones and teeth.", v:2},
-            // Transitions (v=null to skip valence questions for simplicity)
             {z: 21, s: "Sc", n: "Scandium", b: "d", d: "Used in stadium lights.", v:null},
             {z: 22, s: "Ti", n: "Titanium", b: "d", d: "Strong as steel, light as aluminum.", v:null},
-            {z: 23, s: "V", n: "Vanadium", b: "d", d: "Hardens steel tools.", v:null},
-            {z: 24, s: "Cr", n: "Chromium", b: "d", d: "Shiny coating on car bumpers.", v:null},
+            {z: 23, s: "V", n: "Vanadium", b: "d", d: "Used to harden steel tools.", v:null},
+            {z: 24, s: "Cr", n: "Chromium", b: "d", d: "Exception alert: [Ar] 4s1 3d5.", v:null},
             {z: 25, s: "Mn", n: "Manganese", b: "d", d: "Crucial for steel making.", v:null},
-            {z: 26, s: "Fe", n: "Iron", b: "d", d: "Core of the Earth, carries oxygen in blood.", v:null},
+            {z: 26, s: "Fe", n: "Iron", b: "d", d: "Core of the Earth.", v:null},
             {z: 27, s: "Co", n: "Cobalt", b: "d", d: "Used in magnets and blue glass.", v:null},
-            {z: 28, s: "Ni", n: "Nickel", b: "d", d: "Used in coins and stainless steel.", v:null},
-            {z: 29, s: "Cu", n: "Copper", b: "d", d: "Excellent electrical conductor.", v:null},
-            {z: 30, s: "Zn", n: "Zinc", b: "d", d: "Galvanizes steel against rust.", v:null},
+            {z: 28, s: "Ni", n: "Nickel", b: "d", d: "Used in coins and batteries.", v:null},
+            {z: 29, s: "Cu", n: "Copper", b: "d", d: "Exception alert: [Ar] 4s1 3d10.", v:null},
+            {z: 30, s: "Zn", n: "Zinc", b: "d", d: "Galvanizes steel.", v:null},
             {z: 31, s: "Ga", n: "Gallium", b: "p", d: "Metal that melts in your hand.", v:3},
-            {z: 32, s: "Ge", n: "Germanium", b: "p", d: "Used in early transistors.", v:4},
+            {z: 32, s: "Ge", n: "Germanium", b: "p", d: "Semiconductor used in transistors.", v:4},
             {z: 33, s: "As", n: "Arsenic", b: "p", d: "Historically famous poison.", v:5},
-            {z: 34, s: "Se", n: "Selenium", b: "p", d: "Conducts electricity when light hits it.", v:6},
-            {z: 35, s: "Br", n: "Bromine", b: "p", d: "Liquid halogen at room temp.", v:7},
-            {z: 36, s: "Kr", n: "Krypton", b: "p", d: "Used in high-speed flash photography.", v:8}
+            {z: 34, s: "Se", n: "Selenium", b: "p", d: "Photoconductive metalloid.", v:6},
+            {z: 35, s: "Br", n: "Bromine", b: "p", d: "Red-brown liquid halogen.", v:7},
+            {z: 36, s: "Kr", n: "Krypton", b: "p", d: "Inert gas used in flash bulbs.", v:8},
+            // Period 5
+            {z: 37, s: "Rb", n: "Rubidium", b: "s", d: "Highly reactive alkali metal.", v:1},
+            {z: 38, s: "Sr", n: "Strontium", b: "s", d: "Gives fireworks a red color.", v:2},
+            {z: 39, s: "Y", n: "Yttrium", b: "d", d: "Used in LEDs and superconductors.", v:null},
+            {z: 40, s: "Zr", n: "Zirconium", b: "d", d: "Used in nuclear reactors.", v:null},
+            {z: 41, s: "Nb", n: "Niobium", b: "d", d: "Used in jet engines.", v:null},
+            {z: 42, s: "Mo", n: "Molybdenum", b: "d", d: "Exception: [Kr] 5s1 4d5.", v:null},
+            {z: 43, s: "Tc", n: "Technetium", b: "d", d: "First artificially produced element.", v:null},
+            {z: 44, s: "Ru", n: "Ruthenium", b: "d", d: "Rare metal used in electronics.", v:null},
+            {z: 45, s: "Rh", n: "Rhodium", b: "d", d: "Rarest non-radioactive metal.", v:null},
+            {z: 46, s: "Pd", n: "Palladium", b: "d", d: "Exception: [Kr] 4d10.", v:null},
+            {z: 47, s: "Ag", n: "Silver", b: "d", d: "Exception: [Kr] 5s1 4d10.", v:null},
+            {z: 48, s: "Cd", n: "Cadmium", b: "d", d: "Toxic metal used in batteries.", v:null},
+            {z: 49, s: "In", n: "Indium", b: "p", d: "Used in touchscreens.", v:3},
+            {z: 50, s: "Sn", n: "Tin", b: "p", d: "Alloyed with copper to make bronze.", v:4},
+            {z: 51, s: "Sb", n: "Antimony", b: "p", d: "Used in flame retardants.", v:5},
+            {z: 52, s: "Te", n: "Tellurium", b: "p", d: "One of the rarest metalloids.", v:6},
+            {z: 53, s: "I", n: "Iodine", b: "p", d: "Vital for hormone production.", v:7},
+            {z: 54, s: "Xe", n: "Xenon", b: "p", d: "Noble gas used in ion thrusters.", v:8}
         ];
 
         const vocabBank = [
-            { q: "What is an atom with a charge?", a: "Ion", opts: ["Ion", "Isotope", "Neutron", "Molecule"] },
-            { q: "What is a positive ion called?", a: "Cation", opts: ["Cation", "Anion", "Positron", "Electron"] },
-            { q: "What is a negative ion called?", a: "Anion", opts: ["Cation", "Anion", "Nucleus", "Proton"] },
-            { q: "Vertical columns on the table are called?", a: "Groups", opts: ["Groups", "Periods", "Blocks", "Shells"] },
-            { q: "Horizontal rows on the table are called?", a: "Periods", opts: ["Groups", "Periods", "Families", "Trends"] },
-            { q: "Isotopes have different numbers of...", a: "Neutrons", opts: ["Protons", "Neutrons", "Electrons", "Shells"] },
-            { q: "Trend for Atomic Radius going DOWN a group?", a: "Increases", opts: ["Increases", "Decreases", "Stays Same", "Random"] },
-            { q: "Electrons in the outermost shell are...", a: "Valence", opts: ["Core", "Valence", "Inner", "Nuclear"] }
+            { q: "Positive ions are called...", a: "Cations", opts: ["Cations", "Anions", "Protons", "Neutrons"] },
+            { q: "Horizontal rows are called...", a: "Periods", opts: ["Groups", "Periods", "Blocks", "Families"] },
+            { q: "Halogens belong to which group?", a: "17", opts: ["1", "2", "17", "18"] },
+            { q: "Valence electrons are located in...", a: "Outer shell", opts: ["Outer shell", "Nucleus", "Inner shell", "Core"] }
         ];
+
+        const orbitalKeys = ["1s", "2s", "2p", "3s", "3p", "4s", "3d", "4p", "5s", "4d", "5p"];
+        const nobleGases = [{z:2,s:"He"},{z:10,s:"Ne"},{z:18,s:"Ar"},{z:36,s:"Kr"},{z:54,s:"Xe"}];
+
+        let state = {
+            element: null,
+            mode: 'build_normal',
+            streak: 0,
+            score: 0,
+            level: 1,
+            userParts: [],
+            userNum: "",
+            diagram: [],
+            vocabQ: null,
+            waitingNext: false,
+            isotopeNeutrons: 0
+        };
 
         const huntCategories = {
             alkali: { name: "Alkali Metal", z: [3, 11, 19, 37] },
             alkaline: { name: "Alkaline Earth", z: [4, 12, 20, 38] },
             halogen: { name: "Halogen", z: [9, 17, 35, 53] },
             noble: { name: "Noble Gas", z: [2, 10, 18, 36, 54] },
-            transition: { name: "Transition Metal", z: [21,22,23,24,25,26,27,28,29,30] },
+            transition: { name: "Transition Metal", z: [21,22,23,24,25,26,27,28,29,30,39,40,41,42,43,44,45,46,47,48] },
             metalloid: { name: "Metalloid", z: [5, 14, 32, 33, 51, 52] }
         };
 
-        const nobleGases = [{z:2,s:"He"},{z:10,s:"Ne"},{z:18,s:"Ar"},{z:36,s:"Kr"},{z:54,s:"Xe"}];
-        const orbitalKeys = ["1s", "2s", "2p", "3s", "3p", "4s", "3d", "4p", "5s", "4d", "5p"];
-
-        // --- State ---
-        let state = {
-            element: null,
-            targetCategory: null,
-            vocabQ: null,
-            mode: 'build_normal',
-            streak: 0,
-            score: 0,
-            level: 1,
-            userParts: [], // Build mode
-            userNum: "",   // Numeric mode
-            diagram: [],
-            waitingNext: false,
-            isotopeMass: 0, // For isotope challenge
-            isotopeNeutrons: 0
-        };
-
-        // --- Logic ---
         function getCorrectConfig(z, mode) {
             let electrons = z;
-            let configParts = [];
-            let nobleUsed = null;
+            let parts = [];
+            let noble = null;
             let isShort = mode.includes('short') || mode === 'identify_config';
 
             if (isShort) {
                 for (let i = nobleGases.length - 1; i >= 0; i--) {
                     if (nobleGases[i].z < z) {
-                        nobleUsed = nobleGases[i];
-                        electrons -= nobleUsed.z;
+                        noble = nobleGases[i];
+                        electrons -= noble.z;
                         break;
                     }
                 }
@@ -389,474 +403,370 @@
 
             let order = [
                 {n:"1s",max:2},{n:"2s",max:2},{n:"2p",max:6},{n:"3s",max:2},{n:"3p",max:6},
-                {n:"4s",max:2},{n:"3d",max:10},{n:"4p",max:6},{n:"5s",max:2}
+                {n:"4s",max:2},{n:"3d",max:10},{n:"4p",max:6},{n:"5s",max:2},{n:"4d",max:10}
             ];
-            if (nobleUsed) {
-                if(nobleUsed.s==='He') order=order.slice(1);
-                if(nobleUsed.s==='Ne') order=order.slice(3);
-                if(nobleUsed.s==='Ar') order=order.slice(5);
+            
+            if (noble) {
+                if(noble.s==='He') order=order.slice(1);
+                if(noble.s==='Ne') order=order.slice(3);
+                if(noble.s==='Ar') order=order.slice(5);
+                if(noble.s==='Kr') order=order.slice(8);
             }
 
             for (let orb of order) {
-                if(electrons<=0) break;
+                if(electrons <= 0) break;
                 let fill = Math.min(electrons, orb.max);
-                // Simple exceptions for game flow
-                if(z===24&&orb.n==='4s') fill=1; if(z===24&&orb.n==='3d') fill=5;
-                if(z===29&&orb.n==='4s') fill=1; if(z===29&&orb.n==='3d') fill=10;
-                
-                if(fill>0) configParts.push({label:orb.n, count:fill});
-                electrons-=fill;
+                if((z===24||z===29||z===47) && orb.n.endsWith('s') && electrons >= orb.max) fill = 1;
+                if((z===24) && orb.n==='3d' && fill===4) fill=5;
+                if((z===29||z===47) && orb.n.endsWith('d') && fill===9) fill=10;
+                if(z===46) { if(orb.n==='5s') fill=0; if(orb.n==='4d') fill=10; } // Pd exception
+
+                if(fill > 0) parts.push({label:orb.n, count:fill});
+                electrons -= fill;
             }
-            return { noble: nobleUsed ? `[${nobleUsed.s}]` : null, parts: configParts };
+            return { noble: noble ? `[${noble.s}]` : null, parts };
         }
 
-        // --- Renderers ---
         function renderPTable() {
             const container = document.getElementById('ptable-container');
             container.innerHTML = '';
-            
-            // Map period/groups for layout
-            const map = {};
+            const gridMap = {};
             elements.forEach(e => {
-                let row, col;
-                if(e.z===1) {row=1; col=1;}
-                else if(e.z===2) {row=1; col=18;}
-                else if(e.z<=18) {
-                    row = e.z<=10 ? 2 : 3;
-                    col = (e.z<=4 || (e.z>=11&&e.z<=12)) ? (e.z%18 || 18) : (e.z%8===0?18:(e.z%8===1?13:(e.z%8+10))); 
-                    if(e.z===3) col=1; if(e.z===4) col=2; 
-                    if(e.z>=5&&e.z<=10) col=12+(e.z-4);
-                    if(e.z===11) col=1; if(e.z===12) col=2;
-                    if(e.z>=13&&e.z<=18) col=12+(e.z-12);
-                } else {
-                    row = 4; col = e.z - 18;
-                }
-                map[e.z] = {r:row, c:col};
+                let r, c;
+                if (e.z === 1) { r=1; c=1; }
+                else if (e.z === 2) { r=1; c=18; }
+                else if (e.z <= 10) { r=2; c = e.z <= 4 ? (e.z-2) : (e.z+8); }
+                else if (e.z <= 18) { r=3; c = e.z <= 12 ? (e.z-10) : (e.z); }
+                else if (e.z <= 36) { r=4; c = e.z-18; }
+                else if (e.z <= 54) { r=5; c = e.z-36; }
+                gridMap[`${r}-${c}`] = e;
             });
 
-            for(let i=1; i<=72; i++) { // Render 4 rows
-                const row = Math.ceil(i/18);
-                const col = i%18||18;
-                
-                const div = document.createElement('div');
-                const elData = elements.find(e => map[e.z] && map[e.z].r === row && map[e.z].c === col);
-
-                if(elData) {
-                    div.className = `element block-${elData.b}`;
-                    div.id = `el-${elData.z}`;
-                    div.innerHTML = `<span class="number">${elData.z}</span><span class="symbol">${elData.s}</span>`;
-                    div.onclick = () => handleElementClick(elData);
-                } else {
-                    div.className = 'opacity-0 pointer-events-none';
+            for (let r=1; r<=5; r++) {
+                for (let c=1; c<=18; c++) {
+                    const el = gridMap[`${r}-${c}`];
+                    const div = document.createElement('div');
+                    if (el) {
+                        div.className = `element block-${el.b}`;
+                        div.id = `el-${el.z}`;
+                        div.innerHTML = `<span class="number">${el.z}</span><span class="symbol">${el.s}</span>`;
+                        div.onclick = () => handleElementClick(el);
+                    } else {
+                        div.className = 'opacity-0 pointer-events-none';
+                    }
+                    container.appendChild(div);
                 }
-                container.appendChild(div);
+            }
+        }
+
+        function setMode() {
+            const uis = ['builder-ui', 'numeric-ui', 'quiz-ui', 'diagram-ui', 'identify-hint', 'info-panel'];
+            uis.forEach(id => document.getElementById(id).classList.add('hidden'));
+            document.getElementById('input-area').classList.remove('hidden');
+            document.getElementById('submit-wrapper').classList.remove('hidden');
+            document.querySelectorAll('.element').forEach(e => e.classList.remove('target-highlight'));
+            document.getElementById('ptable-container').classList.remove('mode-identify');
+            document.getElementById('table-instruction').classList.add('hidden');
+            
+            const modes = ['build_normal', 'build_short', 'build_diagram', 'identify_config', 'identify_diagram', 'count_valence', 'calc_neutrons', 'vocab'];
+            state.mode = modes[Math.floor(Math.random() * modes.length)];
+            state.waitingNext = false;
+            state.userParts = [];
+            state.userNum = "";
+            state.diagram = [];
+
+            const badge = document.getElementById('mode-badge');
+            const promptContent = document.getElementById('prompt-content');
+            
+            switch(state.mode) {
+                case 'build_normal':
+                case 'build_short':
+                    badge.innerHTML = `<div class="w-2.5 h-2.5 rounded-full bg-blue-500"></div> Configuration`;
+                    promptContent.innerHTML = `<div class="text-6xl font-black text-slate-800">${state.element.s}</div><div class="text-lg text-slate-500">${state.element.n}</div>`;
+                    document.getElementById('builder-ui').classList.remove('hidden');
+                    document.getElementById('builder-ui').classList.add('flex');
+                    renderBuilder();
+                    highlightElement();
+                    break;
+                case 'build_diagram':
+                    badge.innerHTML = `<div class="w-2.5 h-2.5 rounded-full bg-orange-500"></div> Diagramming`;
+                    promptContent.innerHTML = `<div class="text-6xl font-black text-slate-800">${state.element.s}</div><div class="text-lg text-slate-500">${state.element.n}</div>`;
+                    document.getElementById('diagram-ui').classList.remove('hidden');
+                    document.getElementById('diagram-ui').classList.add('flex');
+                    renderDiagramInput();
+                    highlightElement();
+                    break;
+                case 'identify_config':
+                case 'identify_diagram':
+                    badge.innerHTML = `<div class="w-2.5 h-2.5 rounded-full bg-pink-500"></div> Identify`;
+                    document.getElementById('input-area').classList.add('hidden');
+                    document.getElementById('identify-hint').classList.remove('hidden');
+                    document.getElementById('identify-hint').classList.add('flex');
+                    document.getElementById('ptable-container').classList.add('mode-identify');
+                    document.getElementById('table-instruction').classList.remove('hidden');
+                    if(state.mode === 'identify_config') {
+                        const sol = getCorrectConfig(state.element.z, 'short');
+                        let str = (sol.noble ? sol.noble + " " : "") + sol.parts.map(p => `${p.label}<sup>${p.count}</sup>`).join(" ");
+                        promptContent.innerHTML = `<div class="text-xl font-mono text-slate-700 bg-slate-100 p-4 rounded-xl shadow-inner">${str}</div>`;
+                    } else {
+                        promptContent.innerHTML = `<div id="diagram-preview" class="flex flex-wrap gap-2 justify-center p-2 rounded-xl bg-slate-50 border border-slate-100"></div>`;
+                        renderDiagramPreview(state.element.z);
+                    }
+                    break;
+                case 'count_valence':
+                    while(state.element.v === null) state.element = elements[Math.floor(Math.random() * elements.length)];
+                    badge.innerHTML = `<div class="w-2.5 h-2.5 rounded-full bg-teal-500"></div> Valence`;
+                    promptContent.innerHTML = `<div class="text-6xl font-black text-slate-800 mb-1">${state.element.s}</div><div class="text-lg text-slate-500">${state.element.n}</div>`;
+                    document.getElementById('numeric-ui').classList.remove('hidden');
+                    renderNumericKeys();
+                    break;
+                case 'calc_neutrons':
+                    badge.innerHTML = `<div class="w-2.5 h-2.5 rounded-full bg-indigo-500"></div> Neutrons`;
+                    state.isotopeNeutrons = state.element.z + Math.floor(Math.random() * 5);
+                    const mass = state.element.z + state.isotopeNeutrons;
+                    promptContent.innerHTML = `<div class="relative inline-block"><span class="absolute -top-1 -left-5 text-xs font-bold text-slate-400">${mass}</span><div class="text-6xl font-black text-slate-800">${state.element.s}</div></div><p class="mt-2 text-slate-400 font-bold uppercase text-[10px]">Find Neutrons</p>`;
+                    document.getElementById('numeric-ui').classList.remove('hidden');
+                    renderNumericKeys();
+                    break;
+                case 'vocab':
+                    badge.innerHTML = `<div class="w-2.5 h-2.5 rounded-full bg-yellow-500"></div> Terminology`;
+                    state.vocabQ = vocabBank[Math.floor(Math.random() * vocabBank.length)];
+                    promptContent.innerHTML = `<div class="text-lg font-bold text-slate-700 p-2">${state.vocabQ.q}</div>`;
+                    document.getElementById('quiz-ui').classList.remove('hidden');
+                    document.getElementById('submit-wrapper').classList.add('hidden');
+                    renderVocabQuiz();
+                    break;
+            }
+        }
+
+        function highlightElement() {
+            const el = document.getElementById(`el-${state.element.z}`);
+            if(el) {
+                el.classList.add('target-highlight');
+                el.scrollIntoView({behavior:'smooth', block:'center', inline:'center'});
             }
         }
 
         function renderBuilder() {
-            document.getElementById('config-output').innerHTML = '<span class="text-slate-400 text-xs italic">Construct configuration...</span>';
+            const out = document.getElementById('config-output');
             const keypad = document.getElementById('orbital-keypad');
+            out.innerHTML = state.userParts.length ? '' : '<span class="text-slate-400 text-xs italic">Assemble the configuration here...</span>';
             keypad.innerHTML = '';
-            
+
             if (state.mode === 'build_short') {
-                const nobles = ["[He]", "[Ne]", "[Ar]", "[Kr]"];
-                nobles.forEach(n => {
-                    const btn = document.createElement('button');
-                    btn.className = "key-btn key-noble text-xs font-bold";
-                    btn.innerText = n;
-                    btn.onclick = () => addPart(n, true);
-                    keypad.appendChild(btn);
+                ["[He]", "[Ne]", "[Ar]", "[Kr]"].forEach(n => {
+                    const b = document.createElement('button');
+                    b.className = "key-btn key-noble text-xs";
+                    b.innerText = n;
+                    b.onclick = () => addConfigPart(n, true);
+                    keypad.appendChild(b);
                 });
             }
-            orbitalKeys.forEach(key => {
-                const btn = document.createElement('button');
-                btn.className = `key-btn key-${key.charAt(1)} text-xs`;
-                btn.innerText = key;
-                btn.onclick = () => addPart(key, false);
-                keypad.appendChild(btn);
+            orbitalKeys.forEach(k => {
+                const b = document.createElement('button');
+                b.className = "key-btn text-xs";
+                b.innerText = k;
+                b.onclick = () => addConfigPart(k, false);
+                keypad.appendChild(b);
             });
         }
 
-        function renderNumericKeypad() {
-            const keypad = document.getElementById('numeric-keys');
-            keypad.innerHTML = '';
-            document.getElementById('numeric-display').innerText = "_";
-            state.userNum = "";
-
-            [1,2,3,4,5,6,7,8,9,0].forEach(n => {
-                const btn = document.createElement('button');
-                btn.className = "key-btn key-num";
-                btn.innerText = n;
-                btn.onclick = () => {
-                    if(state.userNum.length < 3) {
-                        state.userNum += n;
-                        document.getElementById('numeric-display').innerText = state.userNum;
-                    }
-                };
-                keypad.appendChild(btn);
-            });
-            // Backspace
-            const del = document.createElement('button');
-            del.className = "key-btn text-red-500 font-bold";
-            del.innerText = "⌫";
-            del.onclick = () => {
-                state.userNum = state.userNum.slice(0, -1);
-                document.getElementById('numeric-display').innerText = state.userNum || "_";
-            };
-            keypad.appendChild(del);
-        }
-
-        function renderQuizOptions() {
-            const container = document.getElementById('quiz-ui');
-            container.innerHTML = '';
-            state.vocabQ.opts.forEach(opt => {
-                const btn = document.createElement('button');
-                btn.className = "key-btn key-choice";
-                btn.innerText = opt;
-                btn.onclick = () => submitVocab(opt);
-                container.appendChild(btn);
-            });
-        }
-
-        function renderDiagramInput() {
-            const grid = document.getElementById('orbital-diagram-grid');
-            grid.innerHTML = '';
-            state.diagram = [];
-            const template = [{n:"1s",c:1}, {n:"2s",c:1}, {n:"2p",c:3}, {n:"3s",c:1}, {n:"3p",c:3}, {n:"4s",c:1}, {n:"3d",c:5}];
-            
-            template.forEach((grp) => {
-                if(grp.n === '3d' && state.element.z < 21) return;
-                const grpDiv = document.createElement('div');
-                grpDiv.className = "flex flex-col items-center mx-1 mb-2";
-                grpDiv.innerHTML = `<span class="text-[10px] font-bold text-slate-400 mb-1">${grp.n}</span>`;
-                const boxContainer = document.createElement('div');
-                boxContainer.className = "flex gap-1";
-                for(let i=0; i<grp.c; i++) {
-                    const box = document.createElement('div');
-                    box.className = "orbital-box";
-                    const boxObj = {count:0};
-                    state.diagram.push(boxObj);
-                    box.onclick = () => {
-                        boxObj.count = (boxObj.count + 1) % 3;
-                        updateBox(box, boxObj.count);
-                    };
-                    boxContainer.appendChild(box);
-                }
-                grpDiv.appendChild(boxContainer);
-                grid.appendChild(grpDiv);
-            });
-        }
-
-        function updateBox(el, count) {
-            el.innerHTML = '';
-            if(count>=1) el.innerHTML += '<span class="spin-arrow text-blue-500 relative -top-1">↑</span>';
-            if(count===2) el.innerHTML += '<span class="spin-arrow text-red-500 relative top-1">↓</span>';
-        }
-
-        function addPart(label, isNoble) {
+        function addConfigPart(label, isNoble) {
             if(state.waitingNext) return;
-            const out = document.getElementById('config-output');
-            if(state.userParts.length === 0) out.innerHTML = '';
-
-            if (isNoble) {
+            if(isNoble) {
                 state.userParts = state.userParts.filter(p => !p.isNoble);
                 state.userParts.unshift({label, isNoble:true});
             } else {
                 const type = label.charAt(1);
                 const max = type==='s'?2:type==='p'?6:type==='d'?10:14;
                 const exist = state.userParts.find(p => p.label === label);
-                if(exist) {
-                    if(exist.count < max) exist.count++; else exist.count = 1; 
-                } else {
-                    state.userParts.push({label, count:1, max, isNoble:false});
-                }
+                if(exist) exist.count = (exist.count % max) + 1;
+                else state.userParts.push({label, count:1, isNoble:false});
             }
+            updateConfigDisplay();
+        }
+
+        function updateConfigDisplay() {
+            const out = document.getElementById('config-output');
             out.innerHTML = '';
-            state.userParts.forEach((p, idx) => {
-                const b = document.createElement('div');
-                b.className = "config-block fade-in" + (p.isNoble ? " bg-slate-800 text-white border-slate-900" : "");
-                b.innerHTML = `<span class="font-mono font-bold">${p.label}</span>${!p.isNoble?`<span class="config-super">${p.count}</span>`:''}`;
-                b.onclick = () => { if(!p.isNoble){ p.count++; if(p.count>p.max)p.count=1; addPart(p.label, false); }}; // Simple refresh trigger
-                b.oncontextmenu = (e) => { e.preventDefault(); state.userParts.splice(idx,1); addPart(null, false); }; // Simple refresh
-                out.appendChild(b);
+            state.userParts.forEach((p, i) => {
+                const div = document.createElement('div');
+                div.className = "config-block fade-in" + (p.isNoble ? " bg-slate-800 text-white border-slate-900" : "");
+                div.innerHTML = `<span class="font-mono font-bold">${p.label}</span>${!p.isNoble?`<span class="config-super">${p.count}</span>`:''}`;
+                div.onclick = () => { state.userParts.splice(i, 1); updateConfigDisplay(); };
+                out.appendChild(div);
             });
         }
 
-        // --- Game Flow ---
-        function setMode() {
-            const types = ['build', 'identify', 'hunt', 'count_valence', 'calc_neutrons', 'vocab'];
-            let type = types[Math.floor(Math.random() * types.length)];
-            
-            // Randomize sub-modes
-            if (type === 'build') state.mode = ['build_normal', 'build_short', 'build_diagram'][Math.floor(Math.random()*3)];
-            else if (type === 'identify') state.mode = Math.random() > 0.5 ? 'identify_config' : 'identify_diagram';
-            else if (type === 'hunt') {
-                const huntKeys = Object.keys(huntCategories);
-                state.mode = 'hunt_' + huntKeys[Math.floor(Math.random()*huntKeys.length)];
-            }
-            else state.mode = type;
-
-            state.waitingNext = false;
-            state.userParts = [];
-            state.targetCategory = null;
-
-            // Reset UI Visibility
-            document.getElementById('info-panel').classList.add('hidden');
-            document.getElementById('input-area').classList.remove('hidden');
-            document.getElementById('prompt-content').innerHTML = '';
-            document.querySelectorAll('.element').forEach(e => e.classList.remove('target-highlight', 'opacity-25'));
-            document.getElementById('ptable-container').classList.remove('mode-identify');
-            document.getElementById('identify-hint').classList.add('hidden');
-            document.getElementById('table-instruction').classList.add('hidden');
-            
-            // Hide all specialized UIs
-            document.getElementById('builder-ui').classList.remove('flex'); document.getElementById('builder-ui').classList.add('hidden');
-            document.getElementById('diagram-ui').classList.remove('flex'); document.getElementById('diagram-ui').classList.add('hidden');
-            document.getElementById('numeric-ui').classList.remove('flex'); document.getElementById('numeric-ui').classList.add('hidden');
-            document.getElementById('quiz-ui').classList.remove('flex'); document.getElementById('quiz-ui').classList.add('hidden');
-            document.getElementById('submit-wrapper').classList.remove('hidden');
-
-            const badge = document.getElementById('mode-badge');
-            const promptLabel = document.getElementById('prompt-label');
-
-            // --- SETUP MODES ---
-            
-            // 1. VALENCE ELECTRONS
-            if (state.mode === 'count_valence') {
-                // Ensure main group element
-                while(state.element.v === null) state.element = elements[Math.floor(Math.random() * elements.length)];
-                
-                badge.innerHTML = `<div class="w-2.5 h-2.5 rounded-full bg-teal-500"></div> Valence`;
-                promptLabel.innerText = "Count Valence Electrons";
-                document.getElementById('prompt-content').innerHTML = `
-                    <div class="fade-in text-center">
-                        <div class="text-6xl font-black text-slate-800 tracking-tighter mb-1">${state.element.s}</div>
-                        <div class="text-lg text-slate-500 font-medium">${state.element.n}</div>
-                    </div>`;
-                
-                document.getElementById('numeric-ui').classList.remove('hidden');
-                document.getElementById('numeric-ui').classList.add('flex');
-                renderNumericKeypad();
-            }
-            
-            // 2. ISOTOPE NEUTRONS
-            else if (state.mode === 'calc_neutrons') {
-                badge.innerHTML = `<div class="w-2.5 h-2.5 rounded-full bg-indigo-500"></div> Isotopes`;
-                promptLabel.innerText = "Calculate Neutrons";
-                
-                // Generate Isotope (Mass = Protons + Neutrons)
-                // Approx mass ~ 2x Z, sometimes +1 or +2
-                state.isotopeNeutrons = state.element.z + (Math.random() > 0.5 ? 0 : 1) + (state.element.z > 20 ? 4 : 0);
-                state.isotopeMass = state.element.z + state.isotopeNeutrons;
-                
-                document.getElementById('prompt-content').innerHTML = `
-                    <div class="fade-in text-center flex flex-col items-center">
-                         <div class="relative">
-                            <span class="absolute -top-2 -left-6 text-xs font-bold text-slate-500">${state.isotopeMass}</span>
-                            <div class="text-6xl font-black text-slate-800 tracking-tighter mb-1">${state.element.s}</div>
-                         </div>
-                        <div class="text-sm text-slate-500 font-medium">Mass Number: ${state.isotopeMass}</div>
-                    </div>`;
-                
-                document.getElementById('numeric-ui').classList.remove('hidden');
-                document.getElementById('numeric-ui').classList.add('flex');
-                renderNumericKeypad();
-            }
-
-            // 3. VOCAB QUIZ
-            else if (state.mode === 'vocab') {
-                badge.innerHTML = `<div class="w-2.5 h-2.5 rounded-full bg-yellow-500"></div> Vocab`;
-                promptLabel.innerText = "Trivia";
-                state.vocabQ = vocabBank[Math.floor(Math.random() * vocabBank.length)];
-                
-                document.getElementById('prompt-content').innerHTML = `
-                    <div class="fade-in text-center p-2">
-                        <div class="text-lg md:text-xl font-bold text-slate-700 leading-tight">${state.vocabQ.q}</div>
-                    </div>`;
-                
-                document.getElementById('quiz-ui').classList.remove('hidden');
-                document.getElementById('quiz-ui').classList.add('flex');
-                document.getElementById('submit-wrapper').classList.add('hidden'); // Quiz has instant click buttons
-                renderQuizOptions();
-            }
-
-            // 4. HUNT / IDENTIFY (Table Selection)
-            else if (state.mode.startsWith('hunt') || state.mode.startsWith('identify')) {
-                document.getElementById('input-area').classList.add('hidden');
-                document.getElementById('identify-hint').classList.remove('hidden');
-                document.getElementById('identify-hint').classList.add('flex');
-                document.getElementById('ptable-container').classList.add('mode-identify');
-                document.getElementById('table-instruction').classList.remove('hidden');
-
-                if (state.mode.startsWith('hunt')) {
-                    const t = state.mode.split('_')[1];
-                    state.targetCategory = huntCategories[t];
-                    badge.innerHTML = `<div class="w-2.5 h-2.5 rounded-full bg-emerald-500"></div> Hunt`;
-                    promptLabel.innerText = "Group Hunt";
-                    document.getElementById('hunt-msg').innerHTML = `Find any <b>${state.targetCategory.name}</b>.`;
-                    document.getElementById('prompt-content').innerHTML = `
-                        <div class="fade-in text-center flex flex-col items-center justify-center h-[80px]">
-                            <div class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">FIND A</div>
-                            <div class="text-2xl font-black text-slate-800 tracking-tight leading-none">${state.targetCategory.name}</div>
-                        </div>`;
-                } else {
-                    badge.innerHTML = `<div class="w-2.5 h-2.5 rounded-full bg-pink-500"></div> Identify`;
-                    promptLabel.innerText = "Identify Element";
-                    document.getElementById('hunt-msg').innerText = "Find the matching element.";
-                    
-                    if (state.mode === 'identify_config') {
-                        const sol = getCorrectConfig(state.element.z, 'short');
-                        let str = (sol.noble ? sol.noble + " " : "") + sol.parts.map(p => `${p.label}<sup>${p.count}</sup>`).join(" ");
-                        document.getElementById('prompt-content').innerHTML = `<div class="fade-in flex justify-center"><div class="text-xl font-mono text-slate-700 bg-slate-100 p-3 rounded border border-slate-200">${str}</div></div>`;
-                    } else {
-                        // Identify Diagram Logic... (Simplified reuse)
-                        document.getElementById('prompt-content').innerHTML = `<div class="text-center text-sm text-slate-400 italic">Orbital Diagram for Z=${state.element.z}</div>`; 
-                        // Note: Full diagram rendering logic omitted for brevity in this specific prompt update, using text placeholder for diagram-identification to save space, or rely on simple Z hint
+        function renderNumericKeys() {
+            const keypad = document.getElementById('numeric-keys');
+            keypad.innerHTML = '';
+            document.getElementById('numeric-display').innerText = "";
+            [1,2,3,4,5,6,7,8,9,0].forEach(n => {
+                const b = document.createElement('button');
+                b.className = "key-btn text-xl";
+                b.innerText = n;
+                b.onclick = () => {
+                    if(state.userNum.length < 3) {
+                        state.userNum += n;
+                        document.getElementById('numeric-display').innerText = state.userNum;
                     }
-                }
-            }
-
-            // 5. BUILD (Standard)
-            else if (state.mode.startsWith('build')) {
-                document.getElementById(`el-${state.element.z}`)?.classList.add('target-highlight');
-                document.getElementById(`el-${state.element.z}`)?.scrollIntoView({behavior:'smooth', block:'center', inline:'center'});
-
-                document.getElementById('prompt-content').innerHTML = `
-                    <div class="fade-in text-center">
-                        <div class="text-6xl font-black text-slate-800 tracking-tighter mb-1">${state.element.s}</div>
-                        <div class="text-lg text-slate-500 font-medium">${state.element.n}</div>
-                    </div>`;
-                promptLabel.innerText = "Construct Configuration";
-
-                if (state.mode.includes('diagram')) {
-                    badge.innerHTML = `<div class="w-2.5 h-2.5 rounded-full bg-orange-500"></div> Diagram`;
-                    document.getElementById('diagram-ui').classList.remove('hidden');
-                    document.getElementById('diagram-ui').classList.add('flex');
-                    renderDiagramInput();
-                } else {
-                    badge.innerHTML = `<div class="w-2.5 h-2.5 rounded-full bg-blue-500"></div> ${state.mode.includes('short') ? 'Shorthand' : 'Standard'}`;
-                    document.getElementById('builder-ui').classList.remove('hidden');
-                    document.getElementById('builder-ui').classList.add('flex');
-                    renderBuilder();
-                }
-            }
+                };
+                keypad.appendChild(b);
+            });
+            const del = document.createElement('button');
+            del.className = "key-btn text-red-500";
+            del.innerText = "⌫";
+            del.onclick = () => {
+                state.userNum = state.userNum.slice(0, -1);
+                document.getElementById('numeric-display').innerText = state.userNum;
+            };
+            keypad.appendChild(del);
         }
 
-        // --- Interaction Handlers ---
-        
-        function handleElementClick(elData) {
-            if (state.waitingNext) return;
-            if (state.mode.startsWith('build') || state.mode === 'vocab' || state.mode.includes('count') || state.mode.includes('calc')) return;
-
-            let correct = false;
-            if (state.mode.startsWith('hunt')) {
-                if (state.targetCategory.z.includes(elData.z)) {
-                    correct = true;
-                    state.element = elData; 
-                }
-            } else {
-                if (elData.z === state.element.z) correct = true;
-            }
-
-            if (correct) successState();
-            else failState(state.mode.startsWith('hunt') ? "Wrong Group!" : "Wrong Element!");
+        function renderVocabQuiz() {
+            const ui = document.getElementById('quiz-ui');
+            ui.innerHTML = '';
+            state.vocabQ.opts.forEach(opt => {
+                const b = document.createElement('button');
+                b.className = "key-btn p-4 text-sm mb-1";
+                b.innerText = opt;
+                b.onclick = () => {
+                    if(opt === state.vocabQ.a) success();
+                    else fail("Wrong Term!");
+                };
+                ui.appendChild(b);
+            });
         }
 
-        function submitVocab(answer) {
+        function renderDiagramInput() {
+            const grid = document.getElementById('orbital-diagram-grid');
+            grid.innerHTML = '';
+            const order = [ {n:"1s",c:1}, {n:"2s",c:1}, {n:"2p",c:3}, {n:"3s",c:1}, {n:"3p",c:3}, {n:"4s",c:1}, {n:"3d",c:5} ];
+            state.diagram = [];
+            
+            const lastPart = getCorrectConfig(state.element.z, 'normal').parts.slice(-1)[0];
+            const limit = orbitalKeys.indexOf(lastPart.label);
+
+            order.forEach(grp => {
+                if(orbitalKeys.indexOf(grp.n) > limit) return;
+                const grpDiv = document.createElement('div');
+                grpDiv.className = "flex flex-col items-center mx-1 mb-2";
+                grpDiv.innerHTML = `<span class="text-[10px] font-bold text-slate-400 mb-1 uppercase">${grp.n}</span>`;
+                const row = document.createElement('div');
+                row.className = "flex gap-0.5 sm:gap-1";
+                for(let i=0; i<grp.c; i++) {
+                    const box = document.createElement('div');
+                    box.className = "orbital-box";
+                    const bObj = { count: 0 };
+                    state.diagram.push(bObj);
+                    box.onclick = () => {
+                        bObj.count = (bObj.count + 1) % 3;
+                        box.innerHTML = '';
+                        if(bObj.count >= 1) box.innerHTML += '<span class="spin-arrow text-blue-500 relative -top-0.5">↑</span>';
+                        if(bObj.count === 2) box.innerHTML += '<span class="spin-arrow text-red-500 relative top-0.5">↓</span>';
+                    };
+                    row.appendChild(box);
+                }
+                grpDiv.appendChild(row);
+                grid.appendChild(grpDiv);
+            });
+        }
+
+        function renderDiagramPreview(z) {
+            const container = document.getElementById('diagram-preview');
+            container.innerHTML = '';
+            const order = [ {n:"1s",c:1}, {n:"2s",c:1}, {n:"2p",c:3}, {n:"3s",c:1}, {n:"3p",c:3}, {n:"4s",c:1}, {n:"3d",c:5} ];
+            let electrons = z;
+            order.forEach(grp => {
+                if(electrons <= 0) return;
+                const grpDiv = document.createElement('div');
+                grpDiv.className = "flex flex-col items-center mx-0.5";
+                grpDiv.innerHTML = `<span class="text-[8px] font-bold text-slate-300 mb-0.5">${grp.n}</span>`;
+                const row = document.createElement('div');
+                row.className = "flex gap-0.5";
+                for(let i=0; i<grp.c; i++) {
+                    const box = document.createElement('div');
+                    box.className = "w-5 h-5 sm:w-6 sm:h-6 border border-slate-300 rounded flex justify-center items-center bg-white";
+                    let count = 0;
+                    if(electrons > 0) { count++; electrons--; }
+                    if(electrons > 0 && (z <= 20 ? electrons >= (grp.c - i) : electrons >= (grp.c - i))) { 
+                        if(z <= 20) {
+                            if(electrons >= (grp.c - i)) { count++; electrons--; }
+                        } else {
+                             if(electrons >= (grp.c - i)) { count++; electrons--; }
+                        }
+                    }
+                    if(count >= 1) box.innerHTML += '<span class="text-blue-500 text-[10px] sm:text-xs">↑</span>';
+                    if(count === 2) box.innerHTML += '<span class="text-red-500 text-[10px] sm:text-xs">↓</span>';
+                    row.appendChild(box);
+                }
+                grpDiv.appendChild(row);
+                container.appendChild(grpDiv);
+            });
+        }
+
+        function handleElementClick(el) {
             if(state.waitingNext) return;
-            if(answer === state.vocabQ.a) successState("vocab");
-            else failState("Incorrect!");
+            if(!state.mode.startsWith('identify')) return;
+            if(el.z === state.element.z) success();
+            else fail("Wrong Element!");
         }
 
         document.getElementById('submit-btn').onclick = () => {
             if(state.waitingNext) return;
-            
-            // Valence / Isotopes
-            if (state.mode === 'count_valence') {
-                if(parseInt(state.userNum) === state.element.v) successState();
-                else failState("Wrong valence!");
-                return;
-            }
-            if (state.mode === 'calc_neutrons') {
-                if(parseInt(state.userNum) === state.isotopeNeutrons) successState();
-                else failState("Check your math!");
-                return;
-            }
-
-            // Build Modes
-            const sol = getCorrectConfig(state.element.z, state.mode);
             let correct = false;
-            if (state.mode === 'build_diagram') {
-                const total = state.diagram.reduce((a,b)=>a+b.count,0);
-                if(total === state.element.z) correct = true;
+
+            if(state.mode === 'count_valence') {
+                if(parseInt(state.userNum) === state.element.v) correct = true;
+            } else if(state.mode === 'calc_neutrons') {
+                if(parseInt(state.userNum) === state.isotopeNeutrons) correct = true;
+            } else if(state.mode === 'build_diagram') {
+                correct = state.diagram.reduce((a,b)=>a+b.count,0) === state.element.z;
             } else {
-                let userStr = state.userParts.map(p => p.isNoble?p.label:`${p.label}${p.count}`).join(" ");
-                let solStr = (sol.noble?sol.noble+" ":"") + sol.parts.map(p => `${p.label}${p.count}`).join(" ");
+                const sol = getCorrectConfig(state.element.z, state.mode);
+                const userStr = state.userParts.map(p => p.isNoble?p.label:`${p.label}${p.count}`).join(" ");
+                const solStr = (sol.noble?sol.noble+" ":"") + sol.parts.map(p => `${p.label}${p.count}`).join(" ");
                 if(userStr === solStr) correct = true;
             }
 
-            if(correct) successState();
-            else failState("Incorrect Config");
+            if(correct) success();
+            else fail("Try Again!");
         };
 
-        function successState(type) {
+        function success() {
             state.waitingNext = true;
             state.streak++;
-            state.score += (100 + state.streak*25);
+            state.score += 100 + (state.streak * 10);
             updateStats();
-            
             showToast("Correct!", `Streak: ${state.streak}`, true);
             
             document.getElementById('input-area').classList.add('hidden');
             document.getElementById('identify-hint').classList.add('hidden');
-            
-            const info = document.getElementById('info-panel');
-            info.classList.remove('hidden');
-            
-            if(type === "vocab") {
-                document.getElementById('info-title').innerText = "Did you know?";
-                document.getElementById('info-desc').innerText = "Keep learning those definitions!";
-            } else {
-                document.getElementById('info-title').innerText = `${state.element.n} (${state.element.s})`;
-                document.getElementById('info-desc').innerText = state.element.d;
-            }
+            document.getElementById('info-panel').classList.remove('hidden');
+            document.getElementById('info-title').innerText = `${state.element.n} (${state.element.s})`;
+            document.getElementById('info-desc').innerText = state.element.d;
         }
 
-        function failState(msg) {
+        function fail(msg) {
             state.streak = 0;
             updateStats();
-            showToast("Oops!", msg, false);
-            document.getElementById('prompt-card').classList.add('shake');
-            setTimeout(()=>document.getElementById('prompt-card').classList.remove('shake'), 400);
+            showToast("Incorrect", msg, false);
+            const card = document.getElementById('prompt-card');
+            card.classList.add('shake');
+            setTimeout(() => card.classList.remove('shake'), 400);
         }
 
-        let toastTimeout;
-        function showToast(title, msg, success) {
+        function showToast(title, msg, isSuccess) {
             const t = document.getElementById('toast');
-            if (toastTimeout) clearTimeout(toastTimeout);
+            const icon = document.getElementById('toast-icon');
             document.getElementById('toast-title').innerText = title;
             document.getElementById('toast-msg').innerText = msg;
-            const icon = document.getElementById('toast-icon');
-            icon.innerText = success ? "✓" : "✕";
-            icon.className = `w-8 h-8 rounded-full flex items-center justify-center font-bold ${success?'bg-green-100 text-green-600':'bg-red-100 text-red-600'}`;
-            
-            t.classList.remove('toast-visible'); t.classList.add('toast-hidden');
-            void t.offsetWidth;
-            t.classList.remove('toast-hidden'); t.classList.add('toast-visible');
-            
-            toastTimeout = setTimeout(() => {
-                t.classList.remove('toast-visible'); t.classList.add('toast-hidden');
-            }, 2000);
-        }
-
-        function nextLevel() {
-            state.waitingNext = false;
-            let pool = elements;
-            // Simplified logic: random element
-            state.element = pool[Math.floor(Math.random() * pool.length)];
-            setMode();
-            if(state.streak > 0 && state.streak % 5 === 0 && state.level < 5) state.level++;
-            updateStats();
+            icon.innerText = isSuccess ? "✓" : "✕";
+            icon.className = `w-8 h-8 rounded-full flex items-center justify-center font-bold ${isSuccess?'bg-green-100 text-green-600':'bg-red-100 text-red-600'}`;
+            t.classList.remove('toast-hidden');
+            t.classList.add('toast-visible');
+            setTimeout(() => { t.classList.remove('toast-visible'); t.classList.add('toast-hidden'); }, 1800);
         }
 
         function updateStats() {
@@ -865,21 +775,23 @@
             document.getElementById('level-val').innerText = state.level;
         }
 
+        window.nextLevel = () => {
+            state.element = elements[Math.floor(Math.random() * elements.length)];
+            setMode();
+        };
+
         window.resetInput = () => {
             state.userParts = [];
             state.userNum = "";
-            document.getElementById('numeric-display').innerText = "_";
-            state.diagram.forEach(b => b.count=0);
-            if(state.mode.startsWith('build')) {
-                if(state.mode.includes('diagram')) renderDiagramInput(); else renderBuilder();
-            }
+            document.getElementById('numeric-display').innerText = "";
+            if(state.mode.startsWith('build_diagram')) renderDiagramInput();
+            else if(state.mode.startsWith('build')) updateConfigDisplay();
         };
 
         window.onload = () => {
             renderPTable();
             nextLevel();
         };
-
     </script>
 </body>
 </html>
