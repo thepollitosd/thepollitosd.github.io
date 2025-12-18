@@ -161,13 +161,12 @@
             justify-content: center;
         }
 
-        /* Dashboard Styles */
+        /* Dashboard Styles - Fixed specificity issue by removing display property here */
         #dashboard {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(248, 250, 252, 0.98);
             backdrop-filter: blur(8px);
             z-index: 100;
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
         }
         .mode-card {
             background: white; border: 1px solid #e2e8f0; border-radius: 12px;
@@ -201,8 +200,8 @@
 </head>
 <body class="p-2 md:p-4 h-screen flex flex-col" oncontextmenu="return false;">
 
-    <!-- DASHBOARD OVERLAY -->
-    <div id="dashboard" class="p-4">
+    <!-- DASHBOARD OVERLAY - Added flex utility classes directly here -->
+    <div id="dashboard" class="p-4 flex flex-col justify-center items-center">
         
         <!-- Header / Nav -->
         <div class="absolute top-8 text-center w-full">
@@ -297,11 +296,12 @@
                 <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 relative overflow-hidden">
                     <div class="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
                     <div class="flex justify-between items-baseline mb-2">
-                        <h3 class="text-lg font-bold text-slate-800">v1.3 <span class="text-blue-500">b.2</span></h3>
+                        <h3 class="text-lg font-bold text-slate-800">v1.3 <span class="text-blue-500">b.3</span></h3>
                         <span class="text-xs font-bold bg-blue-100 text-blue-600 px-2 py-1 rounded">CURRENT</span>
                     </div>
                     <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">ATOMIC DASHBOARD</p>
                     <ul class="text-sm text-slate-600 space-y-1 list-disc list-inside">
+                        <li>Fixed: Dashboard layer blocking game interaction</li>
                         <li>Implemented Dashboard with Game Mode selection</li>
                         <li>Added optional Timers (15s, 30s, 60s)</li>
                         <li>UI Overhaul for menu navigation</li>
@@ -506,7 +506,7 @@
 
     <!-- VERSION FOOTER -->
     <div class="fixed bottom-1 right-2 text-[10px] font-mono text-slate-400 opacity-60 pointer-events-none select-none z-50">
-        ORBITAL_OS <span class="font-bold">v1.3</span> <span class="text-blue-400">b.2</span> [ATOMIC DASHBOARD]
+        ORBITAL_OS <span class="font-bold">v1.3</span> <span class="text-blue-400">b.3</span> [ATOMIC DASHBOARD]
     </div>
 
     <script>
