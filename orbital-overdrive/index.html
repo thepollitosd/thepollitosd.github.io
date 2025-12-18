@@ -161,7 +161,7 @@
             justify-content: center;
         }
 
-        /* Dashboard Styles - Fixed specificity issue by removing display property here */
+        /* Dashboard Styles */
         #dashboard {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(248, 250, 252, 0.98);
@@ -200,7 +200,7 @@
 </head>
 <body class="p-2 md:p-4 h-screen flex flex-col" oncontextmenu="return false;">
 
-    <!-- DASHBOARD OVERLAY - Added flex utility classes directly here -->
+    <!-- DASHBOARD OVERLAY -->
     <div id="dashboard" class="p-4 flex flex-col justify-center items-center">
         
         <!-- Header / Nav -->
@@ -251,6 +251,8 @@
                 <!-- Settings -->
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 w-full max-w-md">
                     <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Training Parameters</h3>
+                    
+                    <!-- Timer -->
                     <div class="flex items-center justify-between mb-4">
                         <span class="text-sm font-bold text-slate-700">Time Limit</span>
                         <label class="relative inline-flex items-center cursor-pointer">
@@ -258,14 +260,37 @@
                             <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                         </label>
                     </div>
-                    <div id="timer-duration-setting" class="flex items-center justify-between opacity-50 pointer-events-none transition-opacity">
-                        <span class="text-sm font-bold text-slate-700">Duration</span>
+                    <div id="timer-duration-setting" class="flex items-center justify-between opacity-50 pointer-events-none transition-opacity mb-6">
+                        <span class="text-sm font-bold text-slate-400 ml-4">Duration</span>
                         <div class="flex gap-2">
                             <button onclick="setTimerDuration(15)" class="t-btn px-3 py-1 rounded border border-slate-200 text-xs font-bold bg-slate-50 hover:bg-white active:bg-blue-50" id="t-15">15s</button>
                             <button onclick="setTimerDuration(30)" class="t-btn px-3 py-1 rounded border border-slate-200 text-xs font-bold bg-slate-50 hover:bg-white active:bg-blue-50" id="t-30">30s</button>
                             <button onclick="setTimerDuration(60)" class="t-btn px-3 py-1 rounded border border-slate-200 text-xs font-bold bg-slate-50 hover:bg-white active:bg-blue-50" id="t-60">60s</button>
                         </div>
                     </div>
+
+                    <!-- Focus Range -->
+                    <div class="flex items-center justify-between mb-4">
+                        <span class="text-sm font-bold text-slate-700">Focus Range</span>
+                        <div class="flex gap-1">
+                            <button onclick="setFocusRange(3)" class="range-btn px-2 py-1 rounded border border-slate-200 text-[10px] font-bold bg-slate-50 hover:bg-white" id="range-3">P 1-3</button>
+                            <button onclick="setFocusRange(4)" class="range-btn px-2 py-1 rounded border border-slate-200 text-[10px] font-bold bg-slate-50 hover:bg-white" id="range-4">P 1-4</button>
+                            <button onclick="setFocusRange(5)" class="range-btn px-2 py-1 rounded border border-slate-200 text-[10px] font-bold bg-blue-600 text-white border-blue-600" id="range-5">ALL</button>
+                        </div>
+                    </div>
+
+                    <!-- Pro Mode -->
+                    <div class="flex items-center justify-between">
+                        <div class="flex flex-col">
+                            <span class="text-sm font-bold text-slate-700">Pro Mode</span>
+                            <span class="text-[10px] text-slate-400">Hides in-game hints</span>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="pro-mode-toggle" class="sr-only peer" onchange="toggleProMode()">
+                            <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                        </label>
+                    </div>
+
                 </div>
             </div>
 
@@ -296,20 +321,29 @@
                 <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 relative overflow-hidden">
                     <div class="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
                     <div class="flex justify-between items-baseline mb-2">
-                        <h3 class="text-lg font-bold text-slate-800">v1.3 <span class="text-blue-500">b.3</span></h3>
+                        <h3 class="text-lg font-bold text-slate-800">v1.4 <span class="text-blue-500">b.1</span></h3>
                         <span class="text-xs font-bold bg-blue-100 text-blue-600 px-2 py-1 rounded">CURRENT</span>
                     </div>
-                    <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">ATOMIC DASHBOARD</p>
+                    <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">QUANTUM TUNING</p>
                     <ul class="text-sm text-slate-600 space-y-1 list-disc list-inside">
-                        <li>Fixed: Dashboard layer blocking game interaction</li>
-                        <li>Implemented Dashboard with Game Mode selection</li>
-                        <li>Added optional Timers (15s, 30s, 60s)</li>
-                        <li>UI Overhaul for menu navigation</li>
-                        <li>Integrated Version History & Dev Notes</li>
+                        <li>New "Focus Range" setting: Limit elements to Period 3, 4, or 5</li>
+                        <li>New "Pro Mode": Hides game hints for extra challenge</li>
+                        <li>Updated dashboard UI with more training parameters</li>
                     </ul>
                 </div>
 
                 <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 opacity-75">
+                    <h3 class="text-lg font-bold text-slate-800 mb-1">v1.3 <span class="text-slate-400">b.4</span></h3>
+                    <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">ATOMIC DASHBOARD</p>
+                    <ul class="text-sm text-slate-600 space-y-1 list-disc list-inside">
+                        <li>Fixed: Time's Up now reveals and explains the correct answer</li>
+                        <li>Balanced: Detective Mode now favors Electron Config identification (40%)</li>
+                        <li>UI: Added rich text formatting for solution explanations</li>
+                        <li>Fixed: Dashboard layer blocking game interaction</li>
+                    </ul>
+                </div>
+
+                <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 opacity-60">
                     <h3 class="text-lg font-bold text-slate-800 mb-1">v1.2 <span class="text-slate-400">b.1</span></h3>
                     <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">MOLECULAR MIND</p>
                     <ul class="text-sm text-slate-600 space-y-1 list-disc list-inside">
@@ -318,34 +352,16 @@
                         <li>Improved mobile scaling for diagrams</li>
                     </ul>
                 </div>
-
-                <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 opacity-60">
-                    <h3 class="text-lg font-bold text-slate-800 mb-1">v1.1 <span class="text-slate-400">b.5</span></h3>
-                    <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">NEON STABILITY</p>
-                    <ul class="text-sm text-slate-600 space-y-1 list-disc list-inside">
-                        <li>Hotfix: Added missing 5p orbital to logic engine</li>
-                        <li>Hotfix: Prevented infinite loop in Valence mode</li>
-                        <li>Added identifying isotopes & counting neutrons</li>
-                        <li>Restored Period 5 elements (Rb to Xe)</li>
-                    </ul>
-                </div>
             </div>
 
             <!-- DEV NOTES -->
             <div id="dash-dev" class="dash-section w-full max-w-2xl flex-col gap-6">
                 <div class="bg-slate-900 p-8 rounded-3xl shadow-lg border border-slate-800 text-slate-300 font-mono text-sm leading-relaxed">
                     <h2 class="text-xl font-bold text-white mb-4">// DEVELOPER LOG</h2>
-                    
                     <div class="mb-6">
                         <h3 class="text-blue-400 font-bold mb-2">> TECH_STACK</h3>
                         <p>Built with vanilla HTML5/JS and TailwindCSS. No external frameworks used to ensure lightweight performance on school devices.</p>
                     </div>
-
-                    <div class="mb-6">
-                        <h3 class="text-blue-400 font-bold mb-2">> LOGIC_ENGINE</h3>
-                        <p>Electron configurations are generated dynamically using an algorithm based on the Aufbau principle `(n + l rule)`. Exceptions for Cr, Mo, Cu, Ag, and Pd are hardcoded as override conditions within the `getCorrectConfig()` function.</p>
-                    </div>
-
                     <div>
                         <h3 class="text-blue-400 font-bold mb-2">> KNOWN_LIMITATIONS</h3>
                         <p>1. f-block elements are currently excluded to maintain UI grid stability on mobile.</p>
@@ -474,7 +490,7 @@
                     <div class="diagram-scroll-container">
                          <div id="orbital-diagram-grid" class="flex flex-wrap gap-y-4 gap-x-2 justify-center max-w-full"></div>
                     </div>
-                    <p class="text-[10px] text-slate-400 mt-2 italic font-medium uppercase tracking-widest text-center">Click boxes to add/remove electrons</p>
+                    <p id="diagram-hint" class="text-[10px] text-slate-400 mt-2 italic font-medium uppercase tracking-widest text-center">Click boxes to add/remove electrons</p>
                 </div>
 
                 <!-- Common Submit -->
@@ -506,7 +522,7 @@
 
     <!-- VERSION FOOTER -->
     <div class="fixed bottom-1 right-2 text-[10px] font-mono text-slate-400 opacity-60 pointer-events-none select-none z-50">
-        ORBITAL_OS <span class="font-bold">v1.3</span> <span class="text-blue-400">b.3</span> [ATOMIC DASHBOARD]
+        ORBITAL_OS <span class="font-bold">v1.4</span> <span class="text-blue-400">b.1</span> [QUANTUM TUNING]
     </div>
 
     <script>
@@ -574,44 +590,10 @@
         ];
 
         const vocabBank = [
-            // Basic Structure
             { q: "Positive ions are called...", a: "Cations", opts: ["Cations", "Anions", "Protons", "Neutrons"] },
-            { q: "Negative ions are called...", a: "Anions", opts: ["Cations", "Anions", "Nuclei", "Isotopes"] },
-            { q: "The center of an atom is the...", a: "Nucleus", opts: ["Nucleus", "Shell", "Orbital", "Cloud"] },
-            { q: "Subatomic particle with no charge?", a: "Neutron", opts: ["Proton", "Electron", "Neutron", "Photon"] },
-            { q: "Subatomic particle with negative charge?", a: "Electron", opts: ["Proton", "Neutron", "Electron", "Positron"] },
-            
-            // Periodic Table Organization
             { q: "Horizontal rows are called...", a: "Periods", opts: ["Groups", "Periods", "Blocks", "Families"] },
-            { q: "Vertical columns are called...", a: "Groups", opts: ["Periods", "Groups", "Shells", "Series"] },
-            { q: "Group 1 elements are...", a: "Alkali Metals", opts: ["Alkali Metals", "Halogens", "Noble Gases", "Transition"] },
-            { q: "Group 2 elements are...", a: "Alkaline Earth", opts: ["Alkali Metals", "Alkaline Earth", "Halogens", "Metalloids"] },
-            { q: "Group 17 elements are...", a: "Halogens", opts: ["Halogens", "Noble Gases", "Alkali Metals", "Lanthanides"] },
-            { q: "Group 18 elements are...", a: "Noble Gases", opts: ["Halogens", "Noble Gases", "Actinides", "Alkaline Earth"] },
-            { q: "Elements along the staircase line?", a: "Metalloids", opts: ["Metals", "Nonmetals", "Metalloids", "Halogens"] },
-            { q: "The d-block elements are...", a: "Transition Metals", opts: ["Transition Metals", "Inner Transition", "Alkali", "Halogens"] },
-
-            // Definitions
-            { q: "Atoms with same p+ but different n0?", a: "Isotopes", opts: ["Isotopes", "Ions", "Allotropes", "Isomers"] },
-            { q: "Electrons in the outermost shell?", a: "Valence", opts: ["Core", "Valence", "Inner", "Nuclear"] },
-            { q: "Rule: Atoms desire 8 valence electrons.", a: "Octet Rule", opts: ["Octet Rule", "Duet Rule", "Hund's Rule", "Aufbau"] },
-            { q: "Energy required to remove an electron?", a: "Ionization Energy", opts: ["Electronegativity", "Ionization Energy", "Electron Affinity", "Lattice Energy"] },
-            { q: "Ability to attract shared electrons?", a: "Electronegativity", opts: ["Ionization Energy", "Electronegativity", "Shielding", "Radius"] },
-            
-            // Trends
-            { q: "Atomic radius trend down a group?", a: "Increases", opts: ["Increases", "Decreases", "Stays Same", "Random"] },
-            { q: "Atomic radius trend across a period?", a: "Decreases", opts: ["Increases", "Decreases", "Stays Same", "Random"] },
-            { q: "Electronegativity trend across a period?", a: "Increases", opts: ["Increases", "Decreases", "Stays Same", "Random"] },
-            { q: "Most electronegative element?", a: "Fluorine", opts: ["Fluorine", "Francium", "Oxygen", "Chlorine"] },
-            
-            // Quantum/Configuration Rules
-            { q: "Rule: Fill lowest energy first.", a: "Aufbau", opts: ["Aufbau", "Pauli", "Hund", "Heisenberg"] },
-            { q: "Rule: Max 2 electrons with opp. spin.", a: "Pauli Exclusion", opts: ["Aufbau", "Pauli Exclusion", "Hund", "Octet"] },
-            { q: "Rule: Fill empty orbitals before pairing.", a: "Hund's Rule", opts: ["Aufbau", "Pauli", "Hund's Rule", "Periodic Law"] },
-            { q: "Shape of an s-orbital?", a: "Sphere", opts: ["Sphere", "Dumbbell", "Clover", "Complex"] },
-            { q: "Shape of a p-orbital?", a: "Dumbbell", opts: ["Sphere", "Dumbbell", "Clover", "Ring"] },
-            { q: "Max electrons in a d-subshell?", a: "10", opts: ["2", "6", "10", "14"] },
-            { q: "Max electrons in an f-subshell?", a: "14", opts: ["6", "10", "14", "18"] }
+            { q: "Halogens belong to which group?", a: "17", opts: ["1", "2", "17", "18"] },
+            { q: "Valence electrons are located in...", a: "Outer shell", opts: ["Outer shell", "Nucleus", "Inner shell", "Core"] }
         ];
 
         const orbitalKeys = ["1s", "2s", "2p", "3s", "3p", "4s", "3d", "4p", "5s", "4d", "5p"];
@@ -622,7 +604,7 @@
             targetCategory: null,
             vocabQ: null,
             mode: 'build_normal',
-            gameType: 'Classic', // Tracks dashboard selection
+            gameType: 'Classic', 
             streak: 0,
             score: 0,
             level: 1,
@@ -636,7 +618,11 @@
             timerEnabled: false,
             timerDuration: 30, // seconds
             timeLeft: 30,
-            timerId: null
+            timerId: null,
+
+            // New Training Params
+            periodLimit: 5, // 3, 4, or 5
+            proMode: false  // If true, hides hints
         };
 
         const huntCategories = {
@@ -659,7 +645,6 @@
 
         function setTimerDuration(sec) {
             state.timerDuration = sec;
-            // Update UI buttons
             [15,30,60].forEach(s => {
                 const btn = document.getElementById(`t-${s}`);
                 if(s === sec) {
@@ -672,20 +657,33 @@
             });
         }
 
+        function setFocusRange(limit) {
+            state.periodLimit = limit;
+            [3,4,5].forEach(l => {
+                const btn = document.getElementById(`range-${l}`);
+                if(l === limit) {
+                    btn.classList.remove('bg-slate-50', 'hover:bg-white');
+                    btn.classList.add('bg-blue-600', 'text-white', 'border-blue-600');
+                } else {
+                    btn.classList.add('bg-slate-50', 'hover:bg-white');
+                    btn.classList.remove('bg-blue-600', 'text-white', 'border-blue-600');
+                }
+            });
+        }
+
+        function toggleProMode() {
+            state.proMode = document.getElementById('pro-mode-toggle').checked;
+        }
+
         function showDashboard() {
             clearInterval(state.timerId);
             document.getElementById('dashboard').classList.remove('hidden');
             document.getElementById('dashboard').classList.add('flex');
         }
 
-        // New function to switch dashboard tabs
         function switchDash(section) {
-            // Hide all sections
             document.querySelectorAll('.dash-section').forEach(el => el.classList.remove('active'));
-            // Remove active state from nav buttons
             document.querySelectorAll('.dash-nav-btn').forEach(el => el.classList.remove('active'));
-            
-            // Activate selected
             document.getElementById(`dash-${section}`).classList.add('active');
             document.getElementById(`nav-${section}`).classList.add('active');
         }
@@ -696,10 +694,8 @@
             state.streak = 0;
             state.level = 1;
             updateStats();
-            
             document.getElementById('dashboard').classList.add('hidden');
             document.getElementById('dashboard').classList.remove('flex');
-            
             nextLevel();
         }
 
@@ -709,27 +705,19 @@
                 document.getElementById('timer-bar-container').classList.add('hidden');
                 return;
             }
-
             document.getElementById('timer-bar-container').classList.remove('hidden');
             const bar = document.getElementById('timer-bar');
             state.timeLeft = state.timerDuration;
-            
-            // Reset bar visual
             bar.style.transition = 'none';
             bar.style.width = '100%';
-            
-            // Force reflow
             void bar.offsetWidth;
-
-            // Start animation
             bar.style.transition = `width ${state.timerDuration}s linear`;
             bar.style.width = '0%';
-
             state.timerId = setInterval(() => {
                 state.timeLeft--;
                 if(state.timeLeft <= 0) {
                     clearInterval(state.timerId);
-                    fail("Time's Up!");
+                    revealAnswer("Time's Up!");
                 }
             }, 1000);
         }
@@ -769,7 +757,7 @@
                 if((z===24||z===29||z===47) && orb.n.endsWith('s') && electrons >= orb.max) fill = 1;
                 if((z===24) && orb.n==='3d' && fill===4) fill=5;
                 if((z===29||z===47) && orb.n.endsWith('d') && fill===9) fill=10;
-                if(z===46) { if(orb.n==='5s') fill=0; if(orb.n==='4d') fill=10; } // Pd exception
+                if(z===46) { if(orb.n==='5s') fill=0; if(orb.n==='4d') fill=10; } 
 
                 if(fill > 0) parts.push({label:orb.n, count:fill});
                 electrons -= fill;
@@ -818,7 +806,6 @@
             document.getElementById('ptable-container').classList.remove('mode-identify');
             document.getElementById('table-instruction').classList.add('hidden');
             
-            // Mode Selection Logic based on Game Type
             if (state.gameType === 'Classic') {
                 const modes = ['build_normal', 'build_short', 'build_diagram', 'identify_config', 'identify_diagram', 'count_valence', 'calc_neutrons', 'vocab'];
                 state.mode = modes[Math.floor(Math.random() * modes.length)];
@@ -827,8 +814,11 @@
             } else if (state.gameType === 'Quantum') {
                 state.mode = 'build_diagram';
             } else if (state.gameType === 'Detective') {
-                const modes = ['identify_config', 'identify_diagram', 'hunt_alkali', 'hunt_alkaline', 'hunt_halogen', 'hunt_noble', 'hunt_transition', 'hunt_metalloid'];
-                state.mode = modes[Math.floor(Math.random() * modes.length)];
+                if(Math.random() < 0.4) state.mode = 'identify_config';
+                else {
+                    const modes = ['identify_diagram', 'hunt_alkali', 'hunt_alkaline', 'hunt_halogen', 'hunt_noble', 'hunt_transition', 'hunt_metalloid'];
+                    state.mode = modes[Math.floor(Math.random() * modes.length)];
+                }
             } else if (state.gameType === 'Nuclear') {
                 state.mode = Math.random() > 0.5 ? 'count_valence' : 'calc_neutrons';
             } else if (state.gameType === 'Trivia') {
@@ -843,8 +833,16 @@
             const badge = document.getElementById('mode-badge');
             const promptContent = document.getElementById('prompt-content');
             
-            // Start Timer
             startTimer();
+
+            // PRO MODE CHECK
+            if(state.proMode) {
+                document.getElementById('diagram-hint').classList.add('hidden');
+                document.getElementById('hunt-msg').classList.add('hidden');
+            } else {
+                document.getElementById('diagram-hint').classList.remove('hidden');
+                document.getElementById('hunt-msg').classList.remove('hidden');
+            }
 
             switch(state.mode) {
                 case 'build_normal':
@@ -871,7 +869,7 @@
                     document.getElementById('identify-hint').classList.remove('hidden');
                     document.getElementById('identify-hint').classList.add('flex');
                     document.getElementById('ptable-container').classList.add('mode-identify');
-                    document.getElementById('table-instruction').classList.remove('hidden');
+                    if(!state.proMode) document.getElementById('table-instruction').classList.remove('hidden');
                     if(state.mode === 'identify_config') {
                         const sol = getCorrectConfig(state.element.z, 'short');
                         let str = (sol.noble ? sol.noble + " " : "") + sol.parts.map(p => `${p.label}<sup>${p.count}</sup>`).join(" ");
@@ -906,7 +904,6 @@
                     break;
             }
             
-            // Handle Hunts separately as they map to 'identify' type logic but different state mode string
             if(state.mode.startsWith('hunt')) {
                 const t = state.mode.split('_')[1];
                 state.targetCategory = huntCategories[t];
@@ -915,10 +912,10 @@
                 document.getElementById('identify-hint').classList.remove('hidden');
                 document.getElementById('identify-hint').classList.add('flex');
                 document.getElementById('ptable-container').classList.add('mode-identify');
-                document.getElementById('table-instruction').classList.remove('hidden');
+                if(!state.proMode) document.getElementById('table-instruction').classList.remove('hidden');
                 
                 badge.innerHTML = `<div class="w-2.5 h-2.5 rounded-full bg-emerald-500"></div> Hunt`;
-                document.getElementById('hunt-msg').innerHTML = `Find any <b>${state.targetCategory.name}</b>.`;
+                if(!state.proMode) document.getElementById('hunt-msg').innerHTML = `Find any <b>${state.targetCategory.name}</b>.`;
                 promptContent.innerHTML = `
                     <div class="fade-in text-center flex flex-col items-center justify-center h-[80px]">
                         <div class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">FIND A</div>
@@ -928,6 +925,7 @@
         }
 
         function highlightElement() {
+            if(state.proMode) return; // Hide highlight in Pro Mode
             const el = document.getElementById(`el-${state.element.z}`);
             if(el) {
                 el.classList.add('target-highlight');
@@ -1030,7 +1028,6 @@
         function renderDiagramInput() {
             const grid = document.getElementById('orbital-diagram-grid');
             grid.innerHTML = '';
-            // ADDED 4p, 5s, 4d, 5p here
             const order = [ {n:"1s",c:1}, {n:"2s",c:1}, {n:"2p",c:3}, {n:"3s",c:1}, {n:"3p",c:3}, 
                             {n:"4s",c:1}, {n:"3d",c:5}, {n:"4p",c:3}, {n:"5s",c:1}, {n:"4d",c:5}, {n:"5p",c:3} ];
             state.diagram = [];
@@ -1066,7 +1063,6 @@
         function renderDiagramPreview(z) {
             const container = document.getElementById('diagram-preview');
             container.innerHTML = '';
-            // ADDED 4p, 5s, 4d, 5p here as well
             const order = [ {n:"1s",c:1}, {n:"2s",c:1}, {n:"2p",c:3}, {n:"3s",c:1}, {n:"3p",c:3}, 
                             {n:"4s",c:1}, {n:"3d",c:5}, {n:"4p",c:3}, {n:"5s",c:1}, {n:"4d",c:5}, {n:"5p",c:3} ];
             let electrons = z;
@@ -1154,6 +1150,47 @@
             }
         }
 
+        function revealAnswer(msg) {
+            clearInterval(state.timerId);
+            state.waitingNext = true;
+            state.streak = 0;
+            updateStats();
+            showToast("Time's Up!", msg, false);
+
+            document.getElementById('input-area').classList.add('hidden');
+            document.getElementById('identify-hint').classList.add('hidden');
+            document.getElementById('info-panel').classList.remove('hidden');
+
+            let title = "";
+            let desc = "";
+
+            if (state.mode === 'vocab') {
+                title = "Correct Answer:";
+                desc = state.vocabQ.a;
+            } else if (state.mode === 'count_valence') {
+                title = `Correct Valence: ${state.element.v}`;
+                desc = `${state.element.n} is in Group ${state.element.v > 2 ? state.element.v + 10 : state.element.v}.`;
+            } else if (state.mode === 'calc_neutrons') {
+                title = `Correct Neutrons: ${state.isotopeNeutrons}`;
+                desc = `Mass (${state.element.z + state.isotopeNeutrons}) - Protons (${state.element.z}) = ${state.isotopeNeutrons}`;
+            } else if (state.mode.startsWith('hunt')) {
+                title = state.targetCategory.name;
+                const symbols = state.targetCategory.z.map(z => {
+                    const e = elements.find(el => el.z === z);
+                    return e ? e.s : '';
+                }).filter(s => s).join(", ");
+                desc = `Correct elements: ${symbols}`;
+            } else {
+                title = `${state.element.n} (${state.element.s})`;
+                const config = getCorrectConfig(state.element.z, 'short');
+                const str = (config.noble ? config.noble + " " : "") + config.parts.map(p => `${p.label}<sup>${p.count}</sup>`).join(" ");
+                desc = `<span class='block mb-2'>${state.element.d}</span><strong>Configuration:</strong><br>${str}`;
+            }
+
+            document.getElementById('info-title').innerText = title;
+            document.getElementById('info-desc').innerHTML = desc;
+        }
+
         function fail(msg) {
             state.streak = 0;
             updateStats();
@@ -1182,8 +1219,13 @@
         }
 
         window.nextLevel = () => {
-            state.element = elements[Math.floor(Math.random() * elements.length)];
-            setMode(); // Resets layout and starts new question
+            // Apply Period Limit Filter
+            let pool = elements;
+            if(state.periodLimit === 3) pool = elements.filter(e => e.z <= 18);
+            else if(state.periodLimit === 4) pool = elements.filter(e => e.z <= 36);
+            
+            state.element = pool[Math.floor(Math.random() * pool.length)];
+            setMode(); 
         };
 
         window.resetInput = () => {
@@ -1196,7 +1238,7 @@
 
         window.onload = () => {
             renderPTable();
-            setTimerDuration(30); // Default
+            setTimerDuration(30); 
         };
     </script>
 </body>
