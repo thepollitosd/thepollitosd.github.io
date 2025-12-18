@@ -188,10 +188,10 @@
         }
 
         /* Nav Tab Active State */
-        .dash-nav-btn { position: relative; color: #94a3b8; transition: color 0.2s; }
+        .dash-nav-btn { position: relative; color: #94a3b8; transition: color 0.2s; padding: 0.5rem 1rem; }
         .dash-nav-btn.active { color: #2563eb; }
         .dash-nav-btn.active::after {
-            content: ''; position: absolute; bottom: -4px; left: 50%; transform: translateX(-50%);
+            content: ''; position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%);
             width: 4px; height: 4px; background: #2563eb; border-radius: 50%;
         }
         .dash-section { display: none; animation: fadeIn 0.3s ease-out; }
@@ -200,17 +200,17 @@
 </head>
 <body class="p-2 md:p-4 h-screen flex flex-col" oncontextmenu="return false;">
 
-    <!-- DASHBOARD OVERLAY -->
+    <!-- DASHBOARD OVERLAY - Added flex utility classes directly here -->
     <div id="dashboard" class="p-4 flex flex-col justify-center items-center">
         
         <!-- Header / Nav -->
-        <div class="text-center w-full flex-none mb-6">
+        <div class="text-center w-full flex-none mb-4 md:mb-6 mt-4">
             <div class="inline-block w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center text-white font-bold text-2xl shadow-lg shadow-blue-200 mb-2">O</div>
             <h1 class="text-3xl font-black text-slate-800 tracking-tighter">ORBITAL <span class="text-blue-600">OVERDRIVE</span></h1>
         </div>
 
         <!-- Content Containers -->
-        <div class="w-full max-w-4xl flex-grow flex flex-col justify-center items-center py-4 overflow-y-auto custom-scroll relative z-10">
+        <div class="w-full max-w-4xl flex-grow flex flex-col items-center pb-24 overflow-y-auto custom-scroll relative z-10 px-2">
             
             <!-- HOME: Game Modes -->
             <div id="dash-home" class="dash-section active w-full flex-col items-center">
@@ -293,6 +293,62 @@
                 </div>
             </div>
 
+            <!-- REFERENCE -->
+            <div id="dash-reference" class="dash-section w-full max-w-2xl flex-col gap-6">
+                <div class="bg-white p-8 rounded-3xl shadow-sm border border-slate-200">
+                    <h2 class="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
+                        <span class="text-2xl">📖</span> Chemist's Handbook
+                    </h2>
+                    
+                    <div class="space-y-6">
+                        <div>
+                            <h3 class="text-blue-600 font-bold text-sm uppercase tracking-wide mb-2">Quantum Rules</h3>
+                            <ul class="space-y-3">
+                                <li class="bg-slate-50 p-3 rounded-lg border border-slate-100 text-sm text-slate-600">
+                                    <strong class="text-slate-800">Aufbau Principle:</strong> Electrons fill the lowest energy orbitals first (1s < 2s < 2p...).
+                                </li>
+                                <li class="bg-slate-50 p-3 rounded-lg border border-slate-100 text-sm text-slate-600">
+                                    <strong class="text-slate-800">Pauli Exclusion:</strong> Max 2 electrons per orbital with opposite spins (↑↓).
+                                </li>
+                                <li class="bg-slate-50 p-3 rounded-lg border border-slate-100 text-sm text-slate-600">
+                                    <strong class="text-slate-800">Hund's Rule:</strong> For degenerate orbitals (p, d, f), fill singly with parallel spin before pairing.
+                                </li>
+                            </ul>
+                        </div>
+
+                        <div>
+                            <h3 class="text-blue-600 font-bold text-sm uppercase tracking-wide mb-2">Common Exceptions</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <div class="bg-yellow-50 p-3 rounded-lg border border-yellow-100 text-sm">
+                                    <strong class="text-yellow-800 block mb-1">d-Block Stability</strong>
+                                    <p class="text-yellow-700 text-xs">Elements favor half-filled (d5) or fully-filled (d10) subshells.</p>
+                                </div>
+                                <div class="bg-slate-50 p-3 rounded-lg border border-slate-100 text-sm font-mono text-slate-600">
+                                    Cr: [Ar] 4s¹ 3d⁵<br>
+                                    Cu: [Ar] 4s¹ 3d¹⁰
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <h3 class="text-blue-600 font-bold text-sm uppercase tracking-wide mb-2">Periodic Trends</h3>
+                            <div class="flex gap-4 text-sm text-slate-600">
+                                <div class="flex-1 bg-slate-50 p-3 rounded-lg">
+                                    <strong class="block mb-1 text-slate-800">Atomic Radius</strong>
+                                    ↓ Increases<br>
+                                    ← Increases
+                                </div>
+                                <div class="flex-1 bg-slate-50 p-3 rounded-lg">
+                                    <strong class="block mb-1 text-slate-800">Electronegativity</strong>
+                                    ↑ Increases<br>
+                                    → Increases
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- ABOUT -->
             <div id="dash-about" class="dash-section w-full max-w-2xl flex-col gap-6">
                 <div class="bg-white p-8 rounded-3xl shadow-sm border border-slate-200">
@@ -300,11 +356,8 @@
                     <p class="text-slate-600 mb-4 leading-relaxed">
                         Orbital Overdrive is an interactive training module designed for Honors Chemistry students to master the fundamental principles of atomic structure.
                     </p>
-                    <p class="text-slate-600 mb-4 leading-relaxed">
-                        Through gamified drills, users practice writing electron configurations (Standard & Shorthand), constructing orbital diagrams according to Hund's Rule and the Pauli Exclusion Principle, and identifying periodic trends.
-                    </p>
                     <div class="p-4 bg-slate-50 rounded-xl border border-slate-100">
-                        <h3 class="font-bold text-slate-700 mb-2 text-sm">Key Concepts Covered</h3>
+                        <h3 class="font-bold text-slate-700 mb-2 text-sm">Key Concepts</h3>
                         <ul class="list-disc list-inside text-sm text-slate-500 space-y-1">
                             <li>Aufbau Principle & Orbital Filling</li>
                             <li>Exceptional Configurations (Cr, Cu, Mo, Ag, Pd)</li>
@@ -320,55 +373,35 @@
                 <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 relative overflow-hidden">
                     <div class="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
                     <div class="flex justify-between items-baseline mb-2">
-                        <h3 class="text-lg font-bold text-slate-800">v1.5 <span class="text-blue-500">b.1</span></h3>
+                        <h3 class="text-lg font-bold text-slate-800">v1.6 <span class="text-blue-500">b.1</span></h3>
                         <span class="text-xs font-bold bg-blue-100 text-blue-600 px-2 py-1 rounded">CURRENT</span>
                     </div>
+                    <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">ISOTOPIC INFINITY</p>
+                    <ul class="text-sm text-slate-600 space-y-1 list-disc list-inside">
+                        <li>New "Reference" tab with chemical rules and trends</li>
+                        <li>Mobile-optimized Dashboard navigation bar</li>
+                        <li>Fixed scrolling issues on smaller screens</li>
+                        <li>General UI polish for menu transitions</li>
+                    </ul>
+                </div>
+
+                <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 opacity-75">
+                    <h3 class="text-lg font-bold text-slate-800 mb-1">v1.5 <span class="text-slate-400">b.1</span></h3>
                     <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">ULTRA VIOLET</p>
                     <ul class="text-sm text-slate-600 space-y-1 list-disc list-inside">
                         <li>New Difficulty System: Normal, Pro, Ultra</li>
                         <li>Ultra Mode: Hides Atomic Numbers on the Periodic Table</li>
                         <li>Pro Mode: Hides textual hints and guides</li>
-                        <li>UI: Dashboard improvements and settings expansion</li>
-                    </ul>
-                </div>
-
-                <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 opacity-75">
-                    <h3 class="text-lg font-bold text-slate-800 mb-1">v1.4 <span class="text-slate-400">b.1</span></h3>
-                    <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">QUANTUM TUNING</p>
-                    <ul class="text-sm text-slate-600 space-y-1 list-disc list-inside">
-                        <li>New "Focus Range" setting: Limit elements to Period 3, 4, or 5</li>
-                        <li>New "Pro Mode" toggle (precursor to difficulty slider)</li>
-                        <li>Updated dashboard UI with more training parameters</li>
                     </ul>
                 </div>
 
                 <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 opacity-60">
-                    <h3 class="text-lg font-bold text-slate-800 mb-1">v1.3 <span class="text-slate-400">b.4</span></h3>
-                    <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">ATOMIC DASHBOARD</p>
+                    <h3 class="text-lg font-bold text-slate-800 mb-1">v1.4 <span class="text-slate-400">b.1</span></h3>
+                    <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">QUANTUM TUNING</p>
                     <ul class="text-sm text-slate-600 space-y-1 list-disc list-inside">
-                        <li>Fixed: Time's Up now reveals and explains the correct answer</li>
-                        <li>Balanced: Detective Mode now favors Electron Config identification (40%)</li>
-                        <li>UI: Added rich text formatting for solution explanations</li>
-                    </ul>
-                </div>
-
-                <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 opacity-50">
-                    <h3 class="text-lg font-bold text-slate-800 mb-1">v1.2 <span class="text-slate-400">b.1</span></h3>
-                    <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">MOLECULAR MIND</p>
-                    <ul class="text-sm text-slate-600 space-y-1 list-disc list-inside">
-                        <li>Massively expanded Vocabulary bank (25+ terms)</li>
-                        <li>Added new trivia categories for Quantum Rules</li>
-                        <li>Improved mobile scaling for diagrams</li>
-                    </ul>
-                </div>
-
-                <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 opacity-40">
-                    <h3 class="text-lg font-bold text-slate-800 mb-1">v1.1 <span class="text-slate-400">b.5</span></h3>
-                    <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">NEON STABILITY</p>
-                    <ul class="text-sm text-slate-600 space-y-1 list-disc list-inside">
-                        <li>Hotfix: Added missing 5p orbital to logic engine</li>
-                        <li>Hotfix: Prevented infinite loop in Valence mode</li>
-                        <li>Added identifying isotopes & counting neutrons</li>
+                        <li>New "Focus Range" setting: Limit elements to Period 3, 4, or 5</li>
+                        <li>New "Pro Mode" toggle</li>
+                        <li>Updated dashboard UI with more training parameters</li>
                     </ul>
                 </div>
             </div>
@@ -384,19 +417,19 @@
                     <div>
                         <h3 class="text-blue-400 font-bold mb-2">> KNOWN_LIMITATIONS</h3>
                         <p>1. f-block elements are currently excluded to maintain UI grid stability on mobile.</p>
-                        <p>2. Orbital diagrams use a simplified box model. Spin quantum numbers are visualized as arrows but strictly enforced only by count.</p>
                     </div>
                 </div>
             </div>
 
         </div>
 
-        <!-- Dashboard Nav -->
-        <div class="absolute bottom-8 flex gap-8">
-            <button onclick="switchDash('home')" id="nav-home" class="dash-nav-btn active font-bold uppercase tracking-widest text-xs">Play</button>
-            <button onclick="switchDash('about')" id="nav-about" class="dash-nav-btn font-bold uppercase tracking-widest text-xs">About</button>
-            <button onclick="switchDash('history')" id="nav-history" class="dash-nav-btn font-bold uppercase tracking-widest text-xs">History</button>
-            <button onclick="switchDash('dev')" id="nav-dev" class="dash-nav-btn font-bold uppercase tracking-widest text-xs">Dev Notes</button>
+        <!-- Dashboard Nav (Fixed Bottom Bar) -->
+        <div class="fixed bottom-0 left-0 w-full bg-white/90 backdrop-blur border-t border-slate-200 p-2 flex justify-around md:justify-center md:gap-12 z-50 shadow-lg">
+            <button onclick="switchDash('home')" id="nav-home" class="dash-nav-btn active font-bold uppercase tracking-widest text-[10px] md:text-xs">Play</button>
+            <button onclick="switchDash('reference')" id="nav-reference" class="dash-nav-btn font-bold uppercase tracking-widest text-[10px] md:text-xs">Ref</button>
+            <button onclick="switchDash('about')" id="nav-about" class="dash-nav-btn font-bold uppercase tracking-widest text-[10px] md:text-xs">About</button>
+            <button onclick="switchDash('history')" id="nav-history" class="dash-nav-btn font-bold uppercase tracking-widest text-[10px] md:text-xs">History</button>
+            <button onclick="switchDash('dev')" id="nav-dev" class="dash-nav-btn font-bold uppercase tracking-widest text-[10px] md:text-xs">Dev</button>
         </div>
     </div>
 
@@ -540,8 +573,8 @@
     </div>
 
     <!-- VERSION FOOTER -->
-    <div class="fixed bottom-1 right-2 text-[10px] font-mono text-slate-400 opacity-60 pointer-events-none select-none z-50">
-        ORBITAL_OS <span class="font-bold">v1.5</span> <span class="text-blue-400">b.1</span> [ULTRA VIOLET]
+    <div class="fixed bottom-16 md:bottom-1 right-2 text-[10px] font-mono text-slate-400 opacity-60 pointer-events-none select-none z-50">
+        ORBITAL_OS <span class="font-bold">v1.6</span> <span class="text-blue-400">b.1</span> [ISOTOPIC INFINITY]
     </div>
 
     <script>
@@ -609,10 +642,44 @@
         ];
 
         const vocabBank = [
+            // Basic Structure
             { q: "Positive ions are called...", a: "Cations", opts: ["Cations", "Anions", "Protons", "Neutrons"] },
+            { q: "Negative ions are called...", a: "Anions", opts: ["Cations", "Anions", "Nuclei", "Isotopes"] },
+            { q: "The center of an atom is the...", a: "Nucleus", opts: ["Nucleus", "Shell", "Orbital", "Cloud"] },
+            { q: "Subatomic particle with no charge?", a: "Neutron", opts: ["Proton", "Electron", "Neutron", "Photon"] },
+            { q: "Subatomic particle with negative charge?", a: "Electron", opts: ["Proton", "Neutron", "Electron", "Positron"] },
+            
+            // Periodic Table Organization
             { q: "Horizontal rows are called...", a: "Periods", opts: ["Groups", "Periods", "Blocks", "Families"] },
-            { q: "Halogens belong to which group?", a: "17", opts: ["1", "2", "17", "18"] },
-            { q: "Valence electrons are located in...", a: "Outer shell", opts: ["Outer shell", "Nucleus", "Inner shell", "Core"] }
+            { q: "Vertical columns are called...", a: "Groups", opts: ["Periods", "Groups", "Shells", "Series"] },
+            { q: "Group 1 elements are...", a: "Alkali Metals", opts: ["Alkali Metals", "Halogens", "Noble Gases", "Transition"] },
+            { q: "Group 2 elements are...", a: "Alkaline Earth", opts: ["Alkali Metals", "Alkaline Earth", "Halogens", "Metalloids"] },
+            { q: "Group 17 elements are...", a: "Halogens", opts: ["Halogens", "Noble Gases", "Alkali Metals", "Lanthanides"] },
+            { q: "Group 18 elements are...", a: "Noble Gases", opts: ["Halogens", "Noble Gases", "Actinides", "Alkaline Earth"] },
+            { q: "Elements along the staircase line?", a: "Metalloids", opts: ["Metals", "Nonmetals", "Metalloids", "Halogens"] },
+            { q: "The d-block elements are...", a: "Transition Metals", opts: ["Transition Metals", "Inner Transition", "Alkali", "Halogens"] },
+
+            // Definitions
+            { q: "Atoms with same p+ but different n0?", a: "Isotopes", opts: ["Isotopes", "Ions", "Allotropes", "Isomers"] },
+            { q: "Electrons in the outermost shell?", a: "Valence", opts: ["Core", "Valence", "Inner", "Nuclear"] },
+            { q: "Rule: Atoms desire 8 valence electrons.", a: "Octet Rule", opts: ["Octet Rule", "Duet Rule", "Hund's Rule", "Aufbau"] },
+            { q: "Energy required to remove an electron?", a: "Ionization Energy", opts: ["Electronegativity", "Ionization Energy", "Electron Affinity", "Lattice Energy"] },
+            { q: "Ability to attract shared electrons?", a: "Electronegativity", opts: ["Ionization Energy", "Electronegativity", "Shielding", "Radius"] },
+            
+            // Trends
+            { q: "Atomic radius trend down a group?", a: "Increases", opts: ["Increases", "Decreases", "Stays Same", "Random"] },
+            { q: "Atomic radius trend across a period?", a: "Decreases", opts: ["Increases", "Decreases", "Stays Same", "Random"] },
+            { q: "Electronegativity trend across a period?", a: "Increases", opts: ["Increases", "Decreases", "Stays Same", "Random"] },
+            { q: "Most electronegative element?", a: "Fluorine", opts: ["Fluorine", "Francium", "Oxygen", "Chlorine"] },
+            
+            // Quantum/Configuration Rules
+            { q: "Rule: Fill lowest energy first.", a: "Aufbau", opts: ["Aufbau", "Pauli", "Hund", "Heisenberg"] },
+            { q: "Rule: Max 2 electrons with opp. spin.", a: "Pauli Exclusion", opts: ["Aufbau", "Pauli Exclusion", "Hund", "Octet"] },
+            { q: "Rule: Fill empty orbitals before pairing.", a: "Hund's Rule", opts: ["Aufbau", "Pauli", "Hund's Rule", "Periodic Law"] },
+            { q: "Shape of an s-orbital?", a: "Sphere", opts: ["Sphere", "Dumbbell", "Clover", "Complex"] },
+            { q: "Shape of a p-orbital?", a: "Dumbbell", opts: ["Sphere", "Dumbbell", "Clover", "Ring"] },
+            { q: "Max electrons in a d-subshell?", a: "10", opts: ["2", "6", "10", "14"] },
+            { q: "Max electrons in an f-subshell?", a: "14", opts: ["6", "10", "14", "18"] }
         ];
 
         const orbitalKeys = ["1s", "2s", "2p", "3s", "3p", "4s", "3d", "4p", "5s", "4d", "5p"];
@@ -1111,6 +1178,7 @@
         function renderDiagramPreview(z) {
             const container = document.getElementById('diagram-preview');
             container.innerHTML = '';
+            // ADDED 4p, 5s, 4d, 5p here as well
             const order = [ {n:"1s",c:1}, {n:"2s",c:1}, {n:"2p",c:3}, {n:"3s",c:1}, {n:"3p",c:3}, 
                             {n:"4s",c:1}, {n:"3d",c:5}, {n:"4p",c:3}, {n:"5s",c:1}, {n:"4d",c:5}, {n:"5p",c:3} ];
             let electrons = z;
