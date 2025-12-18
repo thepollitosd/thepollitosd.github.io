@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Orbital Overdrive - Honors Chemistry</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Space+Grotesk:wght@300;500;700&display=swap');
+
+        :root {
+            --bg-light: #f8fafc;
+            --text-main: #334155;
+            --accent-blue: #3b82f6;
+            --accent-shadow: rgba(59, 130, 246, 0.25);
+        }
+
+        body {
+            background-color: var(--bg-light);
+            color: var(--text-main);
+            font-family: 'Outfit', sans-serif;
+            overflow-x: hidden;
+            background-image: radial-gradient(#e2e8f0 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+
+        .font-mono-display { font-family: 'Space Grotesk', monospace; }
+
+        /* Periodic Table Grid */
+        .ptable-wrapper {
+            width: 100%;
+            overflow-x: auto;
+            padding-bottom: 1rem;
+            scrollbar-width: thin;
+        }
+        
+        .ptable {
+            display: grid;
+            grid-template-columns: repeat(18, minmax(clamp(28px, 2.5vw, 48px), 1fr));
+            gap: 2px;
+            margin: 0 auto;
+            justify-content: center;
+        }
+
+        .element {
+            aspect-ratio: 1/1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: clamp(0.5rem, 1vw, 0.75rem);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 2px solid transparent;
+            font-weight: 600;
+            user-select: none;
+            position: relative;
+        }
+
+        .element span.symbol { font-size: 1.4em; line-height: 1; font-weight: 700; }
+        .element span.number { font-size: 0.7em; opacity: 0.6; position: absolute; top: 1px; left: 2px; }
+
+        .element:hover { transform: scale(1.4); z-index: 50; box-shadow: 0 10px 20px rgba(0,0,0,0.15); border-color: white; }
+        
+        .element.target-highlight { 
+            transform: scale(1.15); z-index: 40; 
+            box-shadow: 0 0 0 3px var(--accent-blue);
+            background-color: white !important;
+            border-color: var(--accent-blue);
+        }
+
+        .mode-identify .element:hover {
+            border-color: var(--accent-blue);
+            cursor: crosshair;
+        }
+
+        .block-s { background-color: #fee2e2; color: #dc2626; }
+        .block-p { background-color: #dbeafe; color: #2563eb; }
+        .block-d { background-color: #fef3c7; color: #d97706; }
+        .block-f { background-color: #f3e8ff; color: #7c3aed; }
+
+        .orbital-box {
+            width: 38px;
+            height: 38px;
+            border: 2px solid #cbd5e1;
+            border-radius: 6px;
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            margin: 2px;
+            background: white;
+            transition: all 0.1s;
+            cursor: pointer;
+        }
+        .orbital-box:hover { border-color: var(--accent-blue); background: #eff6ff; }
+        .spin-arrow { font-size: 22px; font-weight: 800; line-height: 1; }
+
+        .config-block {
+            padding: 4px 10px; background: white; border: 2px solid #e2e8f0; border-radius: 8px;
+            margin: 2px; cursor: pointer; user-select: none; min-width: 45px; position: relative;
+            display: inline-flex; flex-direction: column; align-items: center;
+        }
+        .config-super { 
+            font-size: 0.7rem; background: #eff6ff; color: #2563eb; padding: 0 4px; border-radius: 4px; 
+            position: absolute; top: -6px; right: -6px; font-weight: bold; border: 1px solid #dbeafe;
+        }
+
+        .shake { animation: shake 0.4s ease-in-out; }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+        
+        .fade-in { animation: fadeIn 0.4s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        .key-btn {
+            background: white; border: 1px solid #e2e8f0; border-bottom-width: 3px; border-radius: 0.5rem;
+            font-family: 'Space Grotesk', monospace; font-weight: 600; color: #475569;
+            display: flex; align-items: center; justify-content: center; height: 42px;
+        }
+        .key-btn:active { transform: translateY(2px); border-bottom-width: 1px; }
+        
+        .key-noble { background: #eff6ff; color: #2563eb; border-color: #bfdbfe; }
+        .key-s { border-color: #fecaca; color: #dc2626; }
+        .key-p { border-color: #bfdbfe; color: #2563eb; }
+        .key-d { border-color: #fde68a; color: #d97706; }
+
+        /* Robust Toast Animation Classes */
+        #toast {
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.4s ease;
+        }
+        .toast-visible {
+            transform: translate(-50%, 0) !important; /* Center X, 0 Y */
+            opacity: 1 !important;
+        }
+        .toast-hidden {
+            transform: translate(-50%, -150%) !important; /* Center X, Up Y */
+            opacity: 0 !important;
+        }
+    </style>
+</head>
+<body class="p-2 md:p-4 min-h-screen flex flex-col">
+
+    <!-- Header -->
+    <nav class="flex flex-col md:flex-row justify-between items-center bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-200 mb-4 mx-auto w-full max-w-[1400px] gap-3">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-blue-200">O</div>
+            <div class="leading-tight">
+                <h1 class="text-xl font-bold tracking-tight text-slate-800">ORBITAL <span class="text-blue-600">OVERDRIVE</span></h1>
+                <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Honors Chemistry</p>
+            </div>
+        </div>
+        
+        <div class="flex gap-4 md:gap-8 text-center bg-slate-50 p-2 rounded-lg border border-slate-100">
+            <div>
+                <p class="text-[10px] text-slate-400 font-bold uppercase">Streak</p>
+                <p id="streak-val" class="text-lg font-mono-display font-bold text-orange-500">0</p>
+            </div>
+            <div>
+                <p class="text-[10px] text-slate-400 font-bold uppercase">Score</p>
+                <p id="score-val" class="text-lg font-mono-display font-bold text-emerald-500">0</p>
+            </div>
+            <div>
+                <p class="text-[10px] text-slate-400 font-bold uppercase">Level</p>
+                <p id="level-val" class="text-lg font-mono-display font-bold text-blue-500">1</p>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 max-w-[1400px] mx-auto w-full flex-grow items-start">
+        
+        <!-- Left: Interactive Periodic Table -->
+        <div class="lg:col-span-7 bg-white p-3 md:p-5 rounded-2xl shadow-md border border-slate-100 flex flex-col order-2 lg:order-1 relative group">
+            <div class="flex justify-between items-end mb-2 px-1">
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest">Periodic Table</h3>
+                <div id="table-instruction" class="text-xs font-bold text-blue-500 bg-blue-50 px-2 py-1 rounded hidden animate-pulse">Select Element</div>
+            </div>
+            
+            <div class="ptable-wrapper" id="ptable-wrapper">
+                <div id="ptable-container" class="ptable">
+                    <!-- JS Generated -->
+                </div>
+            </div>
+
+            <!-- Legend -->
+            <div class="flex flex-wrap justify-center gap-2 mt-3 opacity-60 hover:opacity-100 transition-opacity">
+                <div class="flex items-center gap-1.5 px-2 py-1 rounded-full bg-red-50 text-red-600 text-[10px] font-bold">s-block</div>
+                <div class="flex items-center gap-1.5 px-2 py-1 rounded-full bg-blue-50 text-blue-600 text-[10px] font-bold">p-block</div>
+                <div class="flex items-center gap-1.5 px-2 py-1 rounded-full bg-amber-50 text-amber-600 text-[10px] font-bold">d-block</div>
+            </div>
+        </div>
+
+        <!-- Right: Game Dashboard -->
+        <div class="lg:col-span-5 flex flex-col gap-4 order-1 lg:order-2 h-full">
+            
+            <!-- Question/Prompt Card -->
+            <div id="prompt-card" class="bg-white p-6 rounded-2xl shadow-lg border border-blue-50 text-center relative overflow-hidden min-h-[180px] flex flex-col justify-center items-center transition-all">
+                <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500"></div>
+                
+                <!-- Dynamic Header -->
+                <div class="absolute top-3 left-0 w-full flex justify-between px-4 items-center">
+                    <span id="prompt-label" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Target</span>
+                    <!-- Badge (Size Increased) -->
+                    <div id="mode-badge" class="flex items-center gap-2 bg-slate-100 px-5 py-2 rounded-lg text-lg md:text-xl font-bold text-slate-700 shadow-sm border border-slate-200">
+                        <div class="w-3 h-3 rounded-full bg-blue-500"></div> Standard
+                    </div>
+                </div>
+
+                <!-- CONTENT AREA -->
+                <div id="prompt-content" class="w-full mt-6">
+                    <!-- Content injected by JS -->
+                </div>
+            </div>
+
+            <!-- Description/Feedback Panel (Shows on success) -->
+            <div id="info-panel" class="hidden bg-emerald-50 border border-emerald-100 p-4 rounded-xl fade-in">
+                <div class="flex gap-3">
+                    <div class="text-2xl">💡</div>
+                    <div>
+                        <h4 class="text-sm font-bold text-emerald-800" id="info-title">Element Fact</h4>
+                        <p class="text-xs text-emerald-700 mt-1 leading-relaxed" id="info-desc">...</p>
+                    </div>
+                </div>
+                <button onclick="nextLevel()" class="w-full mt-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 rounded-lg text-sm shadow-sm transition-colors">
+                    Next Challenge →
+                </button>
+            </div>
+
+            <!-- Input Area -->
+            <div id="input-area" class="bg-white p-4 rounded-2xl shadow-md border border-slate-100 flex-grow flex flex-col relative transition-all">
+                
+                <div class="flex justify-between items-center mb-2">
+                    <h4 class="text-xs font-bold text-slate-500 uppercase">Controls</h4>
+                    <button onclick="resetInput()" class="text-[10px] font-bold text-red-400 hover:text-red-500 uppercase hover:bg-red-50 px-2 py-1 rounded">Reset</button>
+                </div>
+
+                <!-- Builder Mode UI -->
+                <div id="builder-ui" class="flex flex-col gap-3">
+                    <div id="config-output" class="min-h-[50px] bg-slate-50 border-2 border-slate-200 border-dashed rounded-xl p-2 flex flex-wrap gap-1 items-center content-center justify-center">
+                        <span class="text-slate-400 text-xs italic">Construct configuration...</span>
+                    </div>
+                    <div class="grid grid-cols-5 gap-1.5" id="orbital-keypad"></div>
+                </div>
+
+                <!-- Diagram Mode UI -->
+                <div id="diagram-ui" class="hidden flex-col items-center">
+                    <div id="orbital-diagram-grid" class="flex flex-wrap gap-2 justify-center content-center min-h-[120px]"></div>
+                    <p class="text-xs text-slate-400 mt-2">Click: <span class="text-blue-500 font-bold">↑</span> / <span class="text-red-500 font-bold">↓</span></p>
+                </div>
+
+                <div class="mt-auto pt-4">
+                    <button id="submit-btn" class="w-full py-3 bg-slate-900 text-white rounded-xl font-bold tracking-wide hover:bg-slate-800 active:scale-95 transition-all shadow-lg shadow-slate-200/50 flex items-center justify-center gap-2">
+                        <span>CONFIRM</span>
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Identify Mode Hint -->
+            <div id="identify-hint" class="hidden bg-slate-50 p-6 rounded-2xl border-2 border-dashed border-slate-200 text-center flex-col justify-center items-center h-full">
+                <div class="text-4xl mb-2">👆</div>
+                <h3 class="text-slate-800 font-bold">Select on Table</h3>
+                <p class="text-sm text-slate-500 mt-2" id="hunt-msg">Find the correct element.</p>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Toast Notification (Fixed) -->
+    <div id="toast" class="fixed top-24 left-1/2 px-6 py-4 bg-white rounded-full shadow-2xl border border-slate-100 flex items-center gap-3 z-[60] pointer-events-none toast-hidden">
+        <div id="toast-icon" class="w-8 h-8 rounded-full bg-green-100 text-green-600 flex items-center justify-center font-bold">✓</div>
+        <div>
+            <p id="toast-title" class="font-bold text-sm text-slate-800">Correct!</p>
+            <p id="toast-msg" class="text-xs text-slate-500">Streak +1</p>
+        </div>
+    </div>
+
+    <script>
+        // --- Data ---
+        const elements = [
+            {z: 1, s: "H", n: "Hydrogen", b: "s", d: "Most abundant element in the universe, fuel for stars."},
+            {z: 2, s: "He", n: "Helium", b: "s", d: "Used in balloons and cryogenics; inert noble gas."},
+            {z: 3, s: "Li", n: "Lithium", b: "s", d: "Lightest metal, key component in rechargeable batteries."},
+            {z: 4, s: "Be", n: "Beryllium", b: "s", d: "Lightweight and stiff, used in aerospace and X-ray windows."},
+            {z: 5, s: "B", n: "Boron", b: "p", d: "Used in heat-resistant glass (Pyrex) and detergents."},
+            {z: 6, s: "C", n: "Carbon", b: "p", d: "The basis of life; exists as diamond, graphite, and coal."},
+            {z: 7, s: "N", n: "Nitrogen", b: "p", d: "Makes up 78% of Earth's atmosphere; essential for DNA."},
+            {z: 8, s: "O", n: "Oxygen", b: "p", d: "Essential for respiration and combustion; 21% of atmosphere."},
+            {z: 9, s: "F", n: "Fluorine", b: "p", d: "Most reactive element; used in toothpaste and Teflon."},
+            {z: 10, s: "Ne", n: "Neon", b: "p", d: "Glows reddish-orange in high voltage lamps."},
+            {z: 11, s: "Na", n: "Sodium", b: "s", d: "Soft metal, explodes in water; creates table salt with Chlorine."},
+            {z: 12, s: "Mg", n: "Magnesium", b: "s", d: "Burns with bright white light; central to chlorophyll."},
+            {z: 13, s: "Al", n: "Aluminum", b: "p", d: "Most abundant metal in Earth's crust; lightweight and recyclable."},
+            {z: 14, s: "Si", n: "Silicon", b: "p", d: "The foundation of modern electronics and computer chips."},
+            {z: 15, s: "P", n: "Phosphorus", b: "p", d: "Essential for life (ATP, DNA); used in matches."},
+            {z: 16, s: "S", n: "Sulfur", b: "p", d: "Yellow solid found near volcanoes; used in sulfuric acid."},
+            {z: 17, s: "Cl", n: "Chlorine", b: "p", d: "Used to disinfect water; toxic yellow-green gas."},
+            {z: 18, s: "Ar", n: "Argon", b: "p", d: "Used in lightbulbs and welding shields; 3rd most abundant gas."},
+            {z: 19, s: "K", n: "Potassium", b: "s", d: "Vital for nerve function; highly reactive in water."},
+            {z: 20, s: "Ca", n: "Calcium", b: "s", d: "Essential for strong bones and teeth; found in limestone."},
+            {z: 21, s: "Sc", n: "Scandium", b: "d", d: "Used in high-intensity stadium lights and aerospace alloys."},
+            {z: 22, s: "Ti", n: "Titanium", b: "d", d: "Strong as steel but lighter; used in prosthetics and jets."},
+            {z: 23, s: "V", n: "Vanadium", b: "d", d: "Strengthens steel for tools and springs."},
+            {z: 24, s: "Cr", n: "Chromium", b: "d", d: "Adds shine and rust resistance to stainless steel."},
+            {z: 25, s: "Mn", n: "Manganese", b: "d", d: "Essential for steel making; found in railway tracks."},
+            {z: 26, s: "Fe", n: "Iron", b: "d", d: "The core of the Earth; essential for hemoglobin in blood."},
+            {z: 27, s: "Co", n: "Cobalt", b: "d", d: "Used in blue pigments, magnets, and rechargeable batteries."},
+            {z: 28, s: "Ni", n: "Nickel", b: "d", d: "Used in coins, stainless steel, and batteries."},
+            {z: 29, s: "Cu", n: "Copper", b: "d", d: "Excellent conductor; used in electrical wiring."},
+            {z: 30, s: "Zn", n: "Zinc", b: "d", d: "Galvanizes steel to prevent rust; used in brass."},
+            {z: 31, s: "Ga", n: "Gallium", b: "p", d: "Melts in your hand; used in LEDs and semiconductors."},
+            {z: 32, s: "Ge", n: "Germanium", b: "p", d: "Used in fiber optics and early transistors."},
+            {z: 33, s: "As", n: "Arsenic", b: "p", d: "Historically a poison; used in semiconductors."},
+            {z: 34, s: "Se", n: "Selenium", b: "p", d: "Used in photocopiers and anti-dandruff shampoos."},
+            {z: 35, s: "Br", n: "Bromine", b: "p", d: "Liquid at room temperature; used in flame retardants."},
+            {z: 36, s: "Kr", n: "Krypton", b: "p", d: "Used in high-speed photography flashes."},
+            {z: 37, s: "Rb", n: "Rubidium", b: "s", d: "Used in atomic clocks and fireworks (purple)."},
+            {z: 38, s: "Sr", n: "Strontium", b: "s", d: "Used in red fireworks and glow-in-the-dark paints."},
+            {z: 39, s: "Y", n: "Yttrium", b: "d", d: "Used in LEDs and superconductors."},
+            {z: 40, s: "Zr", n: "Zirconium", b: "d", d: "Simulates diamonds (Cubic Zirconia); used in nuclear reactors."},
+            {z: 41, s: "Nb", n: "Niobium", b: "d", d: "Used in superconducting magnets for MRI scanners."},
+            {z: 42, s: "Mo", n: "Molybdenum", b: "d", d: "Withstands extreme heat; used in missiles and filaments."},
+            {z: 43, s: "Tc", n: "Technetium", b: "d", d: "First artificially produced element; used in medical imaging."},
+            {z: 44, s: "Ru", n: "Ruthenium", b: "d", d: "Rare metal used to harden platinum and palladium."},
+            {z: 45, s: "Rh", n: "Rhodium", b: "d", d: "Rarest non-radioactive metal; used in catalytic converters."},
+            {z: 46, s: "Pd", n: "Palladium", b: "d", d: "Absorbs hydrogen like a sponge; used in catalytic converters."},
+            {z: 47, s: "Ag", n: "Silver", b: "d", d: "Best electrical conductor; used in jewelry and mirrors."},
+            {z: 48, s: "Cd", n: "Cadmium", b: "d", d: "Toxic metal used in pigments and batteries."},
+            {z: 49, s: "In", n: "Indium", b: "p", d: "Used in touch screens (ITO) and LCDs."},
+            {z: 50, s: "Sn", n: "Tin", b: "p", d: "Used to coat steel cans and in solder."},
+            {z: 51, s: "Sb", n: "Antimony", b: "p", d: "Used in fire retardants and lead-acid batteries."},
+            {z: 52, s: "Te", n: "Tellurium", b: "p", d: "Used in solar panels and thermoelectric devices."},
+            {z: 53, s: "I", n: "Iodine", b: "p", d: "Essential for thyroid function; used as antiseptic."},
+            {z: 54, s: "Xe", n: "Xenon", b: "p", d: "Used in ion propulsion engines for spacecraft."}
+        ];
+
+        const huntCategories = {
+            alkali: { name: "Alkali Metal", z: [3, 11, 19, 37] },
+            alkaline: { name: "Alkaline Earth", z: [4, 12, 20, 38] },
+            halogen: { name: "Halogen", z: [9, 17, 35, 53] },
+            noble: { name: "Noble Gas", z: [2, 10, 18, 36, 54] },
+            transition: { name: "Transition Metal", z: [] },
+            metalloid: { name: "Metalloid", z: [5, 14, 32, 33, 51, 52] }
+        };
+        for(let i=21; i<=30; i++) huntCategories.transition.z.push(i);
+        for(let i=39; i<=48; i++) huntCategories.transition.z.push(i);
+
+        const nobleGases = [{z:2,s:"He"},{z:10,s:"Ne"},{z:18,s:"Ar"},{z:36,s:"Kr"},{z:54,s:"Xe"}];
+        const orbitalKeys = ["1s", "2s", "2p", "3s", "3p", "4s", "3d", "4p", "5s", "4d", "5p"];
+
+        // --- State ---
+        let state = {
+            element: null,
+            targetCategory: null,
+            mode: 'build_normal',
+            streak: 0,
+            score: 0,
+            level: 1,
+            userParts: [],
+            diagram: [],
+            waitingNext: false
+        };
+
+        // --- Logic ---
+        function getCorrectConfig(z, mode) {
+            let electrons = z;
+            let configParts = [];
+            let nobleUsed = null;
+            let isShort = mode.includes('short') || mode === 'identify_config';
+
+            if (isShort) {
+                for (let i = nobleGases.length - 1; i >= 0; i--) {
+                    if (nobleGases[i].z < z) {
+                        nobleUsed = nobleGases[i];
+                        electrons -= nobleUsed.z;
+                        break;
+                    }
+                }
+            }
+
+            let order = [
+                {n:"1s",max:2},{n:"2s",max:2},{n:"2p",max:6},{n:"3s",max:2},{n:"3p",max:6},
+                {n:"4s",max:2},{n:"3d",max:10},{n:"4p",max:6},{n:"5s",max:2},{n:"4d",max:10},{n:"5p",max:6}
+            ];
+
+            if (nobleUsed) {
+                if(nobleUsed.s==='He') order=order.slice(1);
+                if(nobleUsed.s==='Ne') order=order.slice(3);
+                if(nobleUsed.s==='Ar') order=order.slice(5);
+                if(nobleUsed.s==='Kr') order=order.slice(8);
+            }
+
+            for (let orb of order) {
+                if(electrons<=0) break;
+                let fill = Math.min(electrons, orb.max);
+                if((z===24||z===42)&&(orb.n.includes('s'))&&fill===2&&electrons===6) fill=1;
+                if((z===24||z===42)&&(orb.n.includes('d'))&&fill===4) fill=5;
+                if((z===29||z===47)&&(orb.n.includes('s'))&&fill===2&&electrons===11) fill=1;
+                if((z===29||z===47)&&(orb.n.includes('d'))&&fill===9) fill=10;
+                if(z===46) { if(orb.n==='5s') fill=0; if(orb.n==='4d') fill=10; }
+
+                if(fill>0) configParts.push({label:orb.n, count:fill});
+                electrons-=fill;
+            }
+            return { noble: nobleUsed ? `[${nobleUsed.s}]` : null, parts: configParts };
+        }
+
+        // --- UI Rendering ---
+        function renderPTable() {
+            const container = document.getElementById('ptable-container');
+            container.innerHTML = '';
+            
+            const map = {};
+            elements.forEach(e => {
+                let row, col;
+                if(e.z===1) {row=1; col=1;}
+                else if(e.z===2) {row=1; col=18;}
+                else if(e.z<=18) {
+                    row = e.z<=10 ? 2 : 3;
+                    col = (e.z<=4 || (e.z>=11&&e.z<=12)) ? (e.z%18 || 18) : (e.z%8===0?18:(e.z%8===1?13:(e.z%8+10))); 
+                    if(e.z===3) col=1; if(e.z===4) col=2; 
+                    if(e.z>=5&&e.z<=10) col=12+(e.z-4);
+                    if(e.z===11) col=1; if(e.z===12) col=2;
+                    if(e.z>=13&&e.z<=18) col=12+(e.z-12);
+                }
+                else if(e.z<=54) {
+                    row = e.z<=36 ? 4 : 5;
+                    col = e.z - (row===4?18:36);
+                }
+                map[e.z] = {r:row, c:col};
+            });
+
+            for(let i=1; i<=90; i++) {
+                const row = Math.ceil(i/18);
+                const col = i%18||18;
+                if(row>5) break;
+
+                const div = document.createElement('div');
+                const elData = elements.find(e => map[e.z] && map[e.z].r === row && map[e.z].c === col);
+
+                if(elData) {
+                    div.className = `element block-${elData.b}`;
+                    div.id = `el-${elData.z}`;
+                    div.innerHTML = `<span class="number">${elData.z}</span><span class="symbol">${elData.s}</span>`;
+                    div.onclick = () => handleElementClick(elData);
+                } else {
+                    div.className = 'opacity-0 pointer-events-none';
+                }
+                container.appendChild(div);
+            }
+        }
+
+        function renderBuilder() {
+            document.getElementById('config-output').innerHTML = '<span class="text-slate-400 text-xs italic">Construct configuration...</span>';
+            const keypad = document.getElementById('orbital-keypad');
+            keypad.innerHTML = '';
+            
+            if (state.mode === 'build_short') {
+                const nobles = ["[He]", "[Ne]", "[Ar]", "[Kr]"];
+                nobles.forEach(n => {
+                    const btn = document.createElement('button');
+                    btn.className = "key-btn key-noble text-xs font-bold";
+                    btn.innerText = n;
+                    btn.onclick = () => addPart(n, true);
+                    keypad.appendChild(btn);
+                });
+            }
+            orbitalKeys.forEach(key => {
+                const btn = document.createElement('button');
+                btn.className = `key-btn key-${key.charAt(1)} text-xs`;
+                btn.innerText = key;
+                btn.onclick = () => addPart(key, false);
+                keypad.appendChild(btn);
+            });
+        }
+
+        function renderDiagramInput() {
+            const grid = document.getElementById('orbital-diagram-grid');
+            grid.innerHTML = '';
+            state.diagram = [];
+            
+            const template = [
+                {n:"1s",c:1}, {n:"2s",c:1}, {n:"2p",c:3}, {n:"3s",c:1}, {n:"3p",c:3}, 
+                {n:"4s",c:1}, {n:"3d",c:5}, {n:"4p",c:3}, {n:"5s",c:1}, {n:"4d",c:5}
+            ];
+            
+            let maxOrb = state.element.z > 36 ? 99 : state.element.z > 18 ? 8 : state.element.z > 10 ? 5 : 3;
+            
+            template.forEach((grp, idx) => {
+                if(idx > maxOrb) return;
+                const grpDiv = document.createElement('div');
+                grpDiv.className = "flex flex-col items-center mx-1 mb-2";
+                grpDiv.innerHTML = `<span class="text-[10px] font-bold text-slate-400 mb-1">${grp.n}</span>`;
+                const boxContainer = document.createElement('div');
+                boxContainer.className = "flex gap-1";
+                for(let i=0; i<grp.c; i++) {
+                    const box = document.createElement('div');
+                    box.className = "orbital-box";
+                    const boxObj = {count:0};
+                    state.diagram.push(boxObj);
+                    box.onclick = () => {
+                        if(state.mode.includes('identify')) return;
+                        boxObj.count = (boxObj.count + 1) % 3;
+                        updateBox(box, boxObj.count);
+                    };
+                    boxContainer.appendChild(box);
+                }
+                grpDiv.appendChild(boxContainer);
+                grid.appendChild(grpDiv);
+            });
+        }
+
+        function updateBox(el, count) {
+            el.innerHTML = '';
+            if(count>=1) el.innerHTML += '<span class="spin-arrow text-blue-500 relative -top-1">↑</span>';
+            if(count===2) el.innerHTML += '<span class="spin-arrow text-red-500 relative top-1">↓</span>';
+        }
+
+        function addPart(label, isNoble) {
+            if(state.waitingNext) return;
+            const out = document.getElementById('config-output');
+            if(state.userParts.length === 0) out.innerHTML = '';
+
+            if (isNoble) {
+                state.userParts = state.userParts.filter(p => !p.isNoble);
+                state.userParts.unshift({label, isNoble:true});
+            } else {
+                const type = label.charAt(1);
+                const max = type==='s'?2:type==='p'?6:type==='d'?10:14;
+                const exist = state.userParts.find(p => p.label === label);
+                if(exist) {
+                    if(exist.count < max) exist.count++;
+                    else exist.count = 1; 
+                } else {
+                    state.userParts.push({label, count:1, max, isNoble:false});
+                }
+            }
+            renderConfigDisplay();
+        }
+
+        function renderConfigDisplay() {
+            const out = document.getElementById('config-output');
+            out.innerHTML = '';
+            state.userParts.forEach((p, idx) => {
+                const b = document.createElement('div');
+                b.className = "config-block fade-in" + (p.isNoble ? " bg-slate-800 text-white border-slate-900" : "");
+                b.innerHTML = `<span class="font-mono font-bold">${p.label}</span>${!p.isNoble?`<span class="config-super">${p.count}</span>`:''}`;
+                b.onclick = () => { if(!p.isNoble){ p.count++; if(p.count>p.max)p.count=1; renderConfigDisplay(); }};
+                b.oncontextmenu = (e) => { e.preventDefault(); state.userParts.splice(idx,1); renderConfigDisplay(); };
+                out.appendChild(b);
+            });
+        }
+
+        // --- Game Flow ---
+        function setMode() {
+            const modes = [
+                'build_normal', 'build_short', 'build_diagram', // Build
+                'identify_config', 'identify_diagram', // Identify Element
+                'hunt_alkali', 'hunt_alkaline', 'hunt_halogen', 'hunt_noble', 'hunt_transition', 'hunt_metalloid' // Hunt Category
+            ];
+            
+            const r = Math.random();
+            if(r < 0.4) {
+                 const huntKeys = ['hunt_alkali', 'hunt_alkaline', 'hunt_halogen', 'hunt_noble', 'hunt_transition', 'hunt_metalloid'];
+                 state.mode = huntKeys[Math.floor(Math.random() * huntKeys.length)];
+            } else if (r < 0.7) {
+                state.mode = Math.random() > 0.5 ? 'identify_config' : 'identify_diagram';
+            } else {
+                const builds = ['build_normal', 'build_short', 'build_diagram'];
+                state.mode = builds[Math.floor(Math.random() * builds.length)];
+            }
+
+            state.waitingNext = false;
+            state.userParts = [];
+            state.targetCategory = null;
+
+            document.getElementById('info-panel').classList.add('hidden');
+            document.getElementById('input-area').classList.remove('hidden');
+            document.getElementById('prompt-content').innerHTML = '';
+            document.querySelectorAll('.element').forEach(e => e.classList.remove('target-highlight', 'opacity-25'));
+            document.getElementById('ptable-wrapper').classList.remove('pointer-events-none');
+            document.getElementById('ptable-container').classList.remove('mode-identify');
+            document.getElementById('identify-hint').classList.add('hidden');
+            document.getElementById('table-instruction').classList.add('hidden');
+
+            const badge = document.getElementById('mode-badge');
+            const promptLabel = document.getElementById('prompt-label');
+            const inputArea = document.getElementById('input-area');
+            const identifyHint = document.getElementById('identify-hint');
+
+            if (state.mode.startsWith('hunt')) {
+                const type = state.mode.split('_')[1];
+                state.targetCategory = huntCategories[type];
+
+                inputArea.classList.add('hidden');
+                identifyHint.classList.remove('hidden');
+                identifyHint.classList.add('flex');
+                document.getElementById('ptable-container').classList.add('mode-identify');
+                document.getElementById('table-instruction').classList.remove('hidden');
+                document.getElementById('hunt-msg').innerHTML = `Find any <b>${state.targetCategory.name}</b> on the table.`;
+
+                promptLabel.innerText = "Group Hunt";
+                badge.innerHTML = `<div class="w-3 h-3 rounded-full bg-emerald-500"></div> Category Search`;
+                
+                document.getElementById('prompt-content').innerHTML = `
+                    <div class="fade-in text-center flex flex-col items-center justify-center h-[100px]">
+                        <div class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">TARGET GROUP</div>
+                        <div class="text-3xl font-black text-slate-800 tracking-tight leading-none">${state.targetCategory.name}</div>
+                    </div>
+                `;
+            }
+            else if (state.mode.startsWith('build')) {
+                const elDiv = document.getElementById(`el-${state.element.z}`);
+                if(elDiv) {
+                    elDiv.classList.add('target-highlight');
+                    elDiv.scrollIntoView({behavior:'smooth', block:'center', inline:'center'});
+                }
+
+                document.getElementById('prompt-content').innerHTML = `
+                    <div class="fade-in text-center">
+                        <div class="text-6xl font-black text-slate-800 tracking-tighter mb-1">${state.element.s}</div>
+                        <div class="text-lg text-slate-500 font-medium">${state.element.n}</div>
+                    </div>
+                `;
+                promptLabel.innerText = "Construct Configuration";
+
+                if (state.mode.includes('diagram')) {
+                    badge.innerHTML = `<div class="w-3 h-3 rounded-full bg-orange-500"></div> Orbital Diagram`;
+                    document.getElementById('builder-ui').classList.add('hidden');
+                    document.getElementById('diagram-ui').classList.remove('hidden');
+                    document.getElementById('diagram-ui').classList.add('flex');
+                    renderDiagramInput();
+                } else {
+                    badge.innerHTML = `<div class="w-3 h-3 rounded-full bg-blue-500"></div> ${state.mode.includes('short') ? 'Shorthand' : 'Standard'}`;
+                    document.getElementById('diagram-ui').classList.add('hidden');
+                    document.getElementById('diagram-ui').classList.remove('flex');
+                    document.getElementById('builder-ui').classList.remove('hidden');
+                    renderBuilder();
+                }
+            } 
+            else {
+                inputArea.classList.add('hidden');
+                identifyHint.classList.remove('hidden');
+                identifyHint.classList.add('flex');
+                document.getElementById('ptable-container').classList.add('mode-identify');
+                document.getElementById('table-instruction').classList.remove('hidden');
+                document.getElementById('hunt-msg').innerText = "Find the correct element.";
+
+                promptLabel.innerText = "Identify Element";
+                
+                const sol = getCorrectConfig(state.element.z, state.mode === 'identify_config' ? 'short' : 'normal');
+
+                if (state.mode === 'identify_config') {
+                    badge.innerHTML = `<div class="w-3 h-3 rounded-full bg-purple-500"></div> Detective Mode`;
+                    
+                    let str = (sol.noble ? sol.noble + " " : "") + sol.parts.map(p => `${p.label}<sup>${p.count}</sup>`).join(" ");
+                    document.getElementById('prompt-content').innerHTML = `
+                        <div class="fade-in flex items-center justify-center h-full min-h-[100px]">
+                            <div class="text-2xl md:text-3xl font-mono text-slate-700 bg-slate-100 p-4 rounded-xl shadow-inner border border-slate-200">
+                                ${str}
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    badge.innerHTML = `<div class="w-3 h-3 rounded-full bg-pink-500"></div> Spectroscopy`;
+                    
+                    const dContainer = document.createElement('div');
+                    dContainer.className = "flex flex-wrap gap-2 justify-center content-center scale-90";
+                    const order = [{n:"1s",c:1}, {n:"2s",c:1}, {n:"2p",c:3}, {n:"3s",c:1}, {n:"3p",c:3}, {n:"4s",c:1}, {n:"3d",c:5}, {n:"4p",c:3}, {n:"5s",c:1}, {n:"4d",c:5}];
+                    let electrons = state.element.z;
+                    let maxOrb = state.element.z > 36 ? 9 : state.element.z > 18 ? 7 : state.element.z > 10 ? 5 : 4;
+
+                    order.forEach((grp, idx) => {
+                        if(idx > maxOrb) return;
+                        const g = document.createElement('div');
+                        g.className = "flex flex-col items-center mx-1";
+                        g.innerHTML = `<span class="text-[8px] font-bold text-slate-400">${grp.n}</span>`;
+                        const bC = document.createElement('div'); bC.className="flex gap-1";
+                        let capacity = grp.n.includes('s')?2:grp.n.includes('p')?6:10;
+                        let putting = Math.min(electrons, capacity);
+                        electrons -= putting;
+
+                        for(let i=0; i<grp.c; i++) {
+                             let box = document.createElement('div');
+                             box.className = "w-8 h-8 border border-slate-300 rounded flex items-center justify-center bg-white";
+                             let eInBox = 0;
+                             if (putting > 0) {
+                                 if (putting > i) eInBox++;
+                                 if (putting > i + grp.c) eInBox++;
+                             }
+                             updateBox(box, eInBox);
+                             bC.appendChild(box);
+                        }
+                        g.appendChild(bC);
+                        dContainer.appendChild(g);
+                    });
+                    
+                    document.getElementById('prompt-content').innerHTML = '';
+                    document.getElementById('prompt-content').appendChild(dContainer);
+                }
+            }
+        }
+
+        function handleElementClick(elData) {
+            if (state.mode.startsWith('build')) return;
+            if (state.waitingNext) return;
+
+            let correct = false;
+
+            if (state.mode.startsWith('hunt')) {
+                if (state.targetCategory.z.includes(elData.z)) {
+                    correct = true;
+                    state.element = elData; 
+                }
+            } else {
+                if (elData.z === state.element.z) correct = true;
+            }
+
+            if (correct) {
+                successState();
+            } else {
+                failState(state.mode.startsWith('hunt') ? "Wrong Group!" : "Wrong Element!");
+            }
+        }
+
+        function submitBuild() {
+            if(state.waitingNext) return;
+            const sol = getCorrectConfig(state.element.z, state.mode);
+            let correct = false;
+
+            if (state.mode === 'build_diagram') {
+                const total = state.diagram.reduce((a,b)=>a+b.count,0);
+                if(total === state.element.z) correct = true;
+            } else {
+                let userStr = state.userParts.map(p => p.isNoble?p.label:`${p.label}${p.count}`).join(" ");
+                let solStr = (sol.noble?sol.noble+" ":"") + sol.parts.map(p => `${p.label}${p.count}`).join(" ");
+                if(userStr === solStr) correct = true;
+            }
+
+            if(correct) successState();
+            else failState("Incorrect Config");
+        }
+
+        function successState() {
+            state.waitingNext = true;
+            state.streak++;
+            state.score += (100 + state.streak*25);
+            updateStats();
+            
+            showToast("Correct!", `Streak: ${state.streak}`, true);
+            
+            document.getElementById('input-area').classList.add('hidden');
+            document.getElementById('identify-hint').classList.add('hidden');
+            
+            const info = document.getElementById('info-panel');
+            info.classList.remove('hidden');
+            document.getElementById('info-title').innerText = `${state.element.n} (${state.element.s})`;
+            document.getElementById('info-desc').innerText = state.element.d;
+        }
+
+        function failState(msg) {
+            state.streak = 0;
+            updateStats();
+            showToast("Oops!", msg, false);
+            document.getElementById('prompt-card').classList.add('shake');
+            setTimeout(()=>document.getElementById('prompt-card').classList.remove('shake'), 400);
+        }
+
+        function nextLevel() {
+            state.waitingNext = false;
+            let pool = elements;
+            if(state.level===1) pool = elements.filter(e => e.z <= 18);
+            else if(state.level===2) pool = elements.filter(e => e.z <= 36);
+            
+            state.element = pool[Math.floor(Math.random() * pool.length)];
+            setMode();
+            
+            if(state.streak > 0 && state.streak % 3 === 0 && state.level < 3) state.level++;
+            updateStats();
+        }
+
+        let toastTimeout;
+        function showToast(title, msg, success) {
+            const t = document.getElementById('toast');
+            
+            if (toastTimeout) clearTimeout(toastTimeout);
+
+            document.getElementById('toast-title').innerText = title;
+            document.getElementById('toast-msg').innerText = msg;
+            const icon = document.getElementById('toast-icon');
+            icon.innerText = success ? "✓" : "✕";
+            icon.className = `w-8 h-8 rounded-full flex items-center justify-center font-bold ${success?'bg-green-100 text-green-600':'bg-red-100 text-red-600'}`;
+            
+            // Remove visible, add hidden to reset
+            t.classList.remove('toast-visible');
+            t.classList.add('toast-hidden');
+
+            // Force reflow
+            void t.offsetWidth;
+
+            // Show
+            t.classList.remove('toast-hidden');
+            t.classList.add('toast-visible');
+            
+            toastTimeout = setTimeout(() => {
+                t.classList.remove('toast-visible');
+                t.classList.add('toast-hidden');
+            }, 2000);
+        }
+
+        function updateStats() {
+            document.getElementById('streak-val').innerText = state.streak;
+            document.getElementById('score-val').innerText = state.score;
+            document.getElementById('level-val').innerText = state.level;
+        }
+
+        window.resetInput = () => {
+            state.userParts = [];
+            state.diagram.forEach(b => b.count=0);
+            if(state.mode.startsWith('build')) {
+                if(state.mode.includes('diagram')) renderDiagramInput(); else renderBuilder();
+                renderConfigDisplay();
+            }
+        };
+
+        document.getElementById('submit-btn').onclick = submitBuild;
+
+        window.onload = () => {
+            renderPTable();
+            nextLevel();
+        };
+
+    </script>
+</body>
+</html>
