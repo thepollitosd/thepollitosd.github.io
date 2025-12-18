@@ -258,15 +258,20 @@
                         <span class="font-bold text-slate-700">Sci-Not</span>
                         <span class="text-[10px] text-slate-400">Scientific Notation</span>
                     </button>
+                    <button onclick="startGame('SigFig')" class="mode-card group">
+                        <span class="mode-icon group-hover:scale-110 transition-transform">📐</span>
+                        <span class="font-bold text-slate-700">Sig Figs</span>
+                        <span class="text-[10px] text-slate-400">Ops & Counting</span>
+                    </button>
                     <button onclick="startGame('Trends')" class="mode-card group">
                         <span class="mode-icon group-hover:scale-110 transition-transform">📈</span>
                         <span class="font-bold text-slate-700">Trends</span>
                         <span class="text-[10px] text-slate-400">Face-off Mode</span>
                     </button>
-                    <button onclick="startGame('SigFig')" class="mode-card group">
-                        <span class="mode-icon group-hover:scale-110 transition-transform">📐</span>
-                        <span class="font-bold text-slate-700">Sig Figs</span>
-                        <span class="text-[10px] text-slate-400">Measurements</span>
+                    <button onclick="startGame('Trivia')" class="mode-card group">
+                        <span class="mode-icon group-hover:scale-110 transition-transform">🧠</span>
+                        <span class="font-bold text-slate-700">Trivia</span>
+                        <span class="text-[10px] text-slate-400">Vocabulary</span>
                     </button>
                 </div>
 
@@ -333,16 +338,13 @@
                             </ul>
                         </div>
                         <div>
-                            <h3 class="text-blue-600 font-bold text-sm uppercase tracking-wide mb-2">Sig Figs</h3>
+                            <h3 class="text-blue-600 font-bold text-sm uppercase tracking-wide mb-2">Sig Figs Rules</h3>
                             <ul class="space-y-2 text-sm text-slate-600">
                                 <li class="bg-slate-50 p-3 rounded-lg border border-slate-100">
-                                    <strong class="text-slate-800">Non-zeros</strong> are always significant (123 = 3).
+                                    <strong class="text-slate-800">Add/Sub:</strong> Round to least number of <em class="text-blue-600">decimal places</em>.
                                 </li>
                                 <li class="bg-slate-50 p-3 rounded-lg border border-slate-100">
-                                    <strong class="text-slate-800">Sandwiched Zeros</strong> are significant (101 = 3).
-                                </li>
-                                <li class="bg-slate-50 p-3 rounded-lg border border-slate-100">
-                                    <strong class="text-slate-800">Leading Zeros</strong> are NEVER significant (0.01 = 1).
+                                    <strong class="text-slate-800">Mult/Div:</strong> Round to least number of <em class="text-blue-600">sig figs</em>.
                                 </li>
                             </ul>
                         </div>
@@ -358,6 +360,26 @@
                 </div>
             </div>
 
+            <!-- ABOUT -->
+            <div id="dash-about" class="dash-section w-full max-w-2xl flex-col gap-6">
+                <div class="bg-white p-8 rounded-3xl shadow-sm border border-slate-200">
+                    <h2 class="text-2xl font-bold text-slate-800 mb-4">About the Simulation</h2>
+                    <p class="text-slate-600 mb-4 leading-relaxed">
+                        Orbital Overdrive is an interactive training module designed for Honors Chemistry students.
+                    </p>
+                    <div class="p-4 bg-slate-50 rounded-xl border border-slate-100">
+                        <h3 class="font-bold text-slate-700 mb-2 text-sm">Modules</h3>
+                        <ul class="list-disc list-inside text-sm text-slate-500 space-y-1">
+                            <li>Electron Configurations (Aufbau)</li>
+                            <li>Orbital Diagrams (Hund/Pauli)</li>
+                            <li>Periodic Trends (Radius, IE, EN, Affinity)</li>
+                            <li>Nuclear Chemistry (Isotopes, Ions, Particles)</li>
+                            <li>Measurement (Sig Fig Counting & Operations)</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
             <!-- HISTORY -->
             <div id="dash-history" class="dash-section w-full max-w-2xl flex-col gap-4">
                 
@@ -365,15 +387,15 @@
                 <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 relative overflow-hidden">
                     <div class="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
                     <div class="flex justify-between items-baseline mb-2">
-                        <h3 class="text-lg font-bold text-slate-800">v1.8 <span class="text-blue-500">b.1</span></h3>
+                        <h3 class="text-lg font-bold text-slate-800">v1.8 <span class="text-blue-500">b.2</span></h3>
                         <span class="text-xs font-bold bg-blue-100 text-blue-600 px-2 py-1 rounded">CURRENT</span>
                     </div>
                     <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">METRIC STORM</p>
                     <ul class="text-sm text-slate-600 space-y-1 list-disc list-inside">
-                        <li>New Mode: Metric Master (Unit conversions)</li>
-                        <li>New Mode: Sci-Not Scramble (Scientific Notation)</li>
-                        <li>Overhauled Version History design</li>
-                        <li>Expanded Reference section with metric prefixes</li>
+                        <li>Fixed: Full element list (1-54) restored to prevent missing grid cells</li>
+                        <li>Added Study Guide Vocab: Precision, Accuracy, Density</li>
+                        <li>Added Study Guide Vocab: Physical vs Chemical Changes</li>
+                        <li>Expanded Reference Library with new vocab and rules</li>
                     </ul>
                 </div>
 
@@ -440,6 +462,7 @@
         <div class="fixed bottom-0 left-0 w-full bg-white/90 backdrop-blur border-t border-slate-200 p-2 flex justify-around md:justify-center md:gap-12 z-50 shadow-lg">
             <button onclick="switchDash('home')" id="nav-home" class="dash-nav-btn active font-bold uppercase tracking-widest text-[10px] md:text-xs">Play</button>
             <button onclick="switchDash('reference')" id="nav-reference" class="dash-nav-btn font-bold uppercase tracking-widest text-[10px] md:text-xs">Ref</button>
+            <button onclick="switchDash('about')" id="nav-about" class="dash-nav-btn font-bold uppercase tracking-widest text-[10px] md:text-xs">About</button>
             <button onclick="switchDash('history')" id="nav-history" class="dash-nav-btn font-bold uppercase tracking-widest text-[10px] md:text-xs">History</button>
             <button onclick="switchDash('dev')" id="nav-dev" class="dash-nav-btn font-bold uppercase tracking-widest text-[10px] md:text-xs">Dev</button>
         </div>
@@ -589,36 +612,97 @@
 
     <!-- VERSION FOOTER -->
     <div class="fixed bottom-16 md:bottom-1 right-2 text-[10px] font-mono text-slate-400 opacity-60 pointer-events-none select-none z-50">
-        ORBITAL_OS <span class="font-bold">v1.8</span> <span class="text-blue-400">b.1</span> [METRIC STORM]
+        ORBITAL_OS <span class="font-bold">v1.8</span> <span class="text-blue-400">b.2</span> [METRIC STORM]
     </div>
 
     <script>
         // --- COMPLETE ELEMENTS LIST (1-54) ---
+        // Fully populated list ensuring no gaps in the grid rendering
         const elements = [
             {z: 1, s: "H", n: "Hydrogen", b: "s", d: "Most abundant element in the universe.", v:1},
-            // ... (Full list maintained) ...
+            {z: 2, s: "He", n: "Helium", b: "s", d: "Inert noble gas used in balloons.", v:2},
+            {z: 3, s: "Li", n: "Lithium", b: "s", d: "Lightest metal, used in batteries.", v:1},
+            {z: 4, s: "Be", n: "Beryllium", b: "s", d: "Lightweight aerospace metal.", v:2},
+            {z: 5, s: "B", n: "Boron", b: "p", d: "Metalloid used in heat-resistant glass.", v:3},
+            {z: 6, s: "C", n: "Carbon", b: "p", d: "Basis of organic life.", v:4},
+            {z: 7, s: "N", n: "Nitrogen", b: "p", d: "78% of Earth's atmosphere.", v:5},
+            {z: 8, s: "O", n: "Oxygen", b: "p", d: "Essential for respiration.", v:6},
+            {z: 9, s: "F", n: "Fluorine", b: "p", d: "Most reactive element.", v:7},
+            {z: 10, s: "Ne", n: "Neon", b: "p", d: "Noble gas that glows red-orange.", v:8},
+            {z: 11, s: "Na", n: "Sodium", b: "s", d: "Explodes in water, forms salt.", v:1},
+            {z: 12, s: "Mg", n: "Magnesium", b: "s", d: "Burns with bright white light.", v:2},
+            {z: 13, s: "Al", n: "Aluminum", b: "p", d: "Most abundant metal in crust.", v:3},
+            {z: 14, s: "Si", n: "Silicon", b: "p", d: "Foundation of computer chips.", v:4},
+            {z: 15, s: "P", n: "Phosphorus", b: "p", d: "Essential for ATP and DNA.", v:5},
+            {z: 16, s: "S", n: "Sulfur", b: "p", d: "Yellow solid, smells like rotten eggs.", v:6},
+            {z: 17, s: "Cl", n: "Chlorine", b: "p", d: "Toxic gas used in pools.", v:7},
+            {z: 18, s: "Ar", n: "Argon", b: "p", d: "3rd most abundant atmospheric gas.", v:8},
+            {z: 19, s: "K", n: "Potassium", b: "s", d: "Vital nutrient for nerves.", v:1},
+            {z: 20, s: "Ca", n: "Calcium", b: "s", d: "Essential for bones and teeth.", v:2},
+            {z: 21, s: "Sc", n: "Scandium", b: "d", d: "Used in stadium lights.", v:null},
+            {z: 22, s: "Ti", n: "Titanium", b: "d", d: "Strong as steel, light as aluminum.", v:null},
+            {z: 23, s: "V", n: "Vanadium", b: "d", d: "Used to harden steel tools.", v:null},
+            {z: 24, s: "Cr", n: "Chromium", b: "d", d: "Exception alert: [Ar] 4s1 3d5.", v:null},
+            {z: 25, s: "Mn", n: "Manganese", b: "d", d: "Crucial for steel making.", v:null},
+            {z: 26, s: "Fe", n: "Iron", b: "d", d: "Core of the Earth.", v:null},
+            {z: 27, s: "Co", n: "Cobalt", b: "d", d: "Used in magnets and blue glass.", v:null},
+            {z: 28, s: "Ni", n: "Nickel", b: "d", d: "Used in coins and batteries.", v:null},
+            {z: 29, s: "Cu", n: "Copper", b: "d", d: "Exception alert: [Ar] 4s1 3d10.", v:null},
+            {z: 30, s: "Zn", n: "Zinc", b: "d", d: "Galvanizes steel.", v:null},
+            {z: 31, s: "Ga", n: "Gallium", b: "p", d: "Metal that melts in your hand.", v:3},
+            {z: 32, s: "Ge", n: "Germanium", b: "p", d: "Semiconductor used in transistors.", v:4},
+            {z: 33, s: "As", n: "Arsenic", b: "p", d: "Historically famous poison.", v:5},
+            {z: 34, s: "Se", n: "Selenium", b: "p", d: "Photoconductive metalloid.", v:6},
+            {z: 35, s: "Br", n: "Bromine", b: "p", d: "Red-brown liquid halogen.", v:7},
+            {z: 36, s: "Kr", n: "Krypton", b: "p", d: "Inert gas used in flash bulbs.", v:8},
+            {z: 37, s: "Rb", n: "Rubidium", b: "s", d: "Highly reactive alkali metal.", v:1},
+            {z: 38, s: "Sr", n: "Strontium", b: "s", d: "Gives fireworks a red color.", v:2},
+            {z: 39, s: "Y", n: "Yttrium", b: "d", d: "Used in LEDs and superconductors.", v:null},
+            {z: 40, s: "Zr", n: "Zirconium", b: "d", d: "Used in nuclear reactors.", v:null},
+            {z: 41, s: "Nb", n: "Niobium", b: "d", d: "Used in jet engines.", v:null},
+            {z: 42, s: "Mo", n: "Molybdenum", b: "d", d: "Exception: [Kr] 5s1 4d5.", v:null},
+            {z: 43, s: "Tc", n: "Technetium", b: "d", d: "First artificially produced element.", v:null},
+            {z: 44, s: "Ru", n: "Ruthenium", b: "d", d: "Rare metal used in electronics.", v:null},
+            {z: 45, s: "Rh", n: "Rhodium", b: "d", d: "Rarest non-radioactive metal.", v:null},
+            {z: 46, s: "Pd", n: "Palladium", b: "d", d: "Exception: [Kr] 4d10.", v:null},
+            {z: 47, s: "Ag", n: "Silver", b: "d", d: "Exception: [Kr] 5s1 4d10.", v:null},
+            {z: 48, s: "Cd", n: "Cadmium", b: "d", d: "Toxic metal used in batteries.", v:null},
+            {z: 49, s: "In", n: "Indium", b: "p", d: "Used in touchscreens.", v:3},
+            {z: 50, s: "Sn", n: "Tin", b: "p", d: "Alloyed with copper to make bronze.", v:4},
+            {z: 51, s: "Sb", n: "Antimony", b: "p", d: "Used in flame retardants.", v:5},
+            {z: 52, s: "Te", n: "Tellurium", b: "p", d: "One of the rarest metalloids.", v:6},
+            {z: 53, s: "I", n: "Iodine", b: "p", d: "Vital for hormone production.", v:7},
             {z: 54, s: "Xe", n: "Xenon", b: "p", d: "Noble gas used in ion thrusters.", v:8}
         ];
-        // Populate specific elements for game logic
-        for(let i=2; i<=53; i++) { if(!elements.find(e=>e.z===i)) elements.push({z:i, s:"?", n:"Generic", b:"s", d:"Standard", v:1}); } // Placeholder safety if list is truncated in view, but assuming full list from previous turns.
-        // Re-injecting full list to be safe:
-        const fullElements = [
-            {z: 1, s: "H", n: "Hydrogen", b: "s", v:1}, {z: 2, s: "He", n: "Helium", b: "s", v:2},
-            {z: 3, s: "Li", n: "Lithium", b: "s", v:1}, {z: 4, s: "Be", n: "Beryllium", b: "s", v:2}, {z: 5, s: "B", n: "Boron", b: "p", v:3}, {z: 6, s: "C", n: "Carbon", b: "p", v:4}, {z: 7, s: "N", n: "Nitrogen", b: "p", v:5}, {z: 8, s: "O", n: "Oxygen", b: "p", v:6}, {z: 9, s: "F", n: "Fluorine", b: "p", v:7}, {z: 10, s: "Ne", n: "Neon", b: "p", v:8},
-            {z: 11, s: "Na", n: "Sodium", b: "s", v:1}, {z: 12, s: "Mg", n: "Magnesium", b: "s", v:2}, {z: 13, s: "Al", n: "Aluminum", b: "p", v:3}, {z: 14, s: "Si", n: "Silicon", b: "p", v:4}, {z: 15, s: "P", n: "Phosphorus", b: "p", v:5}, {z: 16, s: "S", n: "Sulfur", b: "p", v:6}, {z: 17, s: "Cl", n: "Chlorine", b: "p", v:7}, {z: 18, s: "Ar", n: "Argon", b: "p", v:8},
-            {z: 19, s: "K", n: "Potassium", b: "s", v:1}, {z: 20, s: "Ca", n: "Calcium", b: "s", v:2}, 
-            {z:21,s:"Sc",b:"d"},{z:22,s:"Ti",b:"d"},{z:23,s:"V",b:"d"},{z:24,s:"Cr",b:"d"},{z:25,s:"Mn",b:"d"},{z:26,s:"Fe",b:"d"},{z:27,s:"Co",b:"d"},{z:28,s:"Ni",b:"d"},{z:29,s:"Cu",b:"d"},{z:30,s:"Zn",b:"d"},
-            {z:31,s:"Ga",b:"p",v:3},{z:32,s:"Ge",b:"p",v:4},{z:33,s:"As",b:"p",v:5},{z:34,s:"Se",b:"p",v:6},{z:35,s:"Br",b:"p",v:7},{z:36,s:"Kr",b:"p",v:8},
-            {z:37,s:"Rb",b:"s",v:1},{z:38,s:"Sr",b:"s",v:2},
-            {z:39,s:"Y",b:"d"},{z:40,s:"Zr",b:"d"},{z:41,s:"Nb",b:"d"},{z:42,s:"Mo",b:"d"},{z:43,s:"Tc",b:"d"},{z:44,s:"Ru",b:"d"},{z:45,s:"Rh",b:"d"},{z:46,s:"Pd",b:"d"},{z:47,s:"Ag",b:"d"},{z:48,s:"Cd",b:"d"},
-            {z:49,s:"In",b:"p",v:3},{z:50,s:"Sn",b:"p",v:4},{z:51,s:"Sb",b:"p",v:5},{z:52,s:"Te",b:"p",v:6},{z:53,s:"I",b:"p",v:7},{z:54,s:"Xe",b:"p",v:8}
-        ]; // Shortened for brevity in this response but functionally complete for logic
 
         const vocabBank = [
+            // Basic Structure (Review Guide)
+            { q: "Closeness to the true value?", a: "Accuracy", opts: ["Accuracy", "Precision", "Estimation", "Error"] },
+            { q: "Reproducibility of a measurement?", a: "Precision", opts: ["Accuracy", "Precision", "Significance", "Percent Error"] },
+            { q: "Formula for Density?", a: "Mass / Volume", opts: ["Mass / Volume", "Volume / Mass", "Mass * Volume", "Area * Length"] },
+            { q: "Which is a chemical change?", a: "Burning", opts: ["Burning", "Melting", "Boiling", "Cutting"] },
+            { q: "Which is a physical change?", a: "Dissolving", opts: ["Dissolving", "Rusting", "Burning", "Rotting"] },
+            { q: "Phase change solid to gas?", a: "Sublimation", opts: ["Sublimation", "Deposition", "Melting", "Freezing"] },
+            { q: "Phase change gas to solid?", a: "Deposition", opts: ["Sublimation", "Deposition", "Condensation", "Evaporation"] },
+            
+            // Sig Figs Rules (Review Guide)
+            { q: "Sig Fig rule for addition?", a: "Decimal Places", opts: ["Decimal Places", "Sig Figs", "Largest Value", "No Rounding"] },
+            { q: "Sig Fig rule for multiplication?", a: "Least Sig Figs", opts: ["Least Sig Figs", "Decimal Places", "Most Sig Figs", "Average"] },
+            
+            // Metric (Review Guide)
+            { q: "Base unit for mass in lab?", a: "Gram", opts: ["Gram", "Meter", "Liter", "Second"] },
+            { q: "Prefix for 10^-3?", a: "Milli", opts: ["Milli", "Centi", "Kilo", "Micro"] },
+            { q: "Prefix for 10^3?", a: "Kilo", opts: ["Kilo", "Mega", "Giga", "Deca"] },
+
+            // Existing Questions
             { q: "Positive ions are called...", a: "Cations", opts: ["Cations", "Anions", "Protons", "Neutrons"] },
+            { q: "Negative ions are called...", a: "Anions", opts: ["Cations", "Anions", "Nuclei", "Isotopes"] },
             { q: "Horizontal rows are called...", a: "Periods", opts: ["Groups", "Periods", "Blocks", "Families"] },
-            { q: "Halogens belong to which group?", a: "17", opts: ["1", "2", "17", "18"] },
-            { q: "Valence electrons are located in...", a: "Outer shell", opts: ["Outer shell", "Nucleus", "Inner shell", "Core"] }
+            { q: "Vertical columns are called...", a: "Groups", opts: ["Periods", "Groups", "Shells", "Series"] },
+            { q: "Electrons in the outermost shell?", a: "Valence", opts: ["Core", "Valence", "Inner", "Nuclear"] },
+            { q: "Atoms with same p+ but different n0?", a: "Isotopes", opts: ["Isotopes", "Ions", "Allotropes", "Isomers"] },
+            { q: "Most electronegative element?", a: "Fluorine", opts: ["Fluorine", "Francium", "Oxygen", "Chlorine"] },
+            { q: "Rule: Max 2 e- with opp. spin.", a: "Pauli Exclusion", opts: ["Aufbau", "Pauli Exclusion", "Hund", "Octet"] }
         ];
 
         const orbitalKeys = ["1s", "2s", "2p", "3s", "3p", "4s", "3d", "4p", "5s", "4d", "5p"];
@@ -645,8 +729,8 @@
             particleType: 'n',
             sigFigProblem: null,
             trendQ: null,
-            metricQ: null, // New
-            sciNotQ: null, // New
+            metricQ: null, 
+            sciNotQ: null, 
 
             // Settings
             timerEnabled: false,
@@ -758,31 +842,9 @@
         }
 
         // --- DASHBOARD ---
-        function toggleTimerSettings() {
-            state.timerEnabled = document.getElementById('timer-toggle').checked;
-            const settings = document.getElementById('timer-duration-setting');
-            if(state.timerEnabled) settings.classList.remove('opacity-50', 'pointer-events-none');
-            else settings.classList.add('opacity-50', 'pointer-events-none');
-        }
-
-        function setTimerDuration(sec) {
-            state.timerDuration = sec;
-            [15,30,60].forEach(s => {
-                const btn = document.getElementById(`t-${s}`);
-                if(s === sec) { btn.classList.remove('bg-slate-50','hover:bg-white'); btn.classList.add('bg-blue-600','text-white','border-blue-600'); }
-                else { btn.classList.add('bg-slate-50','hover:bg-white'); btn.classList.remove('bg-blue-600','text-white','border-blue-600'); }
-            });
-        }
-
-        function setFocusRange(limit) {
-            state.periodLimit = limit;
-            [3,4,5].forEach(l => {
-                const btn = document.getElementById(`range-${l}`);
-                if(l === limit) { btn.classList.remove('bg-slate-50'); btn.classList.add('bg-blue-600','text-white','border-blue-600'); }
-                else { btn.classList.add('bg-slate-50'); btn.classList.remove('bg-blue-600','text-white','border-blue-600'); }
-            });
-        }
-
+        function toggleTimerSettings() { state.timerEnabled = document.getElementById('timer-toggle').checked; document.getElementById('timer-duration-setting').classList.toggle('opacity-50', !state.timerEnabled); }
+        function setTimerDuration(sec) { state.timerDuration = sec; [15,30,60].forEach(s => { const btn = document.getElementById(`t-${s}`); if(s===sec){btn.classList.add('bg-blue-600','text-white');btn.classList.remove('bg-slate-50');}else{btn.classList.remove('bg-blue-600','text-white');btn.classList.add('bg-slate-50');} }); }
+        function setFocusRange(limit) { state.periodLimit = limit; [3,4,5].forEach(l => { const btn = document.getElementById(`range-${l}`); if(l===limit){btn.classList.add('bg-blue-600','text-white');btn.classList.remove('bg-slate-50');}else{btn.classList.remove('bg-blue-600','text-white');btn.classList.add('bg-slate-50');} }); }
         function setDifficulty(level) {
             state.difficulty = level;
             ['normal', 'pro', 'ultra'].forEach(l => {
@@ -811,53 +873,26 @@
         }
 
         function startGame(type) {
-            state.gameType = type;
-            state.score = 0;
-            state.streak = 0;
-            state.level = 1;
-            updateStats();
-            document.getElementById('dashboard').classList.add('hidden');
-            document.getElementById('dashboard').classList.remove('flex');
-            nextLevel();
+            state.gameType = type; state.score = 0; state.streak = 0; state.level = 1; updateStats();
+            document.getElementById('dashboard').classList.add('hidden'); document.getElementById('dashboard').classList.remove('flex'); nextLevel();
         }
 
         function startTimer() {
             clearInterval(state.timerId);
             if(!state.timerEnabled) { document.getElementById('timer-bar-container').classList.add('hidden'); return; }
             document.getElementById('timer-bar-container').classList.remove('hidden');
-            const bar = document.getElementById('timer-bar');
-            state.timeLeft = state.timerDuration;
+            const bar = document.getElementById('timer-bar'); state.timeLeft = state.timerDuration;
             bar.style.transition = 'none'; bar.style.width = '100%'; void bar.offsetWidth;
             bar.style.transition = `width ${state.timerDuration}s linear`; bar.style.width = '0%';
-            state.timerId = setInterval(() => {
-                state.timeLeft--;
-                if(state.timeLeft <= 0) { clearInterval(state.timerId); revealAnswer("Time's Up!"); }
-            }, 1000);
+            state.timerId = setInterval(() => { state.timeLeft--; if(state.timeLeft <= 0) { clearInterval(state.timerId); revealAnswer("Time's Up!"); } }, 1000);
         }
 
-        // --- Core Functions ---
-        function getCorrectConfig(z, mode) {
-            // (Same as before, simplified for brevity in this response block, logic unchanged)
-            let electrons=z; let parts=[]; let noble=null;
-            let isShort=mode.includes('short')||mode==='identify_config';
-            if(isShort) for(let i=nobleGases.length-1;i>=0;i--){if(nobleGases[i].z<z){noble=nobleGases[i];electrons-=noble.z;break;}}
-            let order=[{n:"1s",max:2},{n:"2s",max:2},{n:"2p",max:6},{n:"3s",max:2},{n:"3p",max:6},{n:"4s",max:2},{n:"3d",max:10},{n:"4p",max:6},{n:"5s",max:2},{n:"4d",max:10},{n:"5p",max:6}];
-            if(noble){if(noble.s==='He')order=order.slice(1);if(noble.s==='Ne')order=order.slice(3);if(noble.s==='Ar')order=order.slice(5);if(noble.s==='Kr')order=order.slice(8);}
-            for(let orb of order){
-                if(electrons<=0)break;
-                let fill=Math.min(electrons,orb.max);
-                if((z===24||z===29||z===47)&&orb.n.endsWith('s')&&electrons>=orb.max)fill=1;
-                if((z===24)&&orb.n==='3d'&&fill===4)fill=5;
-                if((z===29||z===47)&&orb.n.endsWith('d')&&fill===9)fill=10;
-                if(z===46){if(orb.n==='5s')fill=0;if(orb.n==='4d')fill=10;}
-                if(fill>0)parts.push({label:orb.n,count:fill});electrons-=fill;
-            }
-            return {noble:noble?`[${noble.s}]`:null,parts};
-        }
+        // --- Core ---
+        function getCorrectConfig(z, mode) { /* Logic Unchanged */ let electrons=z; let parts=[]; let noble=null; let isShort=mode.includes('short')||mode==='identify_config'; if(isShort) for(let i=nobleGases.length-1;i>=0;i--){if(nobleGases[i].z<z){noble=nobleGases[i];electrons-=noble.z;break;}} let order=[{n:"1s",max:2},{n:"2s",max:2},{n:"2p",max:6},{n:"3s",max:2},{n:"3p",max:6},{n:"4s",max:2},{n:"3d",max:10},{n:"4p",max:6},{n:"5s",max:2},{n:"4d",max:10},{n:"5p",max:6}]; if(noble){if(noble.s==='He')order=order.slice(1);if(noble.s==='Ne')order=order.slice(3);if(noble.s==='Ar')order=order.slice(5);if(noble.s==='Kr')order=order.slice(8);} for(let orb of order){ if(electrons<=0)break; let fill=Math.min(electrons,orb.max); if((z===24||z===29||z===47)&&orb.n.endsWith('s')&&electrons>=orb.max)fill=1; if((z===24)&&orb.n==='3d'&&fill===4)fill=5; if((z===29||z===47)&&orb.n.endsWith('d')&&fill===9)fill=10; if(z===46){if(orb.n==='5s')fill=0;if(orb.n==='4d')fill=10;} if(fill>0)parts.push({label:orb.n,count:fill});electrons-=fill; } return {noble:noble?`[${noble.s}]`:null,parts}; }
 
         function renderPTable() {
             const container = document.getElementById('ptable-container'); container.innerHTML = '';
-            const gridMap={}; fullElements.forEach(e=>{
+            const gridMap={}; elements.forEach(e=>{
                 let r,c; 
                 if(e.z===1){r=1;c=1;}else if(e.z===2){r=1;c=18;}
                 else if(e.z<=10){r=2;c=e.z<=4?e.z-2:e.z+8;}
@@ -880,28 +915,23 @@
         }
 
         function setMode() {
-            // Clear UI
             ['builder-ui', 'numeric-ui', 'quiz-ui', 'diagram-ui', 'identify-hint', 'info-panel', 'trend-ui'].forEach(id => document.getElementById(id).classList.add('hidden'));
-            document.getElementById('input-area').classList.remove('hidden');
-            document.getElementById('submit-wrapper').classList.remove('hidden');
-            document.querySelectorAll('.element').forEach(e => e.classList.remove('target-highlight'));
-            document.getElementById('ptable-container').classList.remove('mode-identify');
-            document.getElementById('table-instruction').classList.add('hidden');
-
-            // Pick Mode
+            document.getElementById('input-area').classList.remove('hidden'); document.getElementById('submit-wrapper').classList.remove('hidden');
+            
+            // Mode Logic from previous builds...
             if (state.gameType === 'Classic') {
-                const modes = ['build_normal', 'identify_config', 'calc_particles', 'sig_fig', 'vocab', 'trend_faceoff', 'metric', 'scinot'];
+                const modes = ['build_normal', 'identify_config', 'calc_particles', 'sig_fig', 'vocab', 'trend_faceoff', 'metric', 'scinot']; 
                 state.mode = modes[Math.floor(Math.random() * modes.length)];
             } else if (state.gameType === 'Architect') state.mode = Math.random() > 0.5 ? 'build_normal' : 'build_short';
             else if (state.gameType === 'Quantum') state.mode = 'build_diagram';
-            else if (state.gameType === 'Detective') state.mode = 'identify_config';
+            else if (state.gameType === 'Detective') { if(Math.random()<0.4) state.mode='identify_config'; else { const m=['identify_diagram','hunt_alkali','hunt_alkaline','hunt_halogen','hunt_noble','hunt_transition','hunt_metalloid']; state.mode=m[Math.floor(Math.random()*m.length)]; } }
             else if (state.gameType === 'Nuclear') state.mode = 'calc_particles';
             else if (state.gameType === 'SigFig') state.mode = 'sig_fig';
             else if (state.gameType === 'Trends') state.mode = 'trend_faceoff';
             else if (state.gameType === 'Trivia') state.mode = 'vocab';
             else if (state.gameType === 'Metric') state.mode = 'metric';
             else if (state.gameType === 'SciNot') state.mode = 'scinot';
-
+            
             state.waitingNext = false; state.userParts = []; state.userNum = ""; state.diagram = [];
             const badge = document.getElementById('mode-badge'); const promptContent = document.getElementById('prompt-content');
             startTimer();
@@ -911,7 +941,6 @@
             else { document.getElementById('diagram-hint').classList.remove('hidden'); document.getElementById('hunt-msg').classList.remove('hidden'); }
 
             switch(state.mode) {
-                // ... Existing Cases (build, identify, etc) ...
                 case 'build_normal':
                 case 'build_short':
                     badge.innerHTML = `<div class="w-2.5 h-2.5 rounded-full bg-blue-500"></div> Configuration`;
@@ -919,30 +948,34 @@
                     document.getElementById('builder-ui').classList.remove('hidden'); document.getElementById('builder-ui').classList.add('flex');
                     renderBuilder(); highlightElement(); break;
 
-                // NEW MODES
-                case 'metric':
-                    badge.innerHTML = `<div class="w-2.5 h-2.5 rounded-full bg-green-500"></div> Metric`;
-                    state.metricQ = generateMetric();
-                    promptContent.innerHTML = `<div class="text-3xl font-mono font-bold text-slate-700">${state.metricQ.q}</div>`;
-                    document.getElementById('quiz-ui').classList.remove('hidden');
-                    document.getElementById('submit-wrapper').classList.add('hidden');
-                    renderMetricQuiz(); break;
-                
-                case 'scinot':
-                    badge.innerHTML = `<div class="w-2.5 h-2.5 rounded-full bg-indigo-500"></div> Sci-Not`;
-                    state.sciNotQ = generateSciNot();
-                    promptContent.innerHTML = `<div class="text-3xl font-mono font-bold text-slate-700">${state.sciNotQ.q}</div>`;
-                    document.getElementById('quiz-ui').classList.remove('hidden');
-                    document.getElementById('submit-wrapper').classList.add('hidden');
-                    renderSciNotQuiz(); break;
+                case 'build_diagram':
+                    badge.innerHTML = `<div class="w-2.5 h-2.5 rounded-full bg-orange-500"></div> Diagramming`;
+                    promptContent.innerHTML = `<div class="text-6xl font-black text-slate-800">${state.element.s}</div><div class="text-lg text-slate-500">${state.element.n}</div>`;
+                    document.getElementById('diagram-ui').classList.remove('hidden'); document.getElementById('diagram-ui').classList.add('flex');
+                    renderDiagramInput(); highlightElement(); break;
 
-                case 'sig_fig':
-                    badge.innerHTML = `<div class="w-2.5 h-2.5 rounded-full bg-teal-500"></div> Measurements`;
-                    state.sigFigProblem = generateSigFig();
-                    promptContent.innerHTML = `<div class="text-4xl font-mono font-bold text-slate-700 bg-slate-100 px-4 py-2 rounded-lg border border-slate-200">${state.sigFigProblem.q}</div><p class="mt-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Count Significant Figures</p>`;
-                    document.getElementById('numeric-ui').classList.remove('hidden');
-                    renderNumericKeys(); break;
-                
+                case 'identify_config':
+                case 'identify_diagram':
+                    badge.innerHTML = `<div class="w-2.5 h-2.5 rounded-full bg-pink-500"></div> Identify`;
+                    document.getElementById('input-area').classList.add('hidden'); document.getElementById('identify-hint').classList.remove('hidden'); document.getElementById('identify-hint').classList.add('flex'); document.getElementById('ptable-container').classList.add('mode-identify');
+                    if(state.difficulty==='normal') document.getElementById('table-instruction').classList.remove('hidden');
+                    if(state.mode === 'identify_config') {
+                        const sol = getCorrectConfig(state.element.z, 'short');
+                        let str = (sol.noble ? sol.noble + " " : "") + sol.parts.map(p => `${p.label}<sup>${p.count}</sup>`).join(" ");
+                        promptContent.innerHTML = `<div class="text-xl font-mono text-slate-700 bg-slate-100 p-4 rounded-xl shadow-inner">${str}</div>`;
+                    } else {
+                        promptContent.innerHTML = `<div id="diagram-preview" class="flex flex-wrap gap-2 justify-center p-2 rounded-xl bg-slate-50 border border-slate-100"></div>`;
+                        renderDiagramPreview(state.element.z);
+                    }
+                    break;
+
+                case 'vocab':
+                    badge.innerHTML = `<div class="w-2.5 h-2.5 rounded-full bg-yellow-500"></div> Terminology`;
+                    state.vocabQ = vocabBank[Math.floor(Math.random() * vocabBank.length)];
+                    promptContent.innerHTML = `<div class="text-lg font-bold text-slate-700 p-2">${state.vocabQ.q}</div>`;
+                    document.getElementById('quiz-ui').classList.remove('hidden'); document.getElementById('submit-wrapper').classList.add('hidden');
+                    renderVocabQuiz(); break;
+
                 case 'calc_particles':
                     badge.innerHTML = `<div class="w-2.5 h-2.5 rounded-full bg-indigo-500"></div> Particles`;
                     state.isotopeNeutrons = (state.element.z <= 20 ? state.element.z : Math.round(state.element.z * 1.2)) + Math.floor(Math.random() * 4);
@@ -951,52 +984,115 @@
                     state.particleType = ['p', 'n', 'e'][Math.floor(Math.random() * 3)];
                     const chargeStr = state.isotopeCharge === 0 ? '' : (state.isotopeCharge > 0 ? `+${state.isotopeCharge}` : state.isotopeCharge);
                     promptContent.innerHTML = `<div class="relative inline-block text-center mb-2"><span class="absolute -top-2 -left-4 text-xs font-bold text-slate-500">${state.isotopeMass}</span><span class="absolute -top-2 -right-4 text-xs font-bold text-blue-500">${chargeStr}</span><div class="text-6xl font-black text-slate-800">${state.element.s}</div></div><p class="text-sm font-bold text-slate-600">Find Number of ${state.particleType === 'p' ? 'PROTONS' : state.particleType === 'n' ? 'NEUTRONS' : 'ELECTRONS'}</p>`;
-                    document.getElementById('numeric-ui').classList.remove('hidden');
-                    renderNumericKeys(); break;
+                    document.getElementById('numeric-ui').classList.remove('hidden'); renderNumericKeys(); break;
+                
+                case 'count_valence':
+                    while(state.element.v === null) state.element = elements[Math.floor(Math.random() * elements.length)];
+                    badge.innerHTML = `<div class="w-2.5 h-2.5 rounded-full bg-teal-500"></div> Valence`;
+                    promptContent.innerHTML = `<div class="text-6xl font-black text-slate-800 mb-1">${state.element.s}</div><div class="text-lg text-slate-500">${state.element.n}</div>`;
+                    document.getElementById('numeric-ui').classList.remove('hidden'); renderNumericKeys(); break;
+                
+                case 'calc_neutrons':
+                    // Legacy catch
+                    state.mode='calc_particles'; setMode(); return;
 
-                // (Other cases trimmed for brevity but logic persists)
-                default: 
-                    // Fallback to vocab for now if case not hit
-                    state.mode = 'vocab';
-                    badge.innerHTML = `<div class="w-2.5 h-2.5 rounded-full bg-yellow-500"></div> Terminology`;
-                    state.vocabQ = vocabBank[Math.floor(Math.random() * vocabBank.length)];
-                    promptContent.innerHTML = `<div class="text-lg font-bold text-slate-700 p-2">${state.vocabQ.q}</div>`;
-                    document.getElementById('quiz-ui').classList.remove('hidden');
+                case 'metric':
+                    badge.innerHTML = `<div class="w-2.5 h-2.5 rounded-full bg-green-500"></div> Metric`;
+                    state.metricQ = generateMetric();
+                    promptContent.innerHTML = `<div class="text-3xl font-mono font-bold text-slate-700">${state.metricQ.q}</div>`;
+                    document.getElementById('quiz-ui').classList.remove('hidden'); document.getElementById('submit-wrapper').classList.add('hidden');
+                    renderMetricQuiz(); break;
+                
+                case 'scinot':
+                    badge.innerHTML = `<div class="w-2.5 h-2.5 rounded-full bg-indigo-500"></div> Sci-Not`;
+                    state.sciNotQ = generateSciNot();
+                    promptContent.innerHTML = `<div class="text-3xl font-mono font-bold text-slate-700">${state.sciNotQ.q}</div>`;
+                    document.getElementById('quiz-ui').classList.remove('hidden'); document.getElementById('submit-wrapper').classList.add('hidden');
+                    renderSciNotQuiz(); break;
+
+                case 'sig_fig':
+                    badge.innerHTML = `<div class="w-2.5 h-2.5 rounded-full bg-teal-500"></div> Measurements`;
+                    state.sigFigProblem = generateSigFig();
+                    promptContent.innerHTML = `<div class="text-4xl font-mono font-bold text-slate-700 bg-slate-100 px-4 py-2 rounded-lg border border-slate-200">${state.sigFigProblem.q}</div><p class="mt-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Count Significant Figures</p>`;
+                    document.getElementById('numeric-ui').classList.remove('hidden'); renderNumericKeys(); break;
+
+                case 'trend_faceoff':
+                    badge.innerHTML = `<div class="w-2.5 h-2.5 rounded-full bg-purple-500"></div> Face-Off`;
+                    let e1 = state.element;
+                    let e2 = elements[Math.floor(Math.random() * elements.length)];
+                    while(e1.z === e2.z) e2 = elements[Math.floor(Math.random() * elements.length)];
+                    
+                    const trendTypes = ['Radius', 'Electronegativity', 'Ionization Energy', 'Electron Affinity'];
+                    const tType = trendTypes[Math.floor(Math.random() * 4)];
+                    
+                    state.trendQ = { e1, e2, type: tType };
+                    
+                    promptContent.innerHTML = `<p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Which is HIGHER?</p><div class="text-2xl font-black text-slate-800">${tType}</div>`;
+                    const trendUI = document.getElementById('trend-ui'); trendUI.innerHTML = '';
+                    [e1, e2].forEach(e => {
+                        const btn = document.createElement('button');
+                        btn.className = "flex-1 aspect-square bg-slate-50 border-2 border-slate-200 rounded-2xl flex flex-col items-center justify-center hover:border-blue-500 hover:bg-blue-50 transition-all group";
+                        btn.innerHTML = `<span class="text-3xl font-black text-slate-700 group-hover:text-blue-600">${e.s}</span><span class="text-xs text-slate-400 font-bold">${e.n}</span>`;
+                        btn.onclick = () => checkTrend(e);
+                        trendUI.appendChild(btn);
+                    });
+                    trendUI.classList.remove('hidden'); trendUI.classList.add('flex');
                     document.getElementById('submit-wrapper').classList.add('hidden');
-                    renderVocabQuiz();
                     break;
+            }
+            
+            // Hunt Mode
+            if(state.mode.startsWith('hunt')) {
+                const t = state.mode.split('_')[1];
+                state.targetCategory = huntCategories[t];
+                
+                document.getElementById('input-area').classList.add('hidden');
+                document.getElementById('identify-hint').classList.remove('hidden');
+                document.getElementById('identify-hint').classList.add('flex');
+                document.getElementById('ptable-container').classList.add('mode-identify');
+                if(state.difficulty === 'normal') document.getElementById('table-instruction').classList.remove('hidden');
+                
+                badge.innerHTML = `<div class="w-2.5 h-2.5 rounded-full bg-emerald-500"></div> Hunt`;
+                if(state.difficulty === 'normal') document.getElementById('hunt-msg').innerHTML = `Find any <b>${state.targetCategory.name}</b>.`;
+                promptContent.innerHTML = `<div class="fade-in text-center flex flex-col items-center justify-center h-[80px]"><div class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">FIND A</div><div class="text-2xl font-black text-slate-800 tracking-tight leading-none">${state.targetCategory.name}</div></div>`;
             }
         }
 
-        // --- NEW QUIZ RENDERERS ---
-        function renderMetricQuiz() {
-            const ui = document.getElementById('quiz-ui'); ui.innerHTML = '';
-            state.metricQ.opts.forEach(opt => {
-                const b = document.createElement('button'); b.className = "key-btn p-4 text-sm mb-1"; b.innerText = opt;
-                b.onclick = () => { if(opt === state.metricQ.a) success(); else fail("Wrong Unit!"); }; ui.appendChild(b);
-            });
+        // --- HANDLERS ---
+        function checkTrend(selected) {
+            if(state.waitingNext) return;
+            const { e1, e2, type } = state.trendQ;
+            let winner;
+            const getPos = (e) => {
+                let r,c; 
+                if(e.z<=2){r=1;c=e.z===1?1:18;} 
+                else if(e.z<=10){r=2;c=e.z<=4?e.z-2:e.z+8;} 
+                else if(e.z<=18){r=3;c=e.z<=12?e.z-10:e.z;} 
+                else if(e.z<=36){r=4;c=e.z-18;} else {r=5;c=e.z-36;}
+                return {r,c};
+            };
+            const p1=getPos(e1); const p2=getPos(e2);
+
+            // Radius: Increases Left & Down
+            if (type === 'Radius') {
+                if (p1.r > p2.r) winner = e1; else if (p2.r > p1.r) winner = e2;
+                else winner = p1.c < p2.c ? e1 : e2;
+            } else {
+                // IE, EN, Affinity: Increase Right & Up
+                if (p1.r < p2.r) winner = e1; else if (p2.r < p1.r) winner = e2;
+                else winner = p1.c > p2.c ? e1 : e2;
+            }
+
+            if (selected === winner) success();
+            else fail(`Wrong! ${type} increases ${type==='Radius'?'Down/Left':'Up/Right'}.`);
         }
-        function renderSciNotQuiz() {
-            const ui = document.getElementById('quiz-ui'); ui.innerHTML = '';
-            state.sciNotQ.opts.forEach(opt => {
-                const b = document.createElement('button'); b.className = "key-btn p-4 text-sm mb-1 font-mono"; b.innerText = opt;
-                b.onclick = () => { if(opt === state.sciNotQ.a) success(); else fail("Check Exponent!"); }; ui.appendChild(b);
-            });
-        }
-        // (Re-used existing)
-        function renderVocabQuiz() {
-            const ui = document.getElementById('quiz-ui'); ui.innerHTML = '';
-            state.vocabQ.opts.forEach(opt => {
-                const b = document.createElement('button'); b.className = "key-btn p-4 text-sm mb-1"; b.innerText = opt;
-                b.onclick = () => { if(opt === state.vocabQ.a) success(); else fail("Wrong Term!"); }; ui.appendChild(b);
-            });
-        }
+
         function highlightElement() {
             if(state.difficulty !== 'normal') return; 
             const el = document.getElementById(`el-${state.element.z}`);
             if(el) { el.classList.add('target-highlight'); el.scrollIntoView({behavior:'smooth', block:'center', inline:'center'}); }
         }
-        // ... (Existing Renderers for Builder, Numeric, Diagram maintained) ...
+        // ... (Renderers for Builder, Numeric, Vocab, Diagram - Same as before) ...
         function renderBuilder() {
             const out = document.getElementById('config-output'); const keypad = document.getElementById('orbital-keypad');
             out.innerHTML = state.userParts.length ? '' : '<span class="text-slate-400 text-xs italic">Assemble the configuration here...</span>'; keypad.innerHTML = '';
@@ -1030,28 +1126,95 @@
             const del = document.createElement('button'); del.className = "key-btn text-red-500"; del.innerText = "⌫";
             del.onclick = () => { state.userNum = state.userNum.slice(0, -1); document.getElementById('numeric-display').innerText = state.userNum; }; keypad.appendChild(del);
         }
-        // ... (Rest of game logic from v1.7 kept intact) ...
+        function renderVocabQuiz() {
+            const ui = document.getElementById('quiz-ui'); ui.innerHTML = '';
+            state.vocabQ.opts.forEach(opt => {
+                const b = document.createElement('button'); b.className = "key-btn p-4 text-sm mb-1"; b.innerText = opt;
+                b.onclick = () => { if(opt === state.vocabQ.a) success(); else fail("Wrong Term!"); }; ui.appendChild(b);
+            });
+        }
+        function renderMetricQuiz() {
+            const ui = document.getElementById('quiz-ui'); ui.innerHTML = '';
+            state.metricQ.opts.forEach(opt => {
+                const b = document.createElement('button'); b.className = "key-btn p-4 text-sm mb-1"; b.innerText = opt;
+                b.onclick = () => { if(opt === state.metricQ.a) success(); else fail("Wrong Unit!"); }; ui.appendChild(b);
+            });
+        }
+        function renderSciNotQuiz() {
+            const ui = document.getElementById('quiz-ui'); ui.innerHTML = '';
+            state.sciNotQ.opts.forEach(opt => {
+                const b = document.createElement('button'); b.className = "key-btn p-4 text-sm mb-1 font-mono"; b.innerText = opt;
+                b.onclick = () => { if(opt === state.sciNotQ.a) success(); else fail("Check Exponent!"); }; ui.appendChild(b);
+            });
+        }
+        function renderDiagramInput() {
+            const grid = document.getElementById('orbital-diagram-grid'); grid.innerHTML = '';
+            const order = [ {n:"1s",c:1}, {n:"2s",c:1}, {n:"2p",c:3}, {n:"3s",c:1}, {n:"3p",c:3}, {n:"4s",c:1}, {n:"3d",c:5}, {n:"4p",c:3}, {n:"5s",c:1}, {n:"4d",c:5}, {n:"5p",c:3} ];
+            state.diagram = [];
+            const lastPart = getCorrectConfig(state.element.z, 'normal').parts.slice(-1)[0];
+            const limit = orbitalKeys.indexOf(lastPart.label);
+            order.forEach(grp => {
+                if(orbitalKeys.indexOf(grp.n) > limit) return;
+                const grpDiv = document.createElement('div'); grpDiv.className = "flex flex-col items-center mx-1 mb-2";
+                grpDiv.innerHTML = `<span class="text-[10px] font-bold text-slate-400 mb-1 uppercase">${grp.n}</span>`;
+                const row = document.createElement('div'); row.className = "flex gap-0.5 sm:gap-1";
+                for(let i=0; i<grp.c; i++) {
+                    const box = document.createElement('div'); box.className = "orbital-box"; const bObj = { count: 0 }; state.diagram.push(bObj);
+                    box.onclick = () => { if(bObj.count===0) bObj.count=2; else if(bObj.count===2) bObj.count=1; else bObj.count=0; box.innerHTML = ''; if(bObj.count>=1) box.innerHTML += '<span class="spin-arrow text-blue-500 relative -top-0.5">↑</span>'; if(bObj.count===2) box.innerHTML += '<span class="spin-arrow text-red-500 relative top-0.5">↓</span>'; };
+                    row.appendChild(box);
+                }
+                grpDiv.appendChild(row); grid.appendChild(grpDiv);
+            });
+        }
+        function renderDiagramPreview(z) {
+            const container = document.getElementById('diagram-preview'); container.innerHTML = '';
+            const order = [ {n:"1s",c:1}, {n:"2s",c:1}, {n:"2p",c:3}, {n:"3s",c:1}, {n:"3p",c:3}, {n:"4s",c:1}, {n:"3d",c:5}, {n:"4p",c:3}, {n:"5s",c:1}, {n:"4d",c:5}, {n:"5p",c:3} ];
+            let electrons = z;
+            order.forEach(grp => {
+                if(electrons <= 0) return;
+                const grpDiv = document.createElement('div'); grpDiv.className = "flex flex-col items-center mx-0.5";
+                grpDiv.innerHTML = `<span class="text-[8px] font-bold text-slate-300 mb-0.5">${grp.n}</span>`;
+                const row = document.createElement('div'); row.className = "flex gap-0.5";
+                for(let i=0; i<grp.c; i++) {
+                    const box = document.createElement('div'); box.className = "w-5 h-5 sm:w-6 sm:h-6 border border-slate-300 rounded flex justify-center items-center bg-white";
+                    let count = 0;
+                    if(electrons>0) { count++; electrons--; }
+                    if(electrons>0 && (z<=20 ? electrons >= (grp.c - i) : electrons >= (grp.c - i))) { if(electrons >= (grp.c - i)) { count++; electrons--; } }
+                    if(count>=1) box.innerHTML += '<span class="text-blue-500 text-[10px] sm:text-xs">↑</span>'; if(count===2) box.innerHTML += '<span class="text-red-500 text-[10px] sm:text-xs">↓</span>';
+                    row.appendChild(box);
+                }
+                grpDiv.appendChild(row); container.appendChild(grpDiv);
+            });
+        }
 
         function handleElementClick(el) {
-            // (Placeholder logic)
             if(state.waitingNext) return;
-            success(); // For now just assume correct click for brevity in this snippet
+            if(!state.mode.startsWith('identify') && !state.mode.startsWith('hunt')) return;
+            let correct = false;
+            if(state.mode.startsWith('hunt')) { if(state.targetCategory.z.includes(el.z)) { correct = true; state.element = el; } } 
+            else { if(el.z === state.element.z) correct = true; }
+            if(correct) success(); else fail("Wrong Element!");
         }
 
         document.getElementById('submit-btn').onclick = () => {
             if(state.waitingNext) return;
             let correct = false;
-            // Mode logic
             if(state.mode === 'calc_particles') {
                 const target = state.particleType === 'p' ? state.element.z : state.particleType === 'n' ? state.isotopeNeutrons : (state.element.z - state.isotopeCharge);
                 if(parseInt(state.userNum) === target) correct = true;
             } else if (state.mode === 'sig_fig') {
-                if(parseInt(state.userNum) === state.sigFigProblem.a) correct = true;
+                if(state.userNum == state.sigFigProblem.a) correct = true;
+            } else if (state.mode === 'count_valence') {
+                if(parseInt(state.userNum) === state.element.v) correct = true;
             } else if (state.mode.startsWith('build')) {
-                const sol = getCorrectConfig(state.element.z, state.mode);
-                const userStr = state.userParts.map(p => p.isNoble?p.label:`${p.label}${p.count}`).join(" ");
-                const solStr = (sol.noble?sol.noble+" ":"") + sol.parts.map(p => `${p.label}${p.count}`).join(" ");
-                if(userStr === solStr) correct = true;
+                let sol = getCorrectConfig(state.element.z, state.mode);
+                // Simple validation for config
+                if(state.mode === 'build_diagram') correct = state.diagram.reduce((a,b)=>a+b.count,0)===state.element.z; 
+                else {
+                    let userStr = state.userParts.map(p => p.isNoble?p.label:`${p.label}${p.count}`).join(" ");
+                    let solStr = (sol.noble?sol.noble+" ":"") + sol.parts.map(p => `${p.label}${p.count}`).join(" ");
+                    if(userStr === solStr) correct = true;
+                }
             }
 
             if(correct) success(); else fail("Incorrect Answer!");
@@ -1059,9 +1222,9 @@
 
         function success() {
             clearInterval(state.timerId); state.waitingNext = true; state.streak++; state.score += 100; updateStats(); showToast("Correct!", `Streak: ${state.streak}`, true);
-            document.getElementById('input-area').classList.add('hidden'); document.getElementById('info-panel').classList.remove('hidden');
-            if(state.mode === 'metric' || state.mode === 'scinot') {
-                document.getElementById('info-title').innerText = "Correct!"; document.getElementById('info-desc').innerText = "Measurement skills improving.";
+            document.getElementById('input-area').classList.add('hidden'); document.getElementById('identify-hint').classList.add('hidden'); document.getElementById('trend-ui').classList.add('hidden'); document.getElementById('info-panel').classList.remove('hidden');
+            if(state.mode === 'metric' || state.mode === 'scinot' || state.mode === 'vocab' || state.mode === 'sig_fig') {
+                document.getElementById('info-title').innerText = "Correct!"; document.getElementById('info-desc').innerText = "Concept Mastered.";
             } else {
                 document.getElementById('info-title').innerText = `${state.element.n}`; document.getElementById('info-desc').innerText = state.element.d;
             }
@@ -1077,15 +1240,26 @@
         }
         function revealAnswer(msg) {
             clearInterval(state.timerId); state.waitingNext = true; state.streak = 0; updateStats(); showToast("Time's Up!", msg, false);
-            document.getElementById('input-area').classList.add('hidden'); document.getElementById('info-panel').classList.remove('hidden');
-            document.getElementById('info-title').innerText = "Time's Up"; document.getElementById('info-desc').innerText = "Try faster next time!";
+            document.getElementById('input-area').classList.add('hidden'); document.getElementById('identify-hint').classList.add('hidden'); document.getElementById('trend-ui').classList.add('hidden'); document.getElementById('info-panel').classList.remove('hidden');
+            
+            let title="Solution"; let desc="Time ran out.";
+            if(state.mode==='vocab') desc=`Answer: ${state.vocabQ.a}`;
+            else if(state.mode==='metric') desc=`Correct: ${state.metricQ.a}`;
+            else if(state.mode==='scinot') desc=`Correct: ${state.sciNotQ.a}`;
+            else if(state.mode==='sig_fig') desc=`Result: ${state.sigFigProblem.a}`;
+            else if(state.mode==='trend_faceoff') desc=`${state.trendQ.type} follows periodic trends.`;
+            else if(state.mode==='calc_particles') { const e=state.element.z-state.isotopeCharge; desc=`p+: ${state.element.z}, n0: ${state.isotopeNeutrons}, e-: ${e}`; }
+            else { title=`${state.element.n}`; const config=getCorrectConfig(state.element.z, 'short'); desc=`Config: ${(config.noble?config.noble+" ":"")+config.parts.map(p=>p.label+p.count).join(" ")}`; }
+            
+            document.getElementById('info-title').innerText = title; document.getElementById('info-desc').innerText = desc;
         }
         function updateStats() {
             document.getElementById('streak-val').innerText = state.streak; document.getElementById('score-val').innerText = state.score; document.getElementById('level-val').innerText = state.level;
         }
         window.nextLevel = () => {
-            let pool = fullElements; // Using full list
-            if(state.periodLimit === 3) pool = fullElements.filter(e => e.z <= 18);
+            let pool = elements; // Using full list
+            if(state.periodLimit === 3) pool = elements.filter(e => e.z <= 18);
+            else if(state.periodLimit === 4) pool = elements.filter(e => e.z <= 36);
             state.element = pool[Math.floor(Math.random() * pool.length)];
             setMode(); 
         };
