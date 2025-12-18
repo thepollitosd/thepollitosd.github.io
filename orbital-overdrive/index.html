@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Orbital Overdrive</title>
+    <title>Orbital Overdrive - Honors Chemistry</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Space+Grotesk:wght@300;500;700&display=swap');
@@ -291,7 +291,7 @@
 
     <!-- VERSION FOOTER -->
     <div class="fixed bottom-1 right-2 text-[10px] font-mono text-slate-400 opacity-60 pointer-events-none select-none z-50">
-        ORBITAL_OS <span class="font-bold">v1.1</span> <span class="text-blue-400">b.5</span> [NEON STABILITY]
+        ORBITAL_OS <span class="font-bold">v1.2</span> <span class="text-blue-400">b.1</span> [MOLECULAR MIND]
     </div>
 
     <script>
@@ -359,10 +359,44 @@
         ];
 
         const vocabBank = [
+            // Basic Structure
             { q: "Positive ions are called...", a: "Cations", opts: ["Cations", "Anions", "Protons", "Neutrons"] },
+            { q: "Negative ions are called...", a: "Anions", opts: ["Cations", "Anions", "Nuclei", "Isotopes"] },
+            { q: "The center of an atom is the...", a: "Nucleus", opts: ["Nucleus", "Shell", "Orbital", "Cloud"] },
+            { q: "Subatomic particle with no charge?", a: "Neutron", opts: ["Proton", "Electron", "Neutron", "Photon"] },
+            { q: "Subatomic particle with negative charge?", a: "Electron", opts: ["Proton", "Neutron", "Electron", "Positron"] },
+            
+            // Periodic Table Organization
             { q: "Horizontal rows are called...", a: "Periods", opts: ["Groups", "Periods", "Blocks", "Families"] },
-            { q: "Halogens belong to which group?", a: "17", opts: ["1", "2", "17", "18"] },
-            { q: "Valence electrons are located in...", a: "Outer shell", opts: ["Outer shell", "Nucleus", "Inner shell", "Core"] }
+            { q: "Vertical columns are called...", a: "Groups", opts: ["Periods", "Groups", "Shells", "Series"] },
+            { q: "Group 1 elements are...", a: "Alkali Metals", opts: ["Alkali Metals", "Halogens", "Noble Gases", "Transition"] },
+            { q: "Group 2 elements are...", a: "Alkaline Earth", opts: ["Alkali Metals", "Alkaline Earth", "Halogens", "Metalloids"] },
+            { q: "Group 17 elements are...", a: "Halogens", opts: ["Halogens", "Noble Gases", "Alkali Metals", "Lanthanides"] },
+            { q: "Group 18 elements are...", a: "Noble Gases", opts: ["Halogens", "Noble Gases", "Actinides", "Alkaline Earth"] },
+            { q: "Elements along the staircase line?", a: "Metalloids", opts: ["Metals", "Nonmetals", "Metalloids", "Halogens"] },
+            { q: "The d-block elements are...", a: "Transition Metals", opts: ["Transition Metals", "Inner Transition", "Alkali", "Halogens"] },
+
+            // Definitions
+            { q: "Atoms with same p+ but different n0?", a: "Isotopes", opts: ["Isotopes", "Ions", "Allotropes", "Isomers"] },
+            { q: "Electrons in the outermost shell?", a: "Valence", opts: ["Core", "Valence", "Inner", "Nuclear"] },
+            { q: "Rule: Atoms desire 8 valence electrons.", a: "Octet Rule", opts: ["Octet Rule", "Duet Rule", "Hund's Rule", "Aufbau"] },
+            { q: "Energy required to remove an electron?", a: "Ionization Energy", opts: ["Electronegativity", "Ionization Energy", "Electron Affinity", "Lattice Energy"] },
+            { q: "Ability to attract shared electrons?", a: "Electronegativity", opts: ["Ionization Energy", "Electronegativity", "Shielding", "Radius"] },
+            
+            // Trends
+            { q: "Atomic radius trend down a group?", a: "Increases", opts: ["Increases", "Decreases", "Stays Same", "Random"] },
+            { q: "Atomic radius trend across a period?", a: "Decreases", opts: ["Increases", "Decreases", "Stays Same", "Random"] },
+            { q: "Electronegativity trend across a period?", a: "Increases", opts: ["Increases", "Decreases", "Stays Same", "Random"] },
+            { q: "Most electronegative element?", a: "Fluorine", opts: ["Fluorine", "Francium", "Oxygen", "Chlorine"] },
+            
+            // Quantum/Configuration Rules
+            { q: "Rule: Fill lowest energy first.", a: "Aufbau", opts: ["Aufbau", "Pauli", "Hund", "Heisenberg"] },
+            { q: "Rule: Max 2 electrons with opp. spin.", a: "Pauli Exclusion", opts: ["Aufbau", "Pauli Exclusion", "Hund", "Octet"] },
+            { q: "Rule: Fill empty orbitals before pairing.", a: "Hund's Rule", opts: ["Aufbau", "Pauli", "Hund's Rule", "Periodic Law"] },
+            { q: "Shape of an s-orbital?", a: "Sphere", opts: ["Sphere", "Dumbbell", "Clover", "Complex"] },
+            { q: "Shape of a p-orbital?", a: "Dumbbell", opts: ["Sphere", "Dumbbell", "Clover", "Ring"] },
+            { q: "Max electrons in a d-subshell?", a: "10", opts: ["2", "6", "10", "14"] },
+            { q: "Max electrons in an f-subshell?", a: "14", opts: ["6", "10", "14", "18"] }
         ];
 
         const orbitalKeys = ["1s", "2s", "2p", "3s", "3p", "4s", "3d", "4p", "5s", "4d", "5p"];
