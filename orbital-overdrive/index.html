@@ -676,7 +676,9 @@
         ];
 
         const vocabBank = [
-            // Basic Structure (Review Guide)
+            // ==================================================================
+            // 1. ORIGINAL & REVIEW GUIDE (Existing Code)
+            // ==================================================================
             { q: "Closeness to the true value?", a: "Accuracy", opts: ["Accuracy", "Precision", "Estimation", "Error"] },
             { q: "Reproducibility of a measurement?", a: "Precision", opts: ["Accuracy", "Precision", "Significance", "Percent Error"] },
             { q: "Formula for Density?", a: "Mass / Volume", opts: ["Mass / Volume", "Volume / Mass", "Mass * Volume", "Area * Length"] },
@@ -684,17 +686,11 @@
             { q: "Which is a physical change?", a: "Dissolving", opts: ["Dissolving", "Rusting", "Burning", "Rotting"] },
             { q: "Phase change solid to gas?", a: "Sublimation", opts: ["Sublimation", "Deposition", "Melting", "Freezing"] },
             { q: "Phase change gas to solid?", a: "Deposition", opts: ["Sublimation", "Deposition", "Condensation", "Evaporation"] },
-            
-            // Sig Figs Rules (Review Guide)
             { q: "Sig Fig rule for addition?", a: "Decimal Places", opts: ["Decimal Places", "Sig Figs", "Largest Value", "No Rounding"] },
             { q: "Sig Fig rule for multiplication?", a: "Least Sig Figs", opts: ["Least Sig Figs", "Decimal Places", "Most Sig Figs", "Average"] },
-            
-            // Metric (Review Guide)
             { q: "Base unit for mass in lab?", a: "Gram", opts: ["Gram", "Meter", "Liter", "Second"] },
             { q: "Prefix for 10^-3?", a: "Milli", opts: ["Milli", "Centi", "Kilo", "Micro"] },
             { q: "Prefix for 10^3?", a: "Kilo", opts: ["Kilo", "Mega", "Giga", "Deca"] },
-
-            // Existing Questions
             { q: "Positive ions are called...", a: "Cations", opts: ["Cations", "Anions", "Protons", "Neutrons"] },
             { q: "Negative ions are called...", a: "Anions", opts: ["Cations", "Anions", "Nuclei", "Isotopes"] },
             { q: "Horizontal rows are called...", a: "Periods", opts: ["Groups", "Periods", "Blocks", "Families"] },
@@ -702,9 +698,268 @@
             { q: "Electrons in the outermost shell?", a: "Valence", opts: ["Core", "Valence", "Inner", "Nuclear"] },
             { q: "Atoms with same p+ but different n0?", a: "Isotopes", opts: ["Isotopes", "Ions", "Allotropes", "Isomers"] },
             { q: "Most electronegative element?", a: "Fluorine", opts: ["Fluorine", "Francium", "Oxygen", "Chlorine"] },
-            { q: "Rule: Max 2 e- with opp. spin.", a: "Pauli Exclusion", opts: ["Aufbau", "Pauli Exclusion", "Hund", "Octet"] }
+            { q: "Rule: Max 2 e- with opp. spin.", a: "Pauli Exclusion", opts: ["Aufbau", "Pauli Exclusion", "Hund", "Octet"] },
+        
+            // ==================================================================
+            // 2. TYPES OF CHANGES (Physical vs Chemical) - 25 Questions
+            // ==================================================================
+            { q: "Digesting food is a...", a: "Chemical Change", opts: ["Chemical Change", "Physical Change", "Phase Change", "Nuclear Change"] },
+            { q: "Evaporating water is a...", a: "Physical Change", opts: ["Chemical Change", "Physical Change", "Decomposition", "Combustion"] },
+            { q: "Burning wood is a...", a: "Chemical Change", opts: ["Chemical Change", "Physical Change", "Fusion", "Sublimation"] },
+            { q: "Rusting iron is a...", a: "Chemical Change", opts: ["Chemical Change", "Physical Change", "Melting", "Alloying"] },
+            { q: "Crushing a can is a...", a: "Physical Change", opts: ["Chemical Change", "Physical Change", "Reaction", "Oxidation"] },
+            { q: "Dissolving salt in water is a...", a: "Physical Change", opts: ["Chemical Change", "Physical Change", "Precipitation", "Neutralization"] },
+            { q: "Milk turning sour is a...", a: "Chemical Change", opts: ["Chemical Change", "Physical Change", "Dilution", "Filtration"] },
+            { q: "Baking a cake is a...", a: "Chemical Change", opts: ["Chemical Change", "Physical Change", "Mixing", "Distillation"] },
+            { q: "Breaking glass is a...", a: "Physical Change", opts: ["Chemical Change", "Physical Change", "Combustion", "Decay"] },
+            { q: "Exploding fireworks is a...", a: "Chemical Change", opts: ["Chemical Change", "Physical Change", "Evaporation", "Filtration"] },
+            { q: "Melting ice is a...", a: "Physical Change", opts: ["Chemical Change", "Physical Change", "Reaction", "Combustion"] },
+            { q: "Rotting bananas is a...", a: "Chemical Change", opts: ["Chemical Change", "Physical Change", "Phase Change", "Erosion"] },
+            { q: "Chopping vegetables is a...", a: "Physical Change", opts: ["Chemical Change", "Physical Change", "Fermentation", "Oxidation"] },
+            { q: "Fermenting grapes is a...", a: "Chemical Change", opts: ["Chemical Change", "Physical Change", "Boiling", "Freezing"] },
+            { q: "Boiling water is a...", a: "Physical Change", opts: ["Chemical Change", "Physical Change", "Combustion", "Corrosion"] },
+            { q: "Photosynthesis is a...", a: "Chemical Change", opts: ["Chemical Change", "Physical Change", "Phase Change", "Distillation"] },
+            { q: "Mixing sand and water is a...", a: "Physical Change", opts: ["Chemical Change", "Physical Change", "Solution", "Reaction"] },
+            { q: "Shredding paper is a...", a: "Physical Change", opts: ["Chemical Change", "Physical Change", "Burn", "Decay"] },
+            { q: "Lighting a match is a...", a: "Chemical Change", opts: ["Chemical Change", "Physical Change", "Friction", "Motion"] },
+            { q: "Tarnishing silver is a...", a: "Chemical Change", opts: ["Chemical Change", "Physical Change", "Polishing", "Cleaning"] },
+            { q: "Freezing juice is a...", a: "Physical Change", opts: ["Chemical Change", "Physical Change", "Reaction", "Cooking"] },
+            { q: "Grinding coffee beans is a...", a: "Physical Change", opts: ["Chemical Change", "Physical Change", "Brewing", "Roasting"] },
+            { q: "Cooking an egg is a...", a: "Chemical Change", opts: ["Chemical Change", "Physical Change", "Heating", "Warming"] },
+            { q: "Sublimation of dry ice is a...", a: "Physical Change", opts: ["Chemical Change", "Physical Change", "Combustion", "Reaction"] },
+            { q: "Combustion of gasoline is a...", a: "Chemical Change", opts: ["Chemical Change", "Physical Change", "Vaporization", "Distillation"] },
+        
+            // ==================================================================
+            // 3. PROPERTIES (Periodic Table & Physical/Chemical) - 25 Questions
+            // ==================================================================
+            { q: "Property dependent on amount of matter?", a: "Extensive", opts: ["Extensive", "Intensive", "Chemical", "Nuclear"] },
+            { q: "Property independent of amount of matter?", a: "Intensive", opts: ["Extensive", "Intensive", "Massive", "Volumetric"] },
+            { q: "Is 'Flammability' physical or chemical?", a: "Chemical", opts: ["Physical", "Chemical", "Intensive", "Nuclear"] },
+            { q: "Is 'Density' physical or chemical?", a: "Physical", opts: ["Physical", "Chemical", "Extensive", "Reactive"] },
+            { q: "Is 'Boiling Point' physical or chemical?", a: "Physical", opts: ["Physical", "Chemical", "Atomic", "Nuclear"] },
+            { q: "Is 'Reactivity with Acid' physical or chemical?", a: "Chemical", opts: ["Physical", "Chemical", "Intensive", "Extensive"] },
+            { q: "Trend: Atomic Radius down a group?", a: "Increases", opts: ["Increases", "Decreases", "Stays Same", "Fluctuates"] },
+            { q: "Trend: Atomic Radius across a period?", a: "Decreases", opts: ["Increases", "Decreases", "Stays Same", "Fluctuates"] },
+            { q: "Trend: Ionization Energy across a period?", a: "Increases", opts: ["Increases", "Decreases", "Stays Same", "Zero"] },
+            { q: "Trend: Electronegativity down a group?", a: "Decreases", opts: ["Increases", "Decreases", "Stays Same", "Doubles"] },
+            { q: "Elements in Group 18 are...", a: "Noble Gases", opts: ["Noble Gases", "Halogens", "Alkali Metals", "Earth Metals"] },
+            { q: "Elements in Group 1 are...", a: "Alkali Metals", opts: ["Alkali Metals", "Alkaline Earth", "Halogens", "Noble Gases"] },
+            { q: "Elements in Group 2 are...", a: "Alkaline Earth", opts: ["Alkaline Earth", "Alkali Metals", "Transition", "Halogens"] },
+            { q: "Elements in Group 17 are...", a: "Halogens", opts: ["Halogens", "Noble Gases", "Metals", "Actinides"] },
+            { q: "Metals are typically...", a: "Conductive", opts: ["Conductive", "Brittle", "Gases", "Dull"] },
+            { q: "Nonmetals are typically...", a: "Poor Conductors", opts: ["Good Conductors", "Poor Conductors", "Shiny", "Malleable"] },
+            { q: "Metalloids are found along the...", a: "Staircase Line", opts: ["Staircase Line", "Bottom Row", "Left Side", "Top Row"] },
+            { q: "Most reactive nonmetal group?", a: "Halogens", opts: ["Halogens", "Noble Gases", "Transition Metals", "Lanthanides"] },
+            { q: "Least reactive group?", a: "Noble Gases", opts: ["Noble Gases", "Halogens", "Alkali Metals", "Actinides"] },
+            { q: "Ability to be hammered into sheets?", a: "Malleability", opts: ["Malleability", "Ductility", "Viscosity", "Solubility"] },
+            { q: "Ability to be drawn into wire?", a: "Ductility", opts: ["Malleability", "Ductility", "Conductivity", "Luster"] },
+            { q: "Tendency to attract electrons?", a: "Electronegativity", opts: ["Electronegativity", "Ionization", "Shielding", "Radii"] },
+            { q: "Energy to remove an electron?", a: "Ionization Energy", opts: ["Ionization Energy", "Electronegativity", "Kinetic Energy", "Potential Energy"] },
+        
+            // ==================================================================
+            // 4. WAVE CALC & ENERGY (J, kJ, E=hf, c=λv) - 25 Questions
+            // ==================================================================
+            { q: "Symbol for wavelength?", a: "Lambda (λ)", opts: ["Lambda (λ)", "Nu (ν)", "C", "h"] },
+            { q: "Symbol for frequency?", a: "Nu (ν)", opts: ["Lambda (λ)", "Nu (ν)", "C", "E"] },
+            { q: "Constant 'c' represents?", a: "Speed of Light", opts: ["Speed of Light", "Planck's Constant", "Energy", "Frequency"] },
+            { q: "Value of Speed of Light (c)?", a: "3.00 x 10^8 m/s", opts: ["3.00 x 10^8 m/s", "6.626 x 10^-34", "9.8 m/s^2", "1.01 x 10^5"] },
+            { q: "Value of Planck's Constant (h)?", a: "6.626 x 10^-34 J·s", opts: ["6.626 x 10^-34 J·s", "3.00 x 10^8", "6.02 x 10^23", "1.008"] },
+            { q: "Relationship between λ and ν?", a: "Inverse", opts: ["Inverse", "Direct", "Exponential", "None"] },
+            { q: "Formula relating c, λ, and ν?", a: "c = λν", opts: ["c = λν", "E = hν", "λ = cν", "ν = cλ"] },
+            { q: "Formula for Energy using frequency?", a: "E = hν", opts: ["E = hν", "E = mc^2", "c = λν", "E = λν"] },
+            { q: "Formula for Energy using wavelength?", a: "E = hc / λ", opts: ["E = hc / λ", "E = hλ / c", "E = c / λ", "E = hνλ"] },
+            { q: "Standard unit for Energy?", a: "Joules (J)", opts: ["Joules (J)", "Hertz (Hz)", "Meters (m)", "Watts (W)"] },
+            { q: "Standard unit for Frequency?", a: "Hertz (Hz)", opts: ["Hertz (Hz)", "Joules (J)", "Meters (m)", "Seconds (s)"] },
+            { q: "Standard unit for Wavelength?", a: "Meters (m)", opts: ["Meters (m)", "Hertz (Hz)", "Joules (J)", "Nanos"] },
+            { q: "1 kJ is equal to...", a: "1000 J", opts: ["1000 J", "100 J", "10 J", "0.001 J"] },
+            { q: "To convert J to kJ, you...", a: "Divide by 1000", opts: ["Divide by 1000", "Multiply by 1000", "Add 1000", "Subtract 1000"] },
+            { q: "High frequency means...", a: "High Energy", opts: ["High Energy", "Low Energy", "Long Wavelength", "Slow Speed"] },
+            { q: "Long wavelength means...", a: "Low Frequency", opts: ["Low Frequency", "High Frequency", "High Energy", "Fast Speed"] },
+            { q: "Visible light with highest energy?", a: "Violet", opts: ["Violet", "Red", "Green", "Yellow"] },
+            { q: "Visible light with longest wavelength?", a: "Red", opts: ["Red", "Violet", "Blue", "Green"] },
+            { q: "Calculate ν if c=3e8 and λ=3e-7?", a: "1 x 10^15 Hz", opts: ["1 x 10^15 Hz", "1 x 10^14 Hz", "9 x 10^1", "3 x 10^15"] },
+            { q: "Packet of light energy is a...", a: "Photon", opts: ["Photon", "Proton", "Electron", "Neutron"] },
+            { q: "Nanometer (nm) is...", a: "10^-9 m", opts: ["10^-9 m", "10^-6 m", "10^-3 m", "10^9 m"] },
+            { q: "As frequency increases, energy...", a: "Increases", opts: ["Increases", "Decreases", "Stays Same", "Stops"] },
+            { q: "Distance between wave peaks?", a: "Wavelength", opts: ["Wavelength", "Frequency", "Amplitude", "Speed"] },
+            { q: "Waves per second is...", a: "Frequency", opts: ["Frequency", "Wavelength", "Speed", "Period"] },
+            { q: "Which has higher energy than visible?", a: "Gamma Rays", opts: ["Gamma Rays", "Radio Waves", "Microwaves", "Infrared"] },
+        
+            // ==================================================================
+            // 5. HEAT TRANSFER (q=mcΔT, Temp, Mass) - 25 Questions
+            // ==================================================================
+            { q: "Symbol for heat energy?", a: "q", opts: ["q", "m", "c", "T"] },
+            { q: "Symbol for specific heat?", a: "c", opts: ["c", "q", "m", "T"] },
+            { q: "Symbol for change in temp?", a: "ΔT", opts: ["ΔT", "Tf", "Ti", "K"] },
+            { q: "Formula for heat transfer?", a: "q = mcΔT", opts: ["q = mcΔT", "q = m/cΔT", "q = c/mΔT", "q = mc"] },
+            { q: "Unit for Specific Heat?", a: "J/g°C", opts: ["J/g°C", "J", "°C", "g"] },
+            { q: "To find Mass (m), arrange formula:", a: "m = q / (cΔT)", opts: ["m = q / (cΔT)", "m = qcΔT", "m = cΔT / q", "m = qΔT / c"] },
+            { q: "To find ΔT, arrange formula:", a: "ΔT = q / (mc)", opts: ["ΔT = q / (mc)", "ΔT = qmc", "ΔT = m / qc", "ΔT = c / qm"] },
+            { q: "Calculating ΔT requires:", a: "T_final - T_initial", opts: ["T_final - T_initial", "T_initial - T_final", "T_final + T_initial", "T_final / T_initial"] },
+            { q: "If q is negative, the process is...", a: "Exothermic", opts: ["Exothermic", "Endothermic", "Isobaric", "Adiabatic"] },
+            { q: "If q is positive, the process is...", a: "Endothermic", opts: ["Endothermic", "Exothermic", "Kinetic", "Potential"] },
+            { q: "Specific heat of water (approx)?", a: "4.18 J/g°C", opts: ["4.18 J/g°C", "1.00 J/g°C", "2.05 J/g°C", "10.0 J/g°C"] },
+            { q: "System releases heat...", a: "Exothermic", opts: ["Exothermic", "Endothermic", "Cold", "Absorption"] },
+            { q: "System absorbs heat...", a: "Endothermic", opts: ["Endothermic", "Exothermic", "Hot", "Release"] },
+            { q: "Temperature measures...", a: "Avg Kinetic Energy", opts: ["Avg Kinetic Energy", "Total Energy", "Heat Flow", "Potential Energy"] },
+            { q: "Heat flows from...", a: "Hot to Cold", opts: ["Hot to Cold", "Cold to Hot", "Low to High", "Solid to Liquid"] },
+            { q: "Solve ΔT: Tf=50, Ti=20", a: "30", opts: ["30", "-30", "70", "25"] },
+            { q: "Solve ΔT: Tf=10, Ti=80", a: "-70", opts: ["-70", "70", "90", "8"] },
+            { q: "High specific heat means...", a: "Resists Temp Change", opts: ["Resists Temp Change", "Heats up Fast", "Cools down Fast", "Conducts well"] },
+            { q: "Low specific heat means...", a: "Changes Temp Easily", opts: ["Changes Temp Easily", "Insulator", "Resists Heat", "Hard to Cool"] },
+            { q: "In calorimetry, -q_metal = ?", a: "q_water", opts: ["q_water", "-q_water", "Mass", "Temp"] },
+            { q: "Unit for q is usually...", a: "Joules", opts: ["Joules", "Grams", "Celsius", "Newtons"] },
+            { q: "1 calorie is equal to...", a: "4.184 J", opts: ["4.184 J", "1 J", "1000 J", "10 J"] },
+            { q: "Phase change diagram: Flat lines?", a: "Potential Energy Change", opts: ["Potential Energy Change", "Kinetic Energy Change", "Cooling", "Heating"] },
+            { q: "Phase change diagram: Sloped lines?", a: "Kinetic Energy Change", opts: ["Kinetic Energy Change", "Potential Energy Change", "Melting", "Boiling"] },
+            { q: "Calorimeter measures...", a: "Heat Transfer", opts: ["Heat Transfer", "Mass", "Density", "Pressure"] },
+        
+            // ==================================================================
+            // 6. A-Z NOTATION (Protons, Neutrons, Electrons) - 25 Questions
+            // ==================================================================
+            { q: "The top number (A) represents...", a: "Mass Number", opts: ["Mass Number", "Atomic Number", "Charge", "Neutrons"] },
+            { q: "The bottom number (Z) represents...", a: "Atomic Number", opts: ["Atomic Number", "Mass Number", "Electrons", "Isotope"] },
+            { q: "Mass Number (A) equals...", a: "Protons + Neutrons", opts: ["Protons + Neutrons", "Protons + Electrons", "Neutrons Only", "Protons Only"] },
+            { q: "Atomic Number (Z) equals...", a: "Protons", opts: ["Protons", "Neutrons", "Mass", "A - Z"] },
+            { q: "Neutrons are calculated by...", a: "A - Z", opts: ["A - Z", "A + Z", "Z - A", "Z * 2"] },
+            { q: "In neutral atoms, electrons equal...", a: "Protons", opts: ["Protons", "Neutrons", "Mass Number", "Zero"] },
+            { q: "Charge is calculated by...", a: "Protons - Electrons", opts: ["Protons - Electrons", "Electrons - Protons", "Neutrons + Protons", "Mass - Number"] },
+            { q: "If Carbon-14 has Z=6, Neutrons?", a: "8", opts: ["8", "6", "14", "20"] },
+            { q: "If Uranium-238 has Z=92, Neutrons?", a: "146", opts: ["146", "92", "238", "330"] },
+            { q: "Proton location?", a: "Nucleus", opts: ["Nucleus", "Orbital", "Shell", "Cloud"] },
+            { q: "Electron location?", a: "Electron Cloud", opts: ["Electron Cloud", "Nucleus", "Center", "Proton"] },
+            { q: "Neutron location?", a: "Nucleus", opts: ["Nucleus", "Orbital", "Valence", "Outside"] },
+            { q: "Proton charge?", a: "+1", opts: ["+1", "-1", "0", "+2"] },
+            { q: "Neutron charge?", a: "0", opts: ["0", "+1", "-1", "+2"] },
+            { q: "Electron charge?", a: "-1", opts: ["-1", "+1", "0", "-2"] },
+            { q: "Mass of Proton (amu)?", a: "1", opts: ["1", "0", "1/1840", "2"] },
+            { q: "Mass of Electron (amu)?", a: "Negligible (~0)", opts: ["Negligible (~0)", "1", "2", "4"] },
+            { q: "Identity of element determined by...", a: "Protons", opts: ["Protons", "Neutrons", "Electrons", "Mass"] },
+            { q: "Symbol for Proton?", a: "p+", opts: ["p+", "e-", "n0", "He"] },
+            { q: "Symbol for Neutron?", a: "n0", opts: ["n0", "p+", "e-", "N"] },
+            { q: "Symbol for Electron?", a: "e-", opts: ["e-", "p+", "n0", "E"] },
+            { q: "An atom with charge -2 has...", a: "Gained 2 e-", opts: ["Gained 2 e-", "Lost 2 e-", "Lost 2 p+", "Gained 2 p+"] },
+            { q: "An atom with charge +3 has...", a: "Lost 3 e-", opts: ["Lost 3 e-", "Gained 3 e-", "Gained 3 p+", "Lost 3 n0"] },
+            { q: "Isotope notation 14_C: 14 is...", a: "Mass Number", opts: ["Mass Number", "Atomic Number", "Neutrons", "Electrons"] },
+            { q: "Nuclear Force holds together...", a: "Protons & Neutrons", opts: ["Protons & Neutrons", "Electrons & Protons", "Electrons", "Ions"] },
+        
+            // ==================================================================
+            // 7. AVERAGE ATOMIC MASS CALCULATION - 25 Questions
+            // ==================================================================
+            { q: "Formula for Avg Atomic Mass?", a: "Σ (Mass x Abundance)", opts: ["Σ (Mass x Abundance)", "(Mass + Mass)/2", "Mass x %", "Total Mass"] },
+            { q: "Abundance must be converted to...", a: "Decimal", opts: ["Decimal", "Percentage", "Whole Number", "Fraction"] },
+            { q: "To convert % to decimal...", a: "Divide by 100", opts: ["Divide by 100", "Multiply by 100", "Add 100", "Subtract 100"] },
+            { q: "Unit for atomic mass?", a: "amu", opts: ["amu", "grams", "kg", "mols"] },
+            { q: "Atomic mass on periodic table is...", a: "Weighted Average", opts: ["Weighted Average", "Mass of most common", "Mass of heaviest", "Integer"] },
+            { q: "Cl-35 (75%) & Cl-37 (25%). Avg?", a: "35.5", opts: ["35.5", "36.0", "35.0", "37.0"] },
+            { q: "B-10 (20%) & B-11 (80%). Avg?", a: "10.8", opts: ["10.8", "10.5", "11.0", "10.2"] },
+            { q: "Mg-24 (80%), Mg-25 (10%), Mg-26 (10%)", a: "24.3", opts: ["24.3", "25.0", "24.0", "26.0"] },
+            { q: "Isotopes affect an element's...", a: "Average Mass", opts: ["Average Mass", "Atomic Number", "Charge", "Chemical Properties"] },
+            { q: "Most common isotope of C (12.01)?", a: "C-12", opts: ["C-12", "C-13", "C-14", "C-11"] },
+            { q: "Most common isotope of H (1.008)?", a: "H-1", opts: ["H-1", "H-2", "H-3", "H-0"] },
+            { q: "Percent abundances must sum to...", a: "100%", opts: ["100%", "50%", "1.0", "10%"] },
+            { q: "Decimal abundances must sum to...", a: "1.0", opts: ["1.0", "100", "10", "0.1"] },
+            { q: "Mass Spectrometry measures...", a: "Isotope Masses", opts: ["Isotope Masses", "Color", "Density", "Volume"] },
+            { q: "Calc: 50% X-10, 50% X-12?", a: "11.0", opts: ["11.0", "10.5", "12.0", "10.0"] },
+            { q: "Calc: 90% Y-20, 10% Y-22?", a: "20.2", opts: ["20.2", "21.0", "20.0", "22.0"] },
+            { q: "Calc: 95% Z-14, 5% Z-15?", a: "14.05", opts: ["14.05", "14.5", "14.95", "15.0"] },
+            { q: "Avg Mass is usually NOT a...", a: "Whole Number", opts: ["Whole Number", "Decimal", "Value", "Measurement"] },
+            { q: "Cu-63 is 69%, Cu-65 is 31%.", a: "63.62", opts: ["63.62", "64.00", "63.00", "65.00"] },
+            { q: "Why is mass not a whole number?", a: "Isotopes exist", opts: ["Isotopes exist", "Electron mass", "Proton variation", "Errors"] },
+            { q: "If Avg Mass is near isotope A...", a: "A is abundant", opts: ["A is abundant", "A is rare", "A is heavy", "A is light"] },
+            { q: "Relative abundance means...", a: "Percentage found", opts: ["Percentage found", "Weight", "Size", "Reactivity"] },
+            { q: "Symbol for Atomic Mass Unit?", a: "u or amu", opts: ["u or amu", "g", "kg", "mol"] },
+            { q: "Standard for amu is based on...", a: "Carbon-12", opts: ["Carbon-12", "Hydrogen-1", "Oxygen-16", "Helium-4"] },
+            { q: "1 amu is defined as...", a: "1/12 mass of C-12", opts: ["1/12 mass of C-12", "Mass of H", "Mass of Neutron", "1 g"] },
+        
+            // ==================================================================
+            // 8. ALPHA AND BETA DECAY - 25 Questions
+            // ==================================================================
+            { q: "Symbol for Alpha particle?", a: "4/2 He", opts: ["4/2 He", "0/-1 e", "0/0 y", "1/1 H"] },
+            { q: "Symbol for Beta particle?", a: "0/-1 e", opts: ["0/-1 e", "4/2 He", "1/0 n", "0/0 y"] },
+            { q: "Symbol for Gamma ray?", a: "0/0 γ", opts: ["0/0 γ", "4/2 He", "0/-1 e", "1/1 p"] },
+            { q: "Alpha decay changes mass by...", a: "-4", opts: ["-4", "0", "+4", "-2"] },
+            { q: "Alpha decay changes Z by...", a: "-2", opts: ["-2", "-4", "+1", "0"] },
+            { q: "Beta decay changes mass by...", a: "0", opts: ["0", "-4", "+1", "-1"] },
+            { q: "Beta decay changes Z by...", a: "+1", opts: ["+1", "-1", "-2", "0"] },
+            { q: "Most penetrating radiation?", a: "Gamma", opts: ["Gamma", "Beta", "Alpha", "X-ray"] },
+            { q: "Least penetrating radiation?", a: "Alpha", opts: ["Alpha", "Beta", "Gamma", "UV"] },
+            { q: "Stopped by paper/skin?", a: "Alpha", opts: ["Alpha", "Beta", "Gamma", "Neutron"] },
+            { q: "Stopped by aluminum foil?", a: "Beta", opts: ["Beta", "Alpha", "Gamma", "Proton"] },
+            { q: "Stopped by thick lead?", a: "Gamma", opts: ["Gamma", "Alpha", "Beta", "Positron"] },
+            { q: "Beta particle is essentially a...", a: "Electron", opts: ["Electron", "Helium Nucleus", "Photon", "Neutron"] },
+            { q: "Alpha particle is essentially a...", a: "Helium Nucleus", opts: ["Helium Nucleus", "Electron", "Photon", "Proton"] },
+            { q: "Gamma ray is essentially...", a: "Energy", opts: ["Energy", "Matter", "Electron", "Proton"] },
+            { q: "U-238 emits Alpha. New Element?", a: "Th-234", opts: ["Th-234", "U-234", "Pu-242", "Pa-239"] },
+            { q: "C-14 emits Beta. New Element?", a: "N-14", opts: ["N-14", "C-13", "B-14", "O-14"] },
+            { q: "During Beta decay, neutron turns to...", a: "Proton + Electron", opts: ["Proton + Electron", "Alpha", "Gamma", "Nothing"] },
+            { q: "Positron symbol?", a: "0/+1 e", opts: ["0/+1 e", "0/-1 e", "4/2 He", "1/0 n"] },
+            { q: "Conservation law in nuclear eq?", a: "Mass # & Charge", opts: ["Mass # & Charge", "Only Mass", "Only Charge", "Energy"] },
+            { q: "Half-life represents...", a: "Time for 50% decay", opts: ["Time for 50% decay", "Total life", "Avg life", "Decay speed"] },
+            { q: "Ra-226 alpha decay produces...", a: "Rn-222", opts: ["Rn-222", "Fr-226", "Ac-226", "Ra-222"] },
+            { q: "I-131 beta decay produces...", a: "Xe-131", opts: ["Xe-131", "Te-131", "I-130", "Sb-127"] },
+            { q: "Nuclear Fission is...", a: "Splitting Nuclei", opts: ["Splitting Nuclei", "Combining Nuclei", "Electron loss", "Oxidation"] },
+            { q: "Nuclear Fusion is...", a: "Combining Nuclei", opts: ["Combining Nuclei", "Splitting Nuclei", "Decay", "Burning"] },
+        
+            // ==================================================================
+            // 9. MORE RULES (Aufbau, Hund, Heisenberg) - 25 Questions
+            // ==================================================================
+            { q: "Electrons fill lowest energy first?", a: "Aufbau Principle", opts: ["Aufbau Principle", "Hund's Rule", "Pauli Exclusion", "Octet Rule"] },
+            { q: "One e- per orbital before pairing?", a: "Hund's Rule", opts: ["Hund's Rule", "Aufbau Principle", "Pauli Exclusion", "Bohr Model"] },
+            { q: "Impossible to know pos & speed?", a: "Heisenberg Uncertainty", opts: ["Heisenberg Uncertainty", "Schrodinger Eq", "Planck's Law", "Bohr's Law"] },
+            { q: "No two e- have same 4 quantum #'s?", a: "Pauli Exclusion", opts: ["Pauli Exclusion", "Hund's Rule", "Aufbau", "Octet"] },
+            { q: "Atoms want 8 valence electrons?", a: "Octet Rule", opts: ["Octet Rule", "Duet Rule", "Aufbau", "Hund"] },
+            { q: "Exception to Octet rule (needs 2)?", a: "Hydrogen", opts: ["Hydrogen", "Carbon", "Oxygen", "Neon"] },
+            { q: "Shape of 's' orbital?", a: "Sphere", opts: ["Sphere", "Dumbbell", "Clover", "Complex"] },
+            { q: "Shape of 'p' orbital?", a: "Dumbbell", opts: ["Dumbbell", "Sphere", "Clover", "Donut"] },
+            { q: "Shape of 'd' orbital?", a: "Clover", opts: ["Clover", "Sphere", "Dumbbell", "Line"] },
+            { q: "Max electrons in 's' subshell?", a: "2", opts: ["2", "6", "10", "14"] },
+            { q: "Max electrons in 'p' subshell?", a: "6", opts: ["6", "2", "10", "14"] },
+            { q: "Max electrons in 'd' subshell?", a: "10", opts: ["10", "6", "2", "14"] },
+            { q: "Max electrons in 'f' subshell?", a: "14", opts: ["14", "10", "6", "2"] },
+            { q: "Principal Quantum Number symbol?", a: "n", opts: ["n", "l", "ml", "ms"] },
+            { q: "Electron Configuration for He?", a: "1s2", opts: ["1s2", "1s1", "2s2", "1p2"] },
+            { q: "Valence e- in 1s2 2s2 2p5?", a: "7", opts: ["7", "5", "2", "9"] },
+            { q: "Outer shell for Period 3?", a: "n=3", opts: ["n=3", "n=2", "n=1", "n=4"] },
+            { q: "Cr and Cu are exceptions to...", a: "Aufbau Principle", opts: ["Aufbau Principle", "Pauli Exclusion", "Hund", "Octet"] },
+            { q: "Noble Gas notation uses...", a: "Previous Noble Gas", opts: ["Previous Noble Gas", "Next Noble Gas", "First Element", "Halogen"] },
+            { q: "Spin quantum number values?", a: "+1/2, -1/2", opts: ["+1/2, -1/2", "0, 1", "1, 2", "Pos, Neg"] },
+            { q: "Total orbitals in p-sublevel?", a: "3", opts: ["3", "1", "5", "7"] },
+            { q: "Total orbitals in d-sublevel?", a: "5", opts: ["5", "3", "1", "7"] },
+            { q: "Lewis structures show...", a: "Valence Electrons", opts: ["Valence Electrons", "All Electrons", "Protons", "Neutrons"] },
+            { q: "Ground state means...", a: "Lowest Energy", opts: ["Lowest Energy", "Highest Energy", "Excited", "Unstable"] },
+            { q: "Excited state means...", a: "Higher Energy Level", opts: ["Higher Energy Level", "Ground State", "Nucleus", "Bonding"] },
+        
+            // ==================================================================
+            // 10. HISTORY OF PERIODIC TABLE & MODELS - 25 Questions
+            // ==================================================================
+            { q: "Solid Sphere Model proposed by...", a: "Dalton", opts: ["Dalton", "Thomson", "Rutherford", "Bohr"] },
+            { q: "Plum Pudding Model proposed by...", a: "Thomson", opts: ["Thomson", "Dalton", "Rutherford", "Chadwick"] },
+            { q: "Nuclear Model proposed by...", a: "Rutherford", opts: ["Rutherford", "Thomson", "Bohr", "Schrodinger"] },
+            { q: "Planetary Model proposed by...", a: "Bohr", opts: ["Bohr", "Rutherford", "Dalton", "Heisenberg"] },
+            { q: "Quantum Mechanical Model by...", a: "Schrodinger", opts: ["Schrodinger", "Bohr", "Newton", "Mendeleev"] },
+            { q: "Discovered the Electron?", a: "Thomson", opts: ["Thomson", "Rutherford", "Millikan", "Chadwick"] },
+            { q: "Discovered the Nucleus?", a: "Rutherford", opts: ["Rutherford", "Thomson", "Bohr", "Curie"] },
+            { q: "Discovered the Neutron?", a: "Chadwick", opts: ["Chadwick", "Rutherford", "Thomson", "Goldstein"] },
+            { q: "Experiment: Gold Foil?", a: "Rutherford", opts: ["Rutherford", "Thomson", "Millikan", "Bohr"] },
+            { q: "Experiment: Cathode Ray Tube?", a: "Thomson", opts: ["Thomson", "Rutherford", "Dalton", "Millikan"] },
+            { q: "Experiment: Oil Drop?", a: "Millikan", opts: ["Millikan", "Thomson", "Rutherford", "Einstein"] },
+            { q: "Father of Periodic Table?", a: "Mendeleev", opts: ["Mendeleev", "Moseley", "Newlands", "Lavoisier"] },
+            { q: "Mendeleev ordered table by...", a: "Atomic Mass", opts: ["Atomic Mass", "Atomic Number", "Density", "Date"] },
+            { q: "Modern table ordered by...", a: "Atomic Number", opts: ["Atomic Number", "Atomic Mass", "Size", "Alpha"] },
+            { q: "Who reordered table by Atomic #?", a: "Moseley", opts: ["Moseley", "Mendeleev", "Seaborg", "Curie"] },
+            { q: "Law of Octaves proposed by...", a: "Newlands", opts: ["Newlands", "Mendeleev", "Meyer", "Dobereiner"] },
+            { q: "Concept of 'Triads'?", a: "Dobereiner", opts: ["Dobereiner", "Newlands", "Moseley", "Bohr"] },
+            { q: "Ancient concept of 4 elements?", a: "Aristotle", opts: ["Aristotle", "Democritus", "Dalton", "Plato"] },
+            { q: "First proposed 'Atomos'?", a: "Democritus", opts: ["Democritus", "Aristotle", "Dalton", "Newton"] },
+            { q: "Bohr model works best for...", a: "Hydrogen", opts: ["Hydrogen", "Gold", "Uranium", "Multi-electron"] },
+            { q: "Rutherford proved atom is mostly...", a: "Empty Space", opts: ["Empty Space", "Solid", "Positive", "Negative"] },
+            { q: "Mendeleev predicted properties of...", a: "Undiscovered Elements", opts: ["Undiscovered Elements", "Electrons", "Protons", "Isotopes"] },
+            { q: "Discovered Polonium & Radium?", a: "Marie Curie", opts: ["Marie Curie", "Mendeleev", "Rutherford", "Becquerel"] },
+            { q: "Actinide series moved by...", a: "Seaborg", opts: ["Seaborg", "Mendeleev", "Moseley", "Pauling"] },
+            { q: "Wave-Particle Duality?", a: "De Broglie", opts: ["De Broglie", "Bohr", "Newton", "Dalton"] }
         ];
-
+                
         const orbitalKeys = ["1s", "2s", "2p", "3s", "3p", "4s", "3d", "4p", "5s", "4d", "5p"];
         const nobleGases = [{z:2,s:"He"},{z:10,s:"Ne"},{z:18,s:"Ar"},{z:36,s:"Kr"},{z:54,s:"Xe"}];
 
