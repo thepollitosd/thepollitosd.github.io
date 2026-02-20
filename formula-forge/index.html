@@ -2,359 +2,326 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Formula Forge</title>
-    <link rel="icon" type="image/png" href="/public/favicon/favicon-96x96.png" sizes="96x96" />
-    <link rel="icon" type="image/svg+xml" href="/public/favicon/favicon.svg" />
-    <link rel="shortcut icon" href="/public/favicon/favicon.ico" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/public/favicon/apple-touch-icon.png" />
-    <meta name="apple-mobile-web-app-title" content="Formula Forge" />
-    <link rel="manifest" href="/public/favicon/site.webmanifest" />
+    <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/1233/1233368.png" />
     
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Space+Grotesk:wght@300;500;700&display=swap');
 
         :root {
-            --bg-light: #f8fafc;
-            --text-main: #334155;
-            --accent-main: #10b981; /* Emerald */
-            --accent-shadow: rgba(16, 185, 129, 0.25);
+            --bg-light: #f0fdfa;
+            --text-main: #0f172a;
+            --accent-main: #059669; /* Emerald 600 */
+            --accent-hover: #047857; /* Emerald 700 */
         }
 
         *, *::before, *::after {
-            user-select: none;
-            box-sizing: border-box;
+            user-select: none; box-sizing: border-box; -webkit-tap-highlight-color: transparent;
         }
 
         body {
-            background-color: var(--bg-light);
-            color: var(--text-main);
+            background-color: var(--bg-light); color: var(--text-main);
             font-family: 'Outfit', sans-serif;
-            overflow: hidden;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
+            height: 100vh; height: -webkit-fill-available;
+            overflow: hidden; display: flex; flex-direction: column;
         }
 
         .font-mono-display { font-family: 'Space Grotesk', monospace; }
-        .custom-scroll::-webkit-scrollbar { width: 6px; }
+        .custom-scroll::-webkit-scrollbar { width: 4px; height: 4px; }
         .custom-scroll::-webkit-scrollbar-track { background: transparent; }
-        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
 
-        .fade-in { animation: fadeIn 0.4s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        /* Animations */
+        .fade-in { animation: fadeIn 0.3s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .shake { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; }
+        @keyframes shake { 10%, 90% { transform: translate3d(-1px, 0, 0); } 20%, 80% { transform: translate3d(2px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-4px, 0, 0); } 40%, 60% { transform: translate3d(4px, 0, 0); } }
 
-        /* MODALS & DASHBOARD */
+        .pulse-green { animation: pulseGreen 1s cubic-bezier(0.4, 0, 0.6, 1); }
+        @keyframes pulseGreen { 0%, 100% { box-shadow: 0 0 0 0 rgba(5, 150, 105, 0.7); } 50% { box-shadow: 0 0 0 10px rgba(5, 150, 105, 0); } }
+
+        /* UI Elements */
         .modal-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(248, 250, 252, 0.95); backdrop-filter: blur(8px);
-            z-index: 100; display: none; flex-direction: column; align-items: center; justify-content: center;
+            position: fixed; inset: 0; z-index: 100;
+            background: rgba(240, 253, 250, 0.8); /* Light emerald tint with opacity */
+            backdrop-filter: blur(12px); /* The blur effect */
+            -webkit-backdrop-filter: blur(12px);
+            display: none; flex-direction: column; align-items: center; justify-content: center;
         }
         .modal-overlay.active { display: flex; animation: fadeIn 0.3s ease-out; }
-        
-        /* PERIODIC GRID */
+
+        /* Main Content Blur Wrapper */
+        #main-content-wrapper { transition: filter 0.3s; height: 100%; display: flex; flex-direction: column; }
+        body.modal-open #main-content-wrapper { filter: blur(6px) grayscale(0.2); pointer-events: none; }
+
+        /* Periodic Grid */
+        .periodic-container {
+            overflow-x: auto; -webkit-overflow-scrolling: touch;
+            background: #e2e8f0; border-radius: 12px; padding: 4px;
+        }
         .periodic-grid {
-            display: grid;
-            grid-template-columns: repeat(18, minmax(0, 1fr));
-            grid-template-rows: repeat(10, minmax(0, 1fr));
-            gap: 2px;
-            background: #e2e8f0;
-            padding: 4px;
-            border-radius: 8px;
-            height: 100%;
+            display: grid; grid-template-columns: repeat(18, minmax(36px, 1fr)); grid-template-rows: repeat(10, minmax(36px, 1fr));
+            gap: 2px; min-width: 700px; /* Ensures it doesn't squish on mobile */
         }
         .elem-btn {
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            font-size: 0.65rem; font-weight: bold; border-radius: 3px; transition: transform 0.1s, box-shadow 0.1s;
-            cursor: pointer; background: white;
-            min-height: 24px;
+            position: relative; aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            border-radius: 4px; transition: transform 0.1s, box-shadow 0.1s, background 0.2s; cursor: pointer; background: white;
+            border: 1px solid transparent;
         }
-        @media (min-width: 1024px) {
-            .elem-btn { font-size: 0.75rem; min-height: 32px; }
-        }
-        .elem-btn:hover { transform: scale(1.2); z-index: 10; box-shadow: 0 4px 10px rgba(0,0,0,0.15); }
+        @media (hover: hover) { .elem-btn:hover { transform: scale(1.15); z-index: 10; box-shadow: 0 4px 10px rgba(0,0,0,0.15); } }
+        .elem-btn .num { position: absolute; top: 2px; left: 2px; font-size: 0.5rem; opacity: 0.7; }
+        .elem-btn .sym { font-size: 0.8rem; font-weight: 800; }
         
-        /* Element Type Colors */
-        .elem-btn.metal { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
-        .elem-btn.nonmetal { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
-        .elem-btn.metalloid { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
-        .elem-btn.noble { background: #fdf4ff; color: #86198f; border: 1px solid #f5d0fe; }
+        .elem-btn.metal { background: #eff6ff; color: #1e40af; border-color: #bfdbfe; }
+        .elem-btn.nonmetal { background: #fef2f2; color: #991b1b; border-color: #fecaca; }
+        .elem-btn.metalloid { background: #f0fdf4; color: #15803d; border-color: #bbf7d0; }
+        .elem-btn.noble { background: #faf5ff; color: #6b21a8; border-color: #e9d5ff; }
         .elem-btn.empty { background: transparent; pointer-events: none; border: none; }
 
-        /* BUILDER TRAY */
+        /* Builder Tray (Light Mode) */
         .builder-slot {
-            background: white; border: 2px dashed #cbd5e1; border-radius: 12px;
-            min-width: 130px; height: 120px; display: flex; flex-direction: column;
+            background: white; border: 2px dashed #cbd5e1; border-radius: 16px;
+            min-width: 100px; height: 110px; display: flex; flex-direction: column;
             align-items: center; justify-content: center; position: relative;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
         }
-        .builder-slot.active { border: 2px solid var(--accent-main); }
+        @media (min-width: 768px) { .builder-slot { min-width: 130px; height: 130px; } }
+        .builder-slot.active { border: 2px solid var(--accent-main); background: #f0fdfa; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
         
         .poly-btn {
-            width: 100%; text-align: left; padding: 8px 12px; border-radius: 8px;
-            background: white; border: 1px solid #e2e8f0; margin-bottom: 4px;
-            font-size: 0.8rem; transition: all 0.2s;
+            width: 100%; text-align: left; padding: 10px 12px; border-radius: 8px;
+            background: white; border: 1px solid #e2e8f0; margin-bottom: 6px;
+            font-size: 0.85rem; transition: all 0.2s; display: flex; justify-content: space-between; align-items: center;
         }
-        .poly-btn:hover { border-color: var(--accent-main); background: #f0fdf4; }
-
-        #charge-overlay { backdrop-filter: blur(4px); background: rgba(255,255,255,0.8); }
+        @media (hover: hover) { .poly-btn:hover { border-color: var(--accent-main); background: #f0fdfa; transform: translateX(2px); } }
+        .poly-btn:active { background: #ccfbf1; }
     </style>
 </head>
-<body class="p-2 md:p-4">
+<body>
 
-    <div id="dashboard" class="modal-overlay active p-4">
-        <div class="text-center w-full flex-none mb-8">
-            <div class="inline-block w-16 h-16 bg-gradient-to-br from-emerald-400 to-teal-600 rounded-2xl flex items-center justify-center text-white font-bold text-3xl shadow-lg mb-4">F</div>
-            <h1 class="text-4xl font-black text-slate-800 tracking-tighter">FORMULA <span class="text-emerald-500">FORGE</span></h1>
-            <p class="text-xs font-bold text-slate-500 uppercase tracking-widest mt-2">Honors Builder Edition</p>
+    <div id="dashboard" class="modal-overlay active p-6">
+        <div class="text-center w-full flex-none mb-8 fade-in">
+            <div class="inline-block w-20 h-20 bg-gradient-to-br from-emerald-400 to-teal-600 rounded-3xl flex items-center justify-center text-white font-bold text-4xl shadow-xl mb-4">F</div>
+            <h1 class="text-5xl font-black text-slate-800 tracking-tighter">FORMULA <span class="text-emerald-600">FORGE</span></h1>
+            <p class="text-sm font-bold text-slate-500 uppercase tracking-widest mt-2">Mobile Builder Edition</p>
         </div>
 
-        <div class="w-full max-w-md flex flex-col gap-4">
-            <button onclick="hideDashboard()" class="w-full py-4 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-bold tracking-widest shadow-lg transition-all active:scale-95">LAUNCH BUILDER</button>
-            <button onclick="showVersionHistory()" class="w-full py-4 bg-white border-2 border-slate-200 text-slate-600 hover:border-emerald-500 hover:text-emerald-600 rounded-xl font-bold tracking-widest transition-all">VERSION HISTORY</button>
+        <div class="w-full max-w-xs flex flex-col gap-4 fade-in" style="animation-delay: 0.1s">
+            <button onclick="hideDashboard()" class="w-full py-5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-bold tracking-widest shadow-lg transition-all active:scale-[0.98] text-lg">START BUILDING</button>
         </div>
-
-        <div class="absolute bottom-4 left-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Build 1.5.0 (Full Elements)</div>
+        <div class="absolute bottom-6 text-[10px] font-bold text-slate-400 uppercase tracking-widest">v2.0 Mobile Redux</div>
     </div>
 
-    <div id="version-history" class="modal-overlay p-4">
-        <div class="bg-white p-8 rounded-3xl shadow-2xl border border-slate-200 max-w-lg w-full max-h-[80vh] flex flex-col relative">
-            <button onclick="closeVersionHistory()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 p-2 text-xl">&times;</button>
-            <h2 class="text-2xl font-black text-slate-800 mb-6">Version History</h2>
-            <div class="overflow-y-auto custom-scroll pr-2 flex-grow space-y-6">
-                <div>
-                    <h3 class="font-bold text-emerald-600 mb-1">v1.5.0 - Complete Periodic Table</h3>
-                    <ul class="text-sm text-slate-600 list-disc pl-4 space-y-1">
-                        <li>Expanded element database to all 118 elements.</li>
-                        <li>Added Lanthanide & Actinide series layout.</li>
-                        <li>UI scaling adjustments to fit 10-row grid seamlessly.</li>
-                        <li>Added Noble Gas categorizations.</li>
-                    </ul>
-                </div>
-                <div>
-                    <h3 class="font-bold text-slate-400 mb-1">v1.4.0 - Builder Interface Update</h3>
-                    <ul class="text-sm text-slate-500 list-disc pl-4 space-y-1">
-                        <li>Rebuilt UI to match Orbital Overdrive architecture.</li>
-                        <li>Subscript dropdown selectors added to builder tray.</li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <nav class="flex-none flex flex-col md:flex-row justify-between items-center bg-white p-3 rounded-2xl shadow-sm border border-slate-200 mb-4 mx-auto w-full max-w-[1400px] gap-2">
-        <div class="flex items-center gap-3">
-            <button onclick="showDashboard()" class="p-2 rounded-lg hover:bg-slate-50 text-slate-400 transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
-            </button>
-            <div class="leading-tight cursor-pointer" onclick="showDashboard()">
-                <h1 class="text-xl font-bold tracking-tight text-slate-800">FORMULA <span class="text-emerald-500">FORGE</span></h1>
-                <p class="text-[10px] text-emerald-500 font-bold uppercase tracking-wider">Builder Mode</p>
-            </div>
-        </div>
-        
-        <div class="flex gap-4 md:gap-8 text-center bg-slate-50 p-2 rounded-xl border border-slate-100 px-6">
-            <div>
-                <p class="text-[10px] text-slate-400 font-bold uppercase">Streak</p>
-                <p id="streak-val" class="text-lg font-mono-display font-bold text-amber-500">0</p>
-            </div>
-            <div>
-                <p class="text-[10px] text-slate-400 font-bold uppercase">Score</p>
-                <p id="score-val" class="text-lg font-mono-display font-bold text-emerald-500">0</p>
-            </div>
-            <div>
-                <p class="text-[10px] text-slate-400 font-bold uppercase">Level</p>
-                <p id="level-val" class="text-lg font-mono-display font-bold text-blue-500">1</p>
-            </div>
-        </div>
-    </nav>
-
-    <div class="flex-grow grid grid-cols-1 lg:grid-cols-12 gap-4 max-w-[1400px] mx-auto w-full overflow-hidden">
-        
-        <div class="lg:col-span-8 flex flex-col gap-4 h-full overflow-hidden">
-            <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex-grow flex flex-col h-full">
-                <div class="flex justify-between items-center mb-3 flex-none">
-                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest">Interactive Elements</h3>
-                    <div class="flex gap-3 text-[10px] font-bold">
-                        <span class="flex items-center gap-1"><div class="w-2 h-2 rounded bg-blue-100 border border-blue-200"></div> Metals</span>
-                        <span class="flex items-center gap-1"><div class="w-2 h-2 rounded bg-red-100 border border-red-200"></div> Non-Metals</span>
-                        <span class="flex items-center gap-1"><div class="w-2 h-2 rounded bg-green-100 border border-green-200"></div> Metalloids</span>
-                        <span class="flex items-center gap-1"><div class="w-2 h-2 rounded bg-fuchsia-100 border border-fuchsia-200"></div> Noble Gases</span>
+    <div id="main-content-wrapper" class="p-2 md:p-4">
+        <nav class="flex-none flex flex-col md:flex-row justify-between items-center bg-white p-3 rounded-2xl shadow-sm border border-slate-100 mb-3 mx-auto w-full max-w-[1400px] gap-2">
+            <div class="flex items-center gap-3 w-full md:w-auto justify-between md:justify-start">
+                <div class="flex items-center gap-3">
+                    <button onclick="showDashboard()" class="p-2 rounded-xl bg-slate-50 text-slate-400 hover:bg-slate-100 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
+                    </button>
+                    <div class="leading-tight" onclick="showDashboard()">
+                        <h1 class="text-lg font-bold tracking-tight text-slate-800">FORMULA <span class="text-emerald-600">FORGE</span></h1>
                     </div>
                 </div>
-                <div id="periodic-table" class="periodic-grid flex-grow">
-                    </div>
+                <select id="mode-select" onchange="changeMode(this.value)" class="md:hidden bg-slate-50 text-xs font-bold text-slate-600 py-2 px-3 rounded-xl border border-slate-200 outline-none">
+                    <option value="simple">Mode: Simple Ionic</option>
+                    <option value="transition">Mode: Transition Metals</option>
+                    <option value="poly">Mode: Polyatomic Mastery</option>
+                </select>
             </div>
-
-            <div class="bg-slate-800 p-4 lg:p-6 rounded-2xl shadow-lg flex flex-col gap-4 flex-none border border-slate-700">
-                <div class="flex justify-between items-center">
-                    <h3 class="text-xs font-bold text-emerald-400 uppercase tracking-widest">Assembly Tray</h3>
-                    <button onclick="clearTray()" class="text-[10px] text-white/50 hover:text-white underline uppercase tracking-wider transition-colors">Reset Tray</button>
-                </div>
-                <div id="builder-tray" class="flex gap-4 items-center justify-center min-h-[130px]">
-                    </div>
-                <button onclick="checkFormula()" class="w-full bg-emerald-500 hover:bg-emerald-400 text-white font-bold py-3.5 rounded-xl tracking-widest transition-all active:scale-[0.98]">
-                    VERIFY STRUCTURE
-                </button>
-            </div>
-        </div>
-
-        <div class="lg:col-span-4 flex flex-col gap-4 h-full overflow-hidden relative">
             
-            <div id="target-card" class="bg-white p-6 rounded-2xl shadow-sm border-2 border-emerald-400 text-center relative flex-none">
-                <p class="text-[10px] font-bold text-emerald-500 uppercase tracking-widest mb-1">Target Compound</p>
-                <h2 id="target-name" class="text-2xl font-black text-slate-800 leading-tight">...</h2>
+            <div class="flex gap-4 text-center bg-slate-50 p-2 rounded-xl border border-slate-100 px-4 w-full md:w-auto justify-center">
+                <div><p class="text-[9px] text-slate-400 font-bold uppercase">Streak</p><p id="streak-val" class="text-lg font-mono-display font-bold text-amber-500 leading-none">0</p></div>
+                <div><p class="text-[9px] text-slate-400 font-bold uppercase">Score</p><p id="score-val" class="text-lg font-mono-display font-bold text-emerald-600 leading-none">0</p></div>
             </div>
+        </nav>
 
-            <div id="info-panel" class="hidden absolute top-0 left-0 w-full bg-emerald-50 border-2 border-emerald-400 p-6 rounded-2xl shadow-lg z-20 flex-col items-center justify-center text-center fade-in">
-                <h4 class="text-xl font-black text-emerald-800 mb-1" id="info-title">Structure Verified!</h4>
-                <p class="text-sm font-bold text-emerald-600 mb-4" id="info-desc"></p>
-                <button onclick="nextLevel()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold w-full py-3 rounded-xl transition-colors tracking-widest text-sm">NEXT COMPOUND →</button>
-            </div>
-
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col flex-grow overflow-hidden">
-                <div class="p-3 border-b border-slate-100 bg-slate-50 flex-none">
-                    <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest">Polyatomic Library</h3>
+        <div class="flex-grow flex flex-col lg:grid lg:grid-cols-12 gap-3 h-full overflow-hidden max-w-[1400px] mx-auto w-full relative">
+            
+            <div class="lg:col-span-8 flex flex-col gap-3 h-[60vh] lg:h-full min-h-[400px]">
+                <div class="bg-white px-4 py-2 rounded-t-2xl border-x border-t border-slate-100 flex justify-between items-center text-xs font-bold text-slate-500 flex-none">
+                    <span id="hover-info">Tap/Hover an element for details</span>
+                    <select onchange="changeMode(this.value)" class="hidden md:block bg-slate-50 text-xs font-bold text-slate-600 py-1 px-2 rounded-lg border border-slate-200 outline-none cursor-pointer hover:border-emerald-400 transition-colors">
+                        <option value="simple">Mode: Simple Ionic</option>
+                        <option value="transition">Mode: Transition Metals</option>
+                        <option value="poly">Mode: Polyatomic Mastery</option>
+                    </select>
                 </div>
-                <div id="poly-list" class="flex-grow overflow-y-auto p-3 custom-scroll">
+
+                <div class="bg-white p-2 rounded-b-2xl shadow-sm border border-slate-100 flex-grow flex flex-col overflow-hidden">
+                    <div class="periodic-container flex-grow custom-scroll">
+                        <div id="periodic-table" class="periodic-grid">
+                            </div>
                     </div>
+                    <div class="flex gap-3 text-[9px] font-bold justify-center mt-2 flex-none flex-wrap px-2">
+                        <span class="flex items-center gap-1"><div class="w-2 h-2 rounded-full bg-blue-200"></div> Metals</span>
+                        <span class="flex items-center gap-1"><div class="w-2 h-2 rounded-full bg-red-200"></div> Non-Metals</span>
+                        <span class="flex items-center gap-1"><div class="w-2 h-2 rounded-full bg-green-200"></div> Metalloids</span>
+                        <span class="flex items-center gap-1"><div class="w-2 h-2 rounded-full bg-purple-200"></div> Noble Gases</span>
+                    </div>
+                </div>
+
+                <div id="tray-container" class="bg-white p-3 lg:p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col gap-3 flex-none">
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-xs font-black text-emerald-600 uppercase tracking-widest">Assembly Tray</h3>
+                        <button onclick="clearTray()" class="text-[10px] font-bold text-slate-400 hover:text-red-500 uppercase tracking-wider transition-colors px-2 py-1 rounded hover:bg-slate-50">Reset Tray</button>
+                    </div>
+                    <div id="builder-tray" class="flex gap-2 lg:gap-4 items-center justify-center">
+                        </div>
+                    <button onclick="checkFormula()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 lg:py-4 rounded-xl tracking-widest transition-all active:scale-[0.97] shadow-md text-sm lg:text-base">
+                        VERIFY STRUCTURE
+                    </button>
+                </div>
+            </div>
+
+            <div class="lg:col-span-4 flex flex-col gap-3 h-[35vh] lg:h-full min-h-[250px] relative">
+                
+                <div id="target-card" class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 text-center relative flex-none flex flex-col items-center justify-center transition-all">
+                    <div class="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-emerald-400 to-teal-500 rounded-t-2xl"></div>
+                    <div class="flex justify-between w-full items-center mb-2">
+                         <p class="text-[10px] font-bold text-emerald-600 uppercase tracking-widest flex-grow text-center pl-8">Target Compound</p>
+                         <button onclick="skipProblem()" class="text-slate-300 hover:text-slate-500 transition-colors p-1" title="Skip Problem">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                         </button>
+                    </div>
+                    <h2 id="target-name" class="text-xl lg:text-2xl font-black text-slate-800 leading-tight px-2">Loading...</h2>
+                </div>
+
+                <div id="info-panel" class="hidden absolute inset-0 bg-emerald-50/95 backdrop-blur-sm border-2 border-emerald-400 p-6 rounded-2xl z-20 flex-col items-center justify-center text-center fade-in">
+                    <div class="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center text-2xl mb-2">🎉</div>
+                    <h4 class="text-xl font-black text-emerald-800 mb-1">Excellent!</h4>
+                    <p class="text-2xl font-mono-display font-bold text-emerald-600 mb-6" id="info-desc"></p>
+                    <button onclick="nextLevel()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold w-full py-3 rounded-xl transition-colors tracking-widest text-sm shadow-lg">NEXT COMPOUND</button>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 flex flex-col flex-grow overflow-hidden">
+                    <div class="p-3 border-b border-slate-50 bg-slate-50/50 flex-none">
+                        <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest">Polyatomic Ions</h3>
+                    </div>
+                    <div id="poly-list" class="flex-grow overflow-y-auto p-2 custom-scroll">
+                        </div>
+                </div>
             </div>
         </div>
     </div>
 
-    <div id="charge-overlay" class="fixed inset-0 z-50 flex items-center justify-center hidden">
-        <div class="bg-white p-8 rounded-3xl shadow-2xl border border-slate-200 text-center max-w-md w-full fade-in relative">
-            <button onclick="document.getElementById('charge-overlay').classList.add('hidden')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 font-bold text-xl">&times;</button>
-            <p id="charge-title" class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Select Oxidation State</p>
-            <div id="charge-options" class="grid grid-cols-2 gap-3 max-h-64 overflow-y-auto custom-scroll pr-2">
+    <div id="charge-overlay" class="modal-overlay p-4" style="z-index: 110;">
+        <div class="bg-white p-6 rounded-3xl shadow-2xl border border-slate-100 text-center max-w-sm w-full fade-in relative">
+            <button onclick="closeChargePicker()" class="absolute top-3 right-3 text-slate-300 hover:text-slate-500 font-bold p-2">&times;</button>
+            <h3 id="charge-title" class="text-sm font-black text-slate-700 uppercase tracking-widest mb-4">Select State</h3>
+            <div id="charge-options" class="grid grid-cols-2 gap-3">
                 </div>
         </div>
     </div>
 
     <script>
-        // --- UI TOGGLES ---
-        function showDashboard() { document.getElementById('dashboard').classList.add('active'); }
-        function hideDashboard() { document.getElementById('dashboard').classList.remove('active'); }
-        function showVersionHistory() { document.getElementById('version-history').classList.add('active'); }
-        function closeVersionHistory() { document.getElementById('version-history').classList.remove('active'); }
-
-        // --- FULL 118 ELEMENT DATABASE ---
-        // Format: {sym, n (name), x (group 1-18), y (period 1-10, where 9=Lanthanides, 10=Actinides), c [charges], t (type)}
-        const elements = [
-            // Period 1
-            {sym:"H",n:"Hydrogen",x:1,y:1,c:[1,-1],t:"nonmetal"}, {sym:"He",n:"Helium",x:18,y:1,c:[0],t:"noble"},
-            // Period 2
-            {sym:"Li",n:"Lithium",x:1,y:2,c:[1],t:"metal"}, {sym:"Be",n:"Beryllium",x:2,y:2,c:[2],t:"metal"},
-            {sym:"B",n:"Boron",x:13,y:2,c:[3],t:"metalloid"}, {sym:"C",n:"Carbon",x:14,y:2,c:[-4,2,4],t:"nonmetal"},
-            {sym:"N",n:"Nitrogen",x:15,y:2,c:[-3],t:"nonmetal"}, {sym:"O",n:"Oxygen",x:16,y:2,c:[-2],t:"nonmetal"},
-            {sym:"F",n:"Fluorine",x:17,y:2,c:[-1],t:"nonmetal"}, {sym:"Ne",n:"Neon",x:18,y:2,c:[0],t:"noble"},
-            // Period 3
-            {sym:"Na",n:"Sodium",x:1,y:3,c:[1],t:"metal"}, {sym:"Mg",n:"Magnesium",x:2,y:3,c:[2],t:"metal"},
-            {sym:"Al",n:"Aluminum",x:13,y:3,c:[3],t:"metal"}, {sym:"Si",n:"Silicon",x:14,y:3,c:[-4,4],t:"metalloid"},
-            {sym:"P",n:"Phosphorus",x:15,y:3,c:[-3,3,5],t:"nonmetal"}, {sym:"S",n:"Sulfur",x:16,y:3,c:[-2,4,6],t:"nonmetal"},
-            {sym:"Cl",n:"Chlorine",x:17,y:3,c:[-1,1,3,5,7],t:"nonmetal"}, {sym:"Ar",n:"Argon",x:18,y:3,c:[0],t:"noble"},
-            // Period 4
-            {sym:"K",n:"Potassium",x:1,y:4,c:[1],t:"metal"}, {sym:"Ca",n:"Calcium",x:2,y:4,c:[2],t:"metal"},
-            {sym:"Sc",n:"Scandium",x:3,y:4,c:[3],t:"metal"}, {sym:"Ti",n:"Titanium",x:4,y:4,c:[2,3,4],t:"metal"},
-            {sym:"V",n:"Vanadium",x:5,y:4,c:[2,3,4,5],t:"metal"}, {sym:"Cr",n:"Chromium",x:6,y:4,c:[2,3,6],t:"metal"},
-            {sym:"Mn",n:"Manganese",x:7,y:4,c:[2,3,4,6,7],t:"metal"}, {sym:"Fe",n:"Iron",x:8,y:4,c:[2,3],t:"metal"},
-            {sym:"Co",n:"Cobalt",x:9,y:4,c:[2,3],t:"metal"}, {sym:"Ni",n:"Nickel",x:10,y:4,c:[2,3],t:"metal"},
-            {sym:"Cu",n:"Copper",x:11,y:4,c:[1,2],t:"metal"}, {sym:"Zn",n:"Zinc",x:12,y:4,c:[2],t:"metal"},
-            {sym:"Ga",n:"Gallium",x:13,y:4,c:[3],t:"metal"}, {sym:"Ge",n:"Germanium",x:14,y:4,c:[2,4],t:"metalloid"},
-            {sym:"As",n:"Arsenic",x:15,y:4,c:[-3,3,5],t:"metalloid"}, {sym:"Se",n:"Selenium",x:16,y:4,c:[-2,4,6],t:"nonmetal"},
-            {sym:"Br",n:"Bromine",x:17,y:4,c:[-1,1,3,5],t:"nonmetal"}, {sym:"Kr",n:"Krypton",x:18,y:4,c:[0],t:"noble"},
-            // Period 5
-            {sym:"Rb",n:"Rubidium",x:1,y:5,c:[1],t:"metal"}, {sym:"Sr",n:"Strontium",x:2,y:5,c:[2],t:"metal"},
-            {sym:"Y",n:"Yttrium",x:3,y:5,c:[3],t:"metal"}, {sym:"Zr",n:"Zirconium",x:4,y:5,c:[4],t:"metal"},
-            {sym:"Nb",n:"Niobium",x:5,y:5,c:[3,5],t:"metal"}, {sym:"Mo",n:"Molybdenum",x:6,y:5,c:[6],t:"metal"},
-            {sym:"Tc",n:"Technetium",x:7,y:5,c:[4,7],t:"metal"}, {sym:"Ru",n:"Ruthenium",x:8,y:5,c:[3,4],t:"metal"},
-            {sym:"Rh",n:"Rhodium",x:9,y:5,c:[3],t:"metal"}, {sym:"Pd",n:"Palladium",x:10,y:5,c:[2,4],t:"metal"},
-            {sym:"Ag",n:"Silver",x:11,y:5,c:[1],t:"metal"}, {sym:"Cd",n:"Cadmium",x:12,y:5,c:[2],t:"metal"},
-            {sym:"In",n:"Indium",x:13,y:5,c:[3],t:"metal"}, {sym:"Sn",n:"Tin",x:14,y:5,c:[2,4],t:"metal"},
-            {sym:"Sb",n:"Antimony",x:15,y:5,c:[-3,3,5],t:"metalloid"}, {sym:"Te",n:"Tellurium",x:16,y:5,c:[-2,4,6],t:"metalloid"},
-            {sym:"I",n:"Iodine",x:17,y:5,c:[-1,1,3,5,7],t:"nonmetal"}, {sym:"Xe",n:"Xenon",x:18,y:5,c:[0],t:"noble"},
-            // Period 6
-            {sym:"Cs",n:"Cesium",x:1,y:6,c:[1],t:"metal"}, {sym:"Ba",n:"Barium",x:2,y:6,c:[2],t:"metal"},
-            {sym:"Lu",n:"Lutetium",x:3,y:6,c:[3],t:"metal"}, {sym:"Hf",n:"Hafnium",x:4,y:6,c:[4],t:"metal"},
-            {sym:"Ta",n:"Tantalum",x:5,y:6,c:[5],t:"metal"}, {sym:"W",n:"Tungsten",x:6,y:6,c:[6],t:"metal"},
-            {sym:"Re",n:"Rhenium",x:7,y:6,c:[4,7],t:"metal"}, {sym:"Os",n:"Osmium",x:8,y:6,c:[4],t:"metal"},
-            {sym:"Ir",n:"Iridium",x:9,y:6,c:[3,4],t:"metal"}, {sym:"Pt",n:"Platinum",x:10,y:6,c:[2,4],t:"metal"},
-            {sym:"Au",n:"Gold",x:11,y:6,c:[1,3],t:"metal"}, {sym:"Hg",n:"Mercury",x:12,y:6,c:[1,2],t:"metal"},
-            {sym:"Tl",n:"Thallium",x:13,y:6,c:[1,3],t:"metal"}, {sym:"Pb",n:"Lead",x:14,y:6,c:[2,4],t:"metal"},
-            {sym:"Bi",n:"Bismuth",x:15,y:6,c:[3,5],t:"metal"}, {sym:"Po",n:"Polonium",x:16,y:6,c:[2,4],t:"metalloid"},
-            {sym:"At",n:"Astatine",x:17,y:6,c:[-1],t:"metalloid"}, {sym:"Rn",n:"Radon",x:18,y:6,c:[0],t:"noble"},
-            // Period 7
-            {sym:"Fr",n:"Francium",x:1,y:7,c:[1],t:"metal"}, {sym:"Ra",n:"Radium",x:2,y:7,c:[2],t:"metal"},
-            {sym:"Lr",n:"Lawrencium",x:3,y:7,c:[3],t:"metal"}, {sym:"Rf",n:"Rutherfordium",x:4,y:7,c:[4],t:"metal"},
-            {sym:"Db",n:"Dubnium",x:5,y:7,c:[5],t:"metal"}, {sym:"Sg",n:"Seaborgium",x:6,y:7,c:[6],t:"metal"},
-            {sym:"Bh",n:"Bohrium",x:7,y:7,c:[7],t:"metal"}, {sym:"Hs",n:"Hassium",x:8,y:7,c:[8],t:"metal"},
-            {sym:"Mt",n:"Meitnerium",x:9,y:7,c:[0],t:"metal"}, {sym:"Ds",n:"Darmstadtium",x:10,y:7,c:[0],t:"metal"},
-            {sym:"Rg",n:"Roentgenium",x:11,y:7,c:[0],t:"metal"}, {sym:"Cn",n:"Copernicium",x:12,y:7,c:[2],t:"metal"},
-            {sym:"Nh",n:"Nihonium",x:13,y:7,c:[0],t:"metal"}, {sym:"Fl",n:"Flerovium",x:14,y:7,c:[0],t:"metal"},
-            {sym:"Mc",n:"Moscovium",x:15,y:7,c:[0],t:"metal"}, {sym:"Lv",n:"Livermorium",x:16,y:7,c:[0],t:"metal"},
-            {sym:"Ts",n:"Tennessine",x:17,y:7,c:[0],t:"nonmetal"}, {sym:"Og",n:"Oganesson",x:18,y:7,c:[0],t:"noble"},
-            // Lanthanides (y=9, x=4 to 17)
-            {sym:"La",n:"Lanthanum",x:4,y:9,c:[3],t:"metal"}, {sym:"Ce",n:"Cerium",x:5,y:9,c:[3,4],t:"metal"},
-            {sym:"Pr",n:"Praseodymium",x:6,y:9,c:[3],t:"metal"}, {sym:"Nd",n:"Neodymium",x:7,y:9,c:[3],t:"metal"},
-            {sym:"Pm",n:"Promethium",x:8,y:9,c:[3],t:"metal"}, {sym:"Sm",n:"Samarium",x:9,y:9,c:[2,3],t:"metal"},
-            {sym:"Eu",n:"Europium",x:10,y:9,c:[2,3],t:"metal"}, {sym:"Gd",n:"Gadolinium",x:11,y:9,c:[3],t:"metal"},
-            {sym:"Tb",n:"Terbium",x:12,y:9,c:[3,4],t:"metal"}, {sym:"Dy",n:"Dysprosium",x:13,y:9,c:[3],t:"metal"},
-            {sym:"Ho",n:"Holmium",x:14,y:9,c:[3],t:"metal"}, {sym:"Er",n:"Erbium",x:15,y:9,c:[3],t:"metal"},
-            {sym:"Tm",n:"Thulium",x:16,y:9,c:[3],t:"metal"}, {sym:"Yb",n:"Ytterbium",x:17,y:9,c:[2,3],t:"metal"},
-            // Actinides (y=10, x=4 to 17)
-            {sym:"Ac",n:"Actinium",x:4,y:10,c:[3],t:"metal"}, {sym:"Th",n:"Thorium",x:5,y:10,c:[4],t:"metal"},
-            {sym:"Pa",n:"Protactinium",x:6,y:10,c:[5],t:"metal"}, {sym:"U",n:"Uranium",x:7,y:10,c:[3,4,5,6],t:"metal"},
-            {sym:"Np",n:"Neptunium",x:8,y:10,c:[5],t:"metal"}, {sym:"Pu",n:"Plutonium",x:9,y:10,c:[4,6],t:"metal"},
-            {sym:"Am",n:"Americium",x:10,y:10,c:[3],t:"metal"}, {sym:"Cm",n:"Curium",x:11,y:10,c:[3],t:"metal"},
-            {sym:"Bk",n:"Berkelium",x:12,y:10,c:[3,4],t:"metal"}, {sym:"Cf",n:"Californium",x:13,y:10,c:[3],t:"metal"},
-            {sym:"Es",n:"Einsteinium",x:14,y:10,c:[3],t:"metal"}, {sym:"Fm",n:"Fermium",x:15,y:10,c:[3],t:"metal"},
-            {sym:"Md",n:"Mendelevium",x:16,y:10,c:[2,3],t:"metal"}, {sym:"No",n:"Nobelium",x:17,y:10,c:[2],t:"metal"}
-        ];
-
-        // Polyatomics from Study List
-        const polyatomics = [
-            { name: "Acetate", sym: "C2H3O2", charge: -1 }, { name: "Hypochlorite", sym: "ClO", charge: -1 },
-            { name: "Chlorite", sym: "ClO2", charge: -1 }, { name: "Chlorate", sym: "ClO3", charge: -1 },
-            { name: "Perchlorate", sym: "ClO4", charge: -1 }, { name: "Nitrite", sym: "NO2", charge: -1 },
-            { name: "Nitrate", sym: "NO3", charge: -1 }, { name: "Permanganate", sym: "MnO4", charge: -1 },
-            { name: "Hydroxide", sym: "OH", charge: -1 }, { name: "Bromate", sym: "BrO3", charge: -1 },
-            { name: "Iodate", sym: "IO3", charge: -1 }, { name: "Cyanide", sym: "CN", charge: -1 },
-            { name: "Cyanate", sym: "OCN", charge: -1 }, { name: "Thiocyanate", sym: "SCN", charge: -1 },
-            { name: "Dihydrogen Phosphate", sym: "H2PO4", charge: -1 }, { name: "Bicarbonate", sym: "HCO3", charge: -1 },
-            { name: "Bisulfite", sym: "HSO3", charge: -1 }, { name: "Bisulfate", sym: "HSO4", charge: -1 },
-            { name: "Sulfite", sym: "SO3", charge: -2 }, { name: "Sulfate", sym: "SO4", charge: -2 },
-            { name: "Thiosulfate", sym: "S2O3", charge: -2 }, { name: "Chromate", sym: "CrO4", charge: -2 },
-            { name: "Dichromate", sym: "Cr2O7", charge: -2 }, { name: "Carbonate", sym: "CO3", charge: -2 },
-            { name: "Oxalate", sym: "C2O4", charge: -2 }, { name: "Peroxide", sym: "O2", charge: -2 },
-            { name: "Hydrogen Phosphate", sym: "HPO4", charge: -2 }, { name: "Arsenate", sym: "AsO4", charge: -3 },
-            { name: "Borate", sym: "BO3", charge: -3 }, { name: "Phosphite", sym: "PO3", charge: -3 },
-            { name: "Phosphate", sym: "PO4", charge: -3 }, { name: "Ammonium", sym: "NH4", charge: 1 },
-            { name: "Mercury (I)", sym: "Hg2", charge: 2 } 
-        ];
-
-        // --- STATE ---
+        // --- UI & STATE MANAGEMENT ---
+        let state = { score: 0, streak: 0, mode: 'simple', currentTarget: null };
         let tray = [];
-        let state = { score: 0, streak: 0, level: 1, currentTarget: null };
 
-        // --- INITIALIZATION ---
+        function showDashboard() { 
+            document.getElementById('dashboard').classList.add('active'); 
+            document.body.classList.add('modal-open');
+        }
+        function hideDashboard() { 
+            document.getElementById('dashboard').classList.remove('active'); 
+            document.body.classList.remove('modal-open');
+        }
+        function closeChargePicker() { document.getElementById('charge-overlay').classList.remove('active'); }
+
+        function changeMode(newMode) {
+            state.mode = newMode;
+            state.streak = 0;
+            updateStats();
+            generateProblem();
+            // Sync mobile selector if changed on desktop
+            document.getElementById('mode-select').value = newMode;
+        }
+
+        function skipProblem() {
+            state.streak = 0;
+            updateStats();
+            const targetCard = document.getElementById('target-card');
+            targetCard.classList.add('shake');
+            setTimeout(() => {
+                 targetCard.classList.remove('shake');
+                 generateProblem();
+            }, 500);
+        }
+
+        function handleElementInteract(el) {
+            const infoBox = document.getElementById('hover-info');
+            if(el) {
+                infoBox.innerHTML = `<span class="font-black text-slate-700">${el.n}</span> <span class="text-slate-400 ml-2">Group ${el.x} ${el.t}</span>`;
+            } else {
+                infoBox.innerText = "Tap/Hover an element for details";
+            }
+        }
+
+        // --- DATA ---
+        const polyatomics = [
+            { name: "Acetate", sym: "C2H3O2", charge: -1 }, { name: "Nitrate", sym: "NO3", charge: -1 },
+            { name: "Nitrite", sym: "NO2", charge: -1 }, { name: "Hydroxide", sym: "OH", charge: -1 },
+            { name: "Cyanide", sym: "CN", charge: -1 }, { name: "Permanganate", sym: "MnO4", charge: -1 },
+            { name: "Chlorate", sym: "ClO3", charge: -1 }, { name: "Sulfate", sym: "SO4", charge: -2 },
+            { name: "Sulfite", sym: "SO3", charge: -2 }, { name: "Carbonate", sym: "CO3", charge: -2 },
+            { name: "Chromate", sym: "CrO4", charge: -2 }, { name: "Dichromate", sym: "Cr2O7", charge: -2 },
+            { name: "Phosphate", sym: "PO4", charge: -3 }, { name: "Phosphite", sym: "PO3", charge: -3 },
+            { name: "Ammonium", sym: "NH4", charge: 1 }
+        ];
+
+        // Simplified 118 Element Data (Symbol, Name, X pos, Y pos, Charges[], Type)
+        const elements = [
+            {sym:"H",n:"Hydrogen",x:1,y:1,c:[1],t:"nonmetal"},{sym:"He",n:"Helium",x:18,y:1,c:[0],t:"noble"},
+            {sym:"Li",n:"Lithium",x:1,y:2,c:[1],t:"metal"},{sym:"Be",n:"Beryllium",x:2,y:2,c:[2],t:"metal"},{sym:"B",n:"Boron",x:13,y:2,c:[3],t:"metalloid"},{sym:"C",n:"Carbon",x:14,y:2,c:[-4,4],t:"nonmetal"},{sym:"N",n:"Nitrogen",x:15,y:2,c:[-3],t:"nonmetal"},{sym:"O",n:"Oxygen",x:16,y:2,c:[-2],t:"nonmetal"},{sym:"F",n:"Fluorine",x:17,y:2,c:[-1],t:"nonmetal"},{sym:"Ne",n:"Neon",x:18,y:2,c:[0],t:"noble"},
+            {sym:"Na",n:"Sodium",x:1,y:3,c:[1],t:"metal"},{sym:"Mg",n:"Magnesium",x:2,y:3,c:[2],t:"metal"},{sym:"Al",n:"Aluminum",x:13,y:3,c:[3],t:"metal"},{sym:"Si",n:"Silicon",x:14,y:3,c:[4],t:"metalloid"},{sym:"P",n:"Phosphorus",x:15,y:3,c:[-3],t:"nonmetal"},{sym:"S",n:"Sulfur",x:16,y:3,c:[-2],t:"nonmetal"},{sym:"Cl",n:"Chlorine",x:17,y:3,c:[-1],t:"nonmetal"},{sym:"Ar",n:"Argon",x:18,y:3,c:[0],t:"noble"},
+            {sym:"K",n:"Potassium",x:1,y:4,c:[1],t:"metal"},{sym:"Ca",n:"Calcium",x:2,y:4,c:[2],t:"metal"},{sym:"Sc",n:"Scandium",x:3,y:4,c:[3],t:"metal"},{sym:"Ti",n:"Titanium",x:4,y:4,c:[2,4],t:"metal"},{sym:"V",n:"Vanadium",x:5,y:4,c:[3,5],t:"metal"},{sym:"Cr",n:"Chromium",x:6,y:4,c:[2,3,6],t:"metal"},{sym:"Mn",n:"Manganese",x:7,y:4,c:[2,4,7],t:"metal"},{sym:"Fe",n:"Iron",x:8,y:4,c:[2,3],t:"metal"},{sym:"Co",n:"Cobalt",x:9,y:4,c:[2,3],t:"metal"},{sym:"Ni",n:"Nickel",x:10,y:4,c:[2],t:"metal"},{sym:"Cu",n:"Copper",x:11,y:4,c:[1,2],t:"metal"},{sym:"Zn",n:"Zinc",x:12,y:4,c:[2],t:"metal"},{sym:"Ga",n:"Gallium",x:13,y:4,c:[3],t:"metal"},{sym:"Ge",n:"Germanium",x:14,y:4,c:[4],t:"metalloid"},{sym:"As",n:"Arsenic",x:15,y:4,c:[-3],t:"metalloid"},{sym:"Se",n:"Selenium",x:16,y:4,c:[-2],t:"nonmetal"},{sym:"Br",n:"Bromine",x:17,y:4,c:[-1],t:"nonmetal"},{sym:"Kr",n:"Krypton",x:18,y:4,c:[0],t:"noble"},
+            {sym:"Rb",n:"Rubidium",x:1,y:5,c:[1],t:"metal"},{sym:"Sr",n:"Strontium",x:2,y:5,c:[2],t:"metal"},{sym:"Y",n:"Yttrium",x:3,y:5,c:[3],t:"metal"},{sym:"Zr",n:"Zirconium",x:4,y:5,c:[4],t:"metal"},{sym:"Nb",n:"Niobium",x:5,y:5,c:[5],t:"metal"},{sym:"Mo",n:"Molybdenum",x:6,y:5,c:[6],t:"metal"},{sym:"Tc",n:"Technetium",x:7,y:5,c:[7],t:"metal"},{sym:"Ru",n:"Ruthenium",x:8,y:5,c:[3,4],t:"metal"},{sym:"Rh",n:"Rhodium",x:9,y:5,c:[3],t:"metal"},{sym:"Pd",n:"Palladium",x:10,y:5,c:[2,4],t:"metal"},{sym:"Ag",n:"Silver",x:11,y:5,c:[1],t:"metal"},{sym:"Cd",n:"Cadmium",x:12,y:5,c:[2],t:"metal"},{sym:"In",n:"Indium",x:13,y:5,c:[3],t:"metal"},{sym:"Sn",n:"Tin",x:14,y:5,c:[2,4],t:"metal"},{sym:"Sb",n:"Antimony",x:15,y:5,c:[-3,5],t:"metalloid"},{sym:"Te",n:"Tellurium",x:16,y:5,c:[-2],t:"metalloid"},{sym:"I",n:"Iodine",x:17,y:5,c:[-1],t:"nonmetal"},{sym:"Xe",n:"Xenon",x:18,y:5,c:[0],t:"noble"},
+            {sym:"Cs",n:"Cesium",x:1,y:6,c:[1],t:"metal"},{sym:"Ba",n:"Barium",x:2,y:6,c:[2],t:"metal"},{sym:"Lu",n:"Lutetium",x:3,y:6,c:[3],t:"metal"},{sym:"Hf",n:"Hafnium",x:4,y:6,c:[4],t:"metal"},{sym:"Ta",n:"Tantalum",x:5,y:6,c:[5],t:"metal"},{sym:"W",n:"Tungsten",x:6,y:6,c:[6],t:"metal"},{sym:"Re",n:"Rhenium",x:7,y:6,c:[7],t:"metal"},{sym:"Os",n:"Osmium",x:8,y:6,c:[4],t:"metal"},{sym:"Ir",n:"Iridium",x:9,y:6,c:[4],t:"metal"},{sym:"Pt",n:"Platinum",x:10,y:6,c:[2,4],t:"metal"},{sym:"Au",n:"Gold",x:11,y:6,c:[1,3],t:"metal"},{sym:"Hg",n:"Mercury",x:12,y:6,c:[1,2],t:"metal"},{sym:"Tl",n:"Thallium",x:13,y:6,c:[1,3],t:"metal"},{sym:"Pb",n:"Lead",x:14,y:6,c:[2,4],t:"metal"},{sym:"Bi",n:"Bismuth",x:15,y:6,c:[3],t:"metal"},{sym:"Po",n:"Polonium",x:16,y:6,c:[2],t:"metalloid"},{sym:"At",n:"Astatine",x:17,y:6,c:[-1],t:"metalloid"},{sym:"Rn",n:"Radon",x:18,y:6,c:[0],t:"noble"},
+            {sym:"Fr",n:"Francium",x:1,y:7,c:[1],t:"metal"},{sym:"Ra",n:"Radium",x:2,y:7,c:[2],t:"metal"},{sym:"Lr",n:"Lawrencium",x:3,y:7,c:[3],t:"metal"},{sym:"Rf",n:"Rutherfordium",x:4,y:7,c:[4],t:"metal"},{sym:"Db",n:"Dubnium",x:5,y:7,c:[5],t:"metal"},{sym:"Sg",n:"Seaborgium",x:6,y:7,c:[6],t:"metal"},{sym:"Bh",n:"Bohrium",x:7,y:7,c:[7],t:"metal"},{sym:"Hs",n:"Hassium",x:8,y:7,c:[8],t:"metal"},{sym:"Mt",n:"Meitnerium",x:9,y:7,c:[0],t:"metal"},{sym:"Ds",n:"Darmstadtium",x:10,y:7,c:[0],t:"metal"},{sym:"Rg",n:"Roentgenium",x:11,y:7,c:[0],t:"metal"},{sym:"Cn",n:"Copernicium",x:12,y:7,c:[2],t:"metal"},{sym:"Nh",n:"Nihonium",x:13,y:7,c:[0],t:"metal"},{sym:"Fl",n:"Flerovium",x:14,y:7,c:[0],t:"metal"},{sym:"Mc",n:"Moscovium",x:15,y:7,c:[0],t:"metal"},{sym:"Lv",n:"Livermorium",x:16,y:7,c:[0],t:"metal"},{sym:"Ts",n:"Tennessine",x:17,y:7,c:[0],t:"nonmetal"},{sym:"Og",n:"Oganesson",x:18,y:7,c:[0],t:"noble"},
+            // Lanthanides (y=9)
+            {sym:"La",n:"Lanthanum",x:4,y:9,c:[3],t:"metal"},{sym:"Ce",n:"Cerium",x:5,y:9,c:[3,4],t:"metal"},{sym:"Pr",n:"Praseodymium",x:6,y:9,c:[3],t:"metal"},{sym:"Nd",n:"Neodymium",x:7,y:9,c:[3],t:"metal"},{sym:"Pm",n:"Promethium",x:8,y:9,c:[3],t:"metal"},{sym:"Sm",n:"Samarium",x:9,y:9,c:[3],t:"metal"},{sym:"Eu",n:"Europium",x:10,y:9,c:[3],t:"metal"},{sym:"Gd",n:"Gadolinium",x:11,y:9,c:[3],t:"metal"},{sym:"Tb",n:"Terbium",x:12,y:9,c:[3],t:"metal"},{sym:"Dy",n:"Dysprosium",x:13,y:9,c:[3],t:"metal"},{sym:"Ho",n:"Holmium",x:14,y:9,c:[3],t:"metal"},{sym:"Er",n:"Erbium",x:15,y:9,c:[3],t:"metal"},{sym:"Tm",n:"Thulium",x:16,y:9,c:[3],t:"metal"},{sym:"Yb",n:"Ytterbium",x:17,y:9,c:[3],t:"metal"},
+            // Actinides (y=10)
+            {sym:"Ac",n:"Actinium",x:4,y:10,c:[3],t:"metal"},{sym:"Th",n:"Thorium",x:5,y:10,c:[4],t:"metal"},{sym:"Pa",n:"Protactinium",x:6,y:10,c:[5],t:"metal"},{sym:"U",n:"Uranium",x:7,y:10,c:[6],t:"metal"},{sym:"Np",n:"Neptunium",x:8,y:10,c:[5],t:"metal"},{sym:"Pu",n:"Plutonium",x:9,y:10,c:[4],t:"metal"},{sym:"Am",n:"Americium",x:10,y:10,c:[3],t:"metal"},{sym:"Cm",n:"Curium",x:11,y:10,c:[3],t:"metal"},{sym:"Bk",n:"Berkelium",x:12,y:10,c:[3],t:"metal"},{sym:"Cf",n:"Californium",x:13,y:10,c:[3],t:"metal"},{sym:"Es",n:"Einsteinium",x:14,y:10,c:[3],t:"metal"},{sym:"Fm",n:"Fermium",x:15,y:10,c:[3],t:"metal"},{sym:"Md",n:"Mendelevium",x:16,y:10,c:[3],t:"metal"},{sym:"No",n:"Nobelium",x:17,y:10,c:[2],t:"metal"}
+        ];
+
+        // --- INITIALIZATION & RENDERING ---
         function initTable() {
             const container = document.getElementById('periodic-table');
+            let atomicNum = 1;
             for(let y=1; y<=10; y++) {
-                // y=8 is intentionally left mostly blank for the gap above f-block
                 for(let x=1; x<=18; x++) {
+                    // Skip the gap rows for Lanthanides/Actinides placeholding
+                    if ((y===6 && x===3) || (y===7 && x===3)) {
+                         const marker = document.createElement('div');
+                         marker.className = 'elem-btn empty flex items-center justify-center text-slate-300 font-bold';
+                         marker.innerText = y===6 ? '*' : '**';
+                         container.appendChild(marker);
+                         atomicNum++; // Increment for the placeholder
+                         continue;
+                    }
+
                     const el = elements.find(e => e.x === x && e.y === y);
                     if(el) {
                         const btn = document.createElement('div');
                         btn.className = `elem-btn ${el.t}`;
-                        btn.innerHTML = `<span>${el.sym}</span>`;
+                        // Find actual atomic number based on index in full list (approximate for this simplified data structure)
+                        let actualNum = elements.indexOf(el) + 1;
+                        // Adjust for gaps manually due to simplified data structure
+                        if(y>6) actualNum += 0; // Placeholder adjustment if needed
+
+                        btn.innerHTML = `<span class="num">${actualNum}</span><span class="sym">${el.sym}</span>`;
                         btn.onclick = () => selectElement(el);
+                        btn.onmouseenter = () => handleElementInteract(el);
+                        btn.onmouseleave = () => handleElementInteract(null);
                         container.appendChild(btn);
+                        atomicNum++;
                     } else {
                         const empty = document.createElement('div');
                         empty.className = 'elem-btn empty';
-                        // Add marker lines pointing to Lanthanides/Actinides if desired
-                        if (x===3 && y===6) empty.innerHTML = '<span class="text-[8px] text-slate-400">*</span>';
-                        if (x===3 && y===7) empty.innerHTML = '<span class="text-[8px] text-slate-400">**</span>';
                         container.appendChild(empty);
                     }
                 }
@@ -368,43 +335,48 @@
                 btn.className = 'poly-btn';
                 const superStr = p.charge > 0 ? `${Math.abs(p.charge)}+` : `${Math.abs(p.charge)}-`;
                 btn.innerHTML = `
-                    <div class="flex justify-between items-center">
-                        <span class="font-bold text-slate-700">${p.name}</span>
-                        <span class="font-mono text-[10px] bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">${p.sym.replace(/(\d+)/g, '<sub>$1</sub>')}<sup>${superStr}</sup></span>
-                    </div>
+                    <span class="font-bold text-slate-700 truncate mr-2">${p.name}</span>
+                    <span class="font-mono text-[10px] bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 whitespace-nowrap">${p.sym.replace(/(\d+)/g, '<sub>$1</sub>')}<sup>${superStr}</sup></span>
                 `;
                 btn.onclick = () => addToTray(p.sym, p.charge, true, p.name);
                 list.appendChild(btn);
             });
         }
 
-        // --- CORE BUILDER LOGIC ---
+        // --- BUILDER LOGIC ---
         function selectElement(el) {
-            if (el.c.length > 1) { showChargePicker(el); } 
+            if (el.c.includes(0) || el.t === 'noble') return; // Skip nobles
+            if (el.c.length > 1 && el.t === 'metal') { showChargePicker(el); } 
             else { addToTray(el.sym, el.c[0], false, el.n); }
         }
 
         function showChargePicker(el) {
             const overlay = document.getElementById('charge-overlay');
             const options = document.getElementById('charge-options');
-            document.getElementById('charge-title').innerText = `Oxidation State for ${el.n}`;
+            document.getElementById('charge-title').innerText = `${el.n} Oxidation State`;
             options.innerHTML = '';
-            overlay.classList.remove('hidden');
+            overlay.classList.add('active');
 
             el.c.forEach(charge => {
+                if(charge === 0) return;
                 const btn = document.createElement('button');
-                btn.className = 'bg-slate-50 hover:bg-emerald-50 hover:border-emerald-500 border-2 border-slate-200 text-slate-800 font-black py-3 rounded-xl text-lg transition-colors';
+                btn.className = 'bg-slate-50 hover:bg-emerald-50 hover:border-emerald-500 border-2 border-slate-200 text-slate-700 font-black py-4 rounded-2xl text-xl transition-colors';
                 btn.innerText = charge > 0 ? `+${charge}` : charge;
                 btn.onclick = () => {
                     addToTray(el.sym, charge, false, el.n);
-                    overlay.classList.add('hidden');
+                    overlay.classList.remove('active');
                 };
                 options.appendChild(btn);
             });
         }
 
         function addToTray(symbol, charge, isPoly, name) {
-            if (tray.length >= 2) return;
+            if (tray.length >= 2) {
+                 // Feedback that tray is full
+                 document.getElementById('tray-container').classList.add('shake');
+                 setTimeout(()=>document.getElementById('tray-container').classList.remove('shake'), 500);
+                 return;
+            }
             tray.push({ symbol, charge, isPoly, subscript: 1, name });
             renderTray();
         }
@@ -422,16 +394,21 @@
 
             tray.forEach((item, index) => {
                 const slot = document.createElement('div');
-                slot.className = 'builder-slot active';
+                slot.className = 'builder-slot active fade-in';
                 const chargeLabel = item.charge > 0 ? `+${item.charge}` : item.charge;
                 
                 slot.innerHTML = `
-                    <button onclick="removeFromTray(${index})" class="absolute -top-2 -right-2 bg-slate-200 text-slate-600 hover:bg-red-500 hover:text-white w-6 h-6 rounded-full text-xs font-bold transition-colors">×</button>
-                    <div class="text-2xl font-black text-slate-800">${formatDisplayFormula(item)}</div>
-                    <div class="text-[9px] font-bold text-slate-400 mb-2 uppercase tracking-widest text-center px-2 line-clamp-1">${item.name} (${chargeLabel})</div>
-                    <select onchange="updateSubscript(${index}, this.value)" class="bg-slate-50 text-[10px] font-bold px-2 py-1 rounded-lg outline-none border border-slate-200 cursor-pointer">
-                        ${[1,2,3,4,5,6,7,8,9,10].map(n => `<option value="${n}" ${item.subscript == n ? 'selected' : ''}>Qty: ${n}</option>`).join('')}
-                    </select>
+                    <button onclick="removeFromTray(${index})" class="absolute -top-2 -right-2 bg-white border border-slate-200 text-slate-400 hover:text-red-500 hover:border-red-500 w-7 h-7 rounded-full flex items-center justify-center text-lg font-bold transition-all shadow-sm z-10">&times;</button>
+                    <div class="text-3xl font-black text-slate-800 mb-1">${formatDisplayFormula(item)}</div>
+                    <div class="text-[9px] font-bold text-slate-400 mb-2 uppercase tracking-widest text-center px-1 line-clamp-1">${item.name} (${chargeLabel})</div>
+                    <div class="relative">
+                        <select onchange="updateSubscript(${index}, this.value)" class="bg-slate-50 appearance-none pl-3 pr-8 py-1 rounded-lg border border-slate-200 text-xs font-bold text-slate-600 outline-none focus:border-emerald-500">
+                            ${[1,2,3,4,5,6,7,8,9,10].map(n => `<option value="${n}" ${item.subscript == n ? 'selected' : ''}>Qty: ${n}</option>`).join('')}
+                        </select>
+                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-400">
+                            <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+                        </div>
+                    </div>
                 `;
                 container.appendChild(slot);
             });
@@ -439,15 +416,12 @@
             for(let i=tray.length; i<2; i++) {
                 const empty = document.createElement('div');
                 empty.className = 'builder-slot';
-                empty.innerHTML = `<span class="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Select Ion</span>`;
+                empty.innerHTML = `<span class="text-xs font-bold text-slate-300 uppercase tracking-widest text-center px-4">Select Cation or Anion</span>`;
                 container.appendChild(empty);
             }
         }
 
-        function updateSubscript(index, val) {
-            tray[index].subscript = parseInt(val);
-            renderTray(); // Re-render to show parentheses properly
-        }
+        function updateSubscript(index, val) { tray[index].subscript = parseInt(val); renderTray(); }
         function removeFromTray(index) { tray.splice(index, 1); renderTray(); }
         function clearTray() { tray = []; renderTray(); }
 
@@ -458,67 +432,92 @@
         function generateProblem() {
             clearTray();
             document.getElementById('info-panel').classList.add('hidden');
-            document.getElementById('target-card').style.opacity = '1';
+            document.getElementById('target-card').classList.remove('shake'); // Reset animation
             
-            const isPoly = Math.random() > 0.4;
-            let cation, anion;
+            let cation, anion, cCharge, aCharge;
+            
+            // Filter elements based on mode
+            let availableMetals = elements.filter(e => e.t === 'metal');
+            let availableNonmetals = elements.filter(e => e.t === 'nonmetal' && e.sym !== 'H' && !e.t.includes('noble'));
 
-            // Constrain random generation to common elements so it's solvable
-            const commonMetals = elements.filter(e => e.t === 'metal' && e.y <= 6 && e.x <= 15);
-            const commonNonmetals = elements.filter(e => e.t === 'nonmetal' && e.sym !== 'H');
+            if (state.mode === 'simple') {
+                 // Group 1, 2, 13 metals only (fixed charge)
+                 availableMetals = availableMetals.filter(e => [1,2,13].includes(e.x) && e.y <= 6);
+                 cation = availableMetals[Math.floor(Math.random() * availableMetals.length)];
+                 anion = availableNonmetals[Math.floor(Math.random() * availableNonmetals.length)];
+                 cCharge = cation.c[0]; aCharge = anion.c[0];
 
-            if (!isPoly) {
-                cation = commonMetals[Math.floor(Math.random() * commonMetals.length)];
-                anion = commonNonmetals[Math.floor(Math.random() * commonNonmetals.length)];
-                
-                const cCharge = cation.c[Math.floor(Math.random() * cation.c.length)];
-                const aCharge = Math.abs(anion.c[0] < 0 ? anion.c[0] : -1);
-                const g = gcd(cCharge, aCharge);
+            } else if (state.mode === 'transition') {
+                 // Transition metals (variable charge) + poor metals
+                 availableMetals = availableMetals.filter(e => e.c.length > 1);
+                 cation = availableMetals[Math.floor(Math.random() * availableMetals.length)];
+                 anion = availableNonmetals[Math.floor(Math.random() * availableNonmetals.length)];
+                 cCharge = cation.c[Math.floor(Math.random() * cation.c.length)];
+                 aCharge = anion.c[0];
 
-                let name = cation.n + (cation.c.length > 1 && cCharge > 0 ? ` (${roman(cCharge)})` : "") + " " + anion.n.toLowerCase().replace(/ine$|ogen$|orus$|ur$/, "") + "ide";
-                if (anion.sym === 'O') name = cation.n + (cation.c.length > 1 && cCharge > 0 ? ` (${roman(cCharge)})` : "") + " oxide";
-
-                state.currentTarget = { name, cSym: cation.sym, cCharge, cSub: aCharge/g, aSym: anion.sym, aCharge: -aCharge, aSub: cCharge/g };
-            } else {
-                const isAmmonium = Math.random() > 0.8;
-                if(isAmmonium) {
-                    cation = polyatomics.find(p => p.name === "Ammonium");
-                    anion = commonNonmetals[Math.floor(Math.random() * commonNonmetals.length)];
-                } else {
-                    cation = commonMetals[Math.floor(Math.random() * commonMetals.length)];
+            } else if (state.mode === 'poly') {
+                 // Mix of anything with polyatomics
+                 if(Math.random() > 0.5) {
+                    cation = availableMetals[Math.floor(Math.random() * availableMetals.length)];
                     anion = polyatomics[Math.floor(Math.random() * polyatomics.length)];
-                }
-
-                const cCharge = cation.c ? cation.c[Math.floor(Math.random() * cation.c.length)] : cation.charge;
-                const aCharge = Math.abs(anion.c ? anion.c[0] : anion.charge);
-                const g = gcd(Math.abs(cCharge), Math.abs(aCharge));
-                
-                state.currentTarget = { 
-                    name: (cation.name || cation.n) + (cation.c && cation.c.length > 1 && cCharge > 0 ? ` (${roman(cCharge)})` : "") + " " + (anion.name || anion.n.toLowerCase().replace(/ine$|ogen$|orus$|ur$/, "") + "ide").toLowerCase(), 
-                    cSym: cation.sym, cCharge, cSub: aCharge/g,
-                    aSym: anion.sym, aCharge: anion.charge || (anion.c ? anion.c[0] : -1), aSub: cCharge/g
-                };
+                    cCharge = cation.c[Math.floor(Math.random() * cation.c.length)];
+                    aCharge = anion.charge;
+                 } else {
+                    cation = polyatomics.find(p => p.sym === 'NH4'); // Ammonium
+                    anion = availableNonmetals[Math.floor(Math.random() * availableNonmetals.length)];
+                    cCharge = cation.charge;
+                    aCharge = anion.c[0];
+                 }
             }
+
+            // Ensure charges are valid for math
+            const absC = Math.abs(cCharge);
+            const absA = Math.abs(aCharge);
+            const g = gcd(absC, absA);
+            
+            let catName = cation.name || cation.n;
+            // Add roman numeral if it's a metal with multiple charges AND charge > 0
+            if (cation.t === 'metal' && cation.c.length > 1 && cCharge > 0) { catName += ` (${roman(cCharge)})`; }
+            
+            let aniName = anion.name || anion.n;
+            if (!anion.name) { // If it's a monoatomic element
+                aniName = aniName.toLowerCase().replace(/ine$|ogen$|orus$|ur$/, "") + "ide";
+                if (anion.sym === 'O') aniName = "oxide";
+            } else { aniName = aniName.toLowerCase(); }
+
+            state.currentTarget = { 
+                name: `${catName} ${aniName}`,
+                cSym: cation.sym, cCharge: cCharge, cSub: absA/g, 
+                aSym: anion.sym, aCharge: aCharge, aSub: absC/g
+            };
+            
             document.getElementById('target-name').innerText = state.currentTarget.name;
         }
 
-        window.nextLevel = () => {
-            state.level++;
-            updateStats();
-            generateProblem();
-        };
+        window.nextLevel = () => { generateProblem(); };
 
         function checkFormula() {
-            if (tray.length < 2) return alert("Assemble both cation and anion.");
-            
-            const [c, a] = tray;
-            
-            // Allow them to place anion first or cation first, though conventionally it's cation first.
-            let userCat = c.charge > 0 ? c : a;
-            let userAni = c.charge < 0 ? c : a;
+            const verifyBtn = document.querySelector('button[onclick="checkFormula()"]');
+            const trayContainer = document.getElementById('tray-container');
 
-            if (userCat.charge <= 0 || userAni.charge >= 0) {
-                alert("Ensure you have one positive ion and one negative ion.");
+            if (tray.length < 2) {
+                alert("Assemble both a cation and an anion first.");
+                return;
+            }
+            
+            // Sort: Cation (positive) first, then Anion (negative)
+            let userCat = tray.find(i => i.charge > 0);
+            let userAni = tray.find(i => i.charge < 0);
+
+            if (!userCat || !userAni) {
+                verifyBtn.innerText = "INVALID IONS SELECTED";
+                verifyBtn.classList.add('bg-red-500', 'hover:bg-red-600');
+                trayContainer.classList.add('shake');
+                setTimeout(() => {
+                    verifyBtn.innerText = "VERIFY STRUCTURE";
+                    verifyBtn.classList.remove('bg-red-500', 'hover:bg-red-600');
+                    trayContainer.classList.remove('shake');
+                }, 1500);
                 return;
             }
 
@@ -526,24 +525,30 @@
             const matchA = (userAni.symbol === state.currentTarget.aSym && userAni.charge === state.currentTarget.aCharge && userAni.subscript === state.currentTarget.aSub);
             
             if (matchC && matchA) {
-                state.streak++; state.score += 100 * state.streak; updateStats();
+                // SUCCESS
+                state.streak++; state.score += 100 + (state.streak * 10); updateStats();
+                
+                trayContainer.classList.add('pulse-green');
                 
                 let cStr = userCat.symbol; if(userCat.isPoly && userCat.subscript > 1) cStr = `(${cStr})`; cStr += userCat.subscript > 1 ? userCat.subscript : "";
                 let aStr = userAni.symbol; if(userAni.isPoly && userAni.subscript > 1) aStr = `(${aStr})`; aStr += userAni.subscript > 1 ? userAni.subscript : "";
                 
                 document.getElementById('info-desc').innerHTML = `${(cStr+aStr).replace(/(\d+)/g, '<sub>$1</sub>')}`;
-                
-                document.getElementById('target-card').style.opacity = '0';
                 document.getElementById('info-panel').classList.remove('hidden');
                 document.getElementById('info-panel').style.display = 'flex';
+
+                setTimeout(() => trayContainer.classList.remove('pulse-green'), 1000);
+
             } else {
+                // FAILURE
                 state.streak = 0; updateStats();
-                const btn = document.querySelector('button[onclick="checkFormula()"]');
-                btn.classList.add('bg-red-500', 'hover:bg-red-600');
-                btn.innerText = "BONDING ERROR";
+                verifyBtn.innerText = "STRUCTURE UNSTABLE";
+                verifyBtn.classList.add('bg-red-500', 'hover:bg-red-600');
+                trayContainer.classList.add('shake');
                 setTimeout(() => {
-                    btn.classList.remove('bg-red-500', 'hover:bg-red-600');
-                    btn.innerText = "VERIFY STRUCTURE";
+                    verifyBtn.innerText = "VERIFY STRUCTURE";
+                    verifyBtn.classList.remove('bg-red-500', 'hover:bg-red-600');
+                    trayContainer.classList.remove('shake');
                 }, 1500);
             }
         }
@@ -551,14 +556,14 @@
         function updateStats() {
             document.getElementById('score-val').innerText = state.score;
             document.getElementById('streak-val').innerText = state.streak;
-            document.getElementById('level-val').innerText = state.level;
         }
 
-        window.onload = () => {
-            initTable();
-            initPolyList();
-            generateProblem();
-        };
+        // Init
+        initTable();
+        initPolyList();
+        generateProblem();
+        // Prevent pinch zoom on iOS
+        document.addEventListener('touchmove', function (event) { if (event.scale !== 1) { event.preventDefault(); }}, { passive: false });
     </script>
 </body>
 </html>
