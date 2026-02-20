@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Formula Forge: Honors Edition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Space+Grotesk:wght@300;500;700&display=swap');
+
+        :root {
+            --bg-light: #f0fdf4;
+            --text-main: #064e3b;
+            --accent-main: #10b981;
+            --accent-shadow: rgba(16, 185, 129, 0.25);
+        }
+
+        *, *::before, *::after {
+            user-select: none;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--bg-light);
+            color: var(--text-main);
+            font-family: 'Outfit', sans-serif;
+            overflow-x: hidden;
+            height: 100vh;
+            background-image: radial-gradient(#dcfce7 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+
+        .font-mono-display { font-family: 'Space Grotesk', monospace; }
+        .custom-scroll::-webkit-scrollbar { width: 6px; }
+        .custom-scroll::-webkit-scrollbar-track { background: transparent; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #6ee7b7; border-radius: 3px; }
+
+        .fade-in { animation: fadeIn 0.4s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        .shake { animation: shake 0.4s ease-in-out; }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+
+        #dashboard {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(240, 253, 244, 0.98);
+            backdrop-filter: blur(8px);
+            z-index: 100;
+        }
+        .mode-card {
+            background: white; border: 1px solid #d1fae5; border-radius: 12px;
+            padding: 1rem; cursor: pointer; transition: all 0.2s;
+            display: flex; flex-direction: column; align-items: center; gap: 0.5rem;
+            text-align: center;
+        }
+        .mode-card:hover {
+            transform: translateY(-4px); box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1);
+            border-color: var(--accent-main);
+        }
+
+        .dash-nav-btn { position: relative; color: #94a3b8; transition: color 0.2s; padding: 0.5rem 1rem; font-weight: bold; text-transform: uppercase; letter-spacing: 0.1em; font-size: 0.75rem; }
+        .dash-nav-btn.active { color: #059669; }
+        .dash-section { display: none; animation: fadeIn 0.3s ease-out; }
+        .dash-section.active { display: flex; }
+
+        .subscript-input {
+            width: 100%;
+            font-family: 'Space Grotesk', monospace;
+            text-align: center;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        #toast { transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.4s ease; }
+        .toast-visible { transform: translate(-50%, 0) !important; opacity: 1 !important; }
+        .toast-hidden { transform: translate(-50%, -150%) !important; opacity: 0 !important; }
+    </style>
+</head>
+<body class="p-2 md:p-4 h-screen flex flex-col">
+
+    <div id="dashboard" class="p-4 flex flex-col justify-center items-center">
+        <div class="text-center w-full flex-none mb-6 mt-4">
+            <div class="inline-block w-12 h-12 bg-gradient-to-br from-emerald-400 to-teal-600 rounded-xl flex items-center justify-center text-white font-bold text-2xl shadow-lg mb-2">F</div>
+            <h1 class="text-3xl font-black text-emerald-900 tracking-tighter">FORMULA <span class="text-emerald-500">FORGE</span></h1>
+            <p class="text-xs font-bold text-emerald-600 uppercase tracking-widest">Chemistry Honors Edition</p>
+        </div>
+
+        <div class="w-full max-w-4xl flex-grow flex flex-col items-center pb-24 overflow-y-auto custom-scroll px-2">
+            <div id="dash-home" class="dash-section active w-full flex-col items-center">
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-3 w-full max-w-2xl mb-8">
+                    <button onclick="startGame('ionic')" class="mode-card group">
+                        <span class="text-2xl">🧂</span>
+                        <span class="font-bold text-emerald-900">Ionic</span>
+                        <span class="text-[10px] text-emerald-600">Includes Polyatomics</span>
+                    </button>
+                    <button onclick="startGame('covalent')" class="mode-card group">
+                        <span class="text-2xl">🔗</span>
+                        <span class="font-bold text-emerald-900">Covalent</span>
+                        <span class="text-[10px] text-emerald-600">Prefix-Based</span>
+                    </button>
+                    <button onclick="startGame('acids')" class="mode-card group">
+                        <span class="text-2xl">🧪</span>
+                        <span class="font-bold text-emerald-900">Acids</span>
+                        <span class="text-[10px] text-emerald-600">Binary & Oxyacids</span>
+                    </button>
+                    <button onclick="startGame('mixed')" class="mode-card group">
+                        <span class="text-2xl">🌪️</span>
+                        <span class="font-bold text-emerald-900">Mixed</span>
+                        <span class="text-[10px] text-emerald-600">Random Protocol</span>
+                    </button>
+                </div>
+            </div>
+            
+            <div id="dash-reference" class="dash-section w-full max-w-2xl flex-col bg-white p-6 rounded-2xl shadow-sm border border-emerald-100">
+                <h2 class="text-xl font-bold text-emerald-900 mb-4">Required Polyatomic Ions </h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2 text-sm text-emerald-700 h-96 overflow-y-auto custom-scroll pr-2" id="ref-list">
+                    </div>
+            </div>
+        </div>
+
+        <div class="fixed bottom-0 left-0 w-full bg-white/90 backdrop-blur border-t border-emerald-100 p-2 flex justify-center gap-12 z-50">
+            <button onclick="switchDash('home')" id="nav-home" class="dash-nav-btn active">Play</button>
+            <button onclick="switchDash('reference')" id="nav-reference" class="dash-nav-btn">Reference</button>
+        </div>
+    </div>
+
+    <nav class="flex-none flex flex-col md:flex-row justify-between items-center bg-white p-3 md:p-4 rounded-xl shadow-sm border border-emerald-100 mb-2 mx-auto w-full max-w-[1400px] gap-2">
+        <div class="flex items-center gap-3">
+            <button onclick="showDashboard()" class="p-2 rounded-lg hover:bg-emerald-50 text-emerald-400">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
+            </button>
+            <h1 class="text-xl font-bold text-emerald-900">FORMULA <span class="text-emerald-500">FORGE</span></h1>
+        </div>
+        <div class="flex gap-8 text-center bg-emerald-50 p-2 rounded-lg border border-emerald-100 px-6">
+            <div><p class="text-[10px] text-emerald-600 font-bold uppercase">Streak</p><p id="streak-val" class="text-lg font-mono-display font-bold text-amber-500">0</p></div>
+            <div><p class="text-[10px] text-emerald-600 font-bold uppercase">Score</p><p id="score-val" class="text-lg font-mono-display font-bold text-teal-500">0</p></div>
+        </div>
+    </nav>
+
+    <div class="flex-grow grid grid-cols-1 lg:grid-cols-12 gap-4 max-w-[1400px] mx-auto w-full overflow-hidden">
+        <div class="lg:col-span-12 flex flex-col gap-4 order-1 h-full overflow-y-auto pb-4">
+            
+            <div id="prompt-card" class="bg-white p-8 rounded-2xl shadow-lg border border-emerald-50 text-center relative flex flex-col justify-center items-center flex-none">
+                <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-teal-400 via-emerald-500 to-amber-400"></div>
+                <div id="mode-badge" class="absolute top-4 right-4 bg-emerald-50 px-3 py-1 rounded-lg text-xs font-bold text-emerald-700 border border-emerald-100">
+                    <span id="mode-text">Mixed</span>
+                </div>
+                <p class="text-sm text-emerald-600 font-bold mb-2 uppercase tracking-widest" id="question-type">Provide the Formula for:</p>
+                <h2 class="text-4xl font-black text-emerald-900 tracking-tight" id="question-text">Loading...</h2>
+            </div>
+
+            <div id="input-area" class="bg-white p-6 rounded-2xl shadow-md border border-emerald-100 flex-grow flex flex-col items-center justify-center gap-6">
+                <input type="text" id="user-input" class="subscript-input text-3xl p-6 bg-emerald-50 border-2 border-emerald-200 rounded-2xl w-full max-w-xl text-emerald-900 font-bold placeholder-emerald-200" placeholder="Type answer..." autocomplete="off">
+                <button onclick="checkAnswer()" class="w-full max-w-xl py-4 bg-emerald-700 text-white rounded-xl font-bold tracking-widest hover:bg-emerald-800 transition-all shadow-lg">CONFIRM PROTOCOL</button>
+            </div>
+
+            <div id="info-panel" class="hidden bg-emerald-50 border border-emerald-200 p-6 rounded-xl fade-in flex flex-col items-center">
+                <h4 class="text-lg font-bold text-emerald-800 mb-1" id="info-title">Correct!</h4>
+                <p class="text-sm text-emerald-700 mb-4" id="info-desc"></p>
+                <button onclick="nextQuestion()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-8 py-3 rounded-xl transition-colors">Next Challenge →</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="fixed top-24 left-1/2 px-6 py-4 bg-white rounded-full shadow-2xl border border-emerald-100 flex items-center gap-3 z-[60] pointer-events-none toast-hidden">
+        <div id="toast-icon" class="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold">✓</div>
+        <div><p id="toast-title" class="font-bold text-sm text-emerald-900">Correct!</p></div>
+    </div>
+
+    <script>
+        // --- DATA FROM HPolyatomic Ions List.pdf  ---
+        const prefixes = ["", "mono", "di", "tri", "tetra", "penta", "hexa", "hepta", "octa", "nona", "deca"];
+        const roman = ["", "I", "II", "III", "IV", "V", "VI"];
+
+        const nonmetals = [
+            { sym: 'C', name: 'carbon', root: 'carb', en: 2.5 }, { sym: 'P', name: 'phosphorus', root: 'phosphor', en: 2.1 },
+            { sym: 'N', name: 'nitrogen', root: 'nitr', en: 3.0 }, { sym: 'S', name: 'sulfur', root: 'sulfur', en: 2.5 },
+            { sym: 'I', name: 'iodine', root: 'iod', en: 2.5 }, { sym: 'Br', name: 'bromine', root: 'brom', en: 2.8 },
+            { sym: 'Cl', name: 'chlorine', root: 'chlor', en: 3.0 }, { sym: 'O', name: 'oxygen', root: 'ox', en: 3.5 },
+            { sym: 'F', name: 'fluorine', root: 'fluor', en: 4.0 }, { sym: 'Se', name: 'selenium', root: 'selen', en: 2.4 }
+        ];
+
+        const cations = [
+            { sym: 'Li', name: 'lithium', charges: [1], trans: false }, { sym: 'Na', name: 'sodium', charges: [1], trans: false },
+            { sym: 'K', name: 'potassium', charges: [1], trans: false }, { sym: 'Mg', name: 'magnesium', charges: [2], trans: false },
+            { sym: 'Ca', name: 'calcium', charges: [2], trans: false }, { sym: 'Al', name: 'aluminum', charges: [3], trans: false },
+            { sym: 'Ag', name: 'silver', charges: [1], trans: false }, { sym: 'Zn', name: 'zinc', charges: [2], trans: false },
+            { sym: 'Fe', name: 'iron', charges: [2, 3], trans: true }, { sym: 'Cu', name: 'copper', charges: [1, 2], trans: true },
+            { sym: 'Sn', name: 'tin', charges: [2, 4], trans: true }, { sym: 'Pb', name: 'lead', charges: [2, 4], trans: true },
+            { sym: 'NH4', name: 'ammonium', charges: [1], trans: false, type: 'poly' },
+            { sym: 'Hg2', name: 'mercury (I)', charges: [1], trans: false, type: 'poly' } // Per PDF 
+        ];
+
+        const anions = [
+            { sym: 'F', name: 'fluoride', charge: 1, type: 'mono', root: 'fluor' },
+            { sym: 'Cl', name: 'chloride', charge: 1, type: 'mono', root: 'chlor' },
+            { sym: 'Br', name: 'bromide', charge: 1, type: 'mono', root: 'brom' },
+            { sym: 'I', name: 'iodide', charge: 1, type: 'mono', root: 'iod' },
+            { sym: 'O', name: 'oxide', charge: 2, type: 'mono', root: 'ox' },
+            { sym: 'S', name: 'sulfide', charge: 2, type: 'mono', root: 'sulfur' },
+            { sym: 'N', name: 'nitride', charge: 3, type: 'mono', root: 'nitr' },
+            { sym: 'P', name: 'phosphide', charge: 3, type: 'mono', root: 'phosphor' },
+            // PDF POLYATOMICS 
+            { sym: 'C2H3O2', name: 'acetate', charge: 1, type: 'poly', root: 'acet', acid: 'acetic' },
+            { sym: 'ClO', name: 'hypochlorite', charge: 1, type: 'poly', root: 'hypochlor', acid: 'hypochlorous' },
+            { sym: 'ClO2', name: 'chlorite', charge: 1, type: 'poly', root: 'chlor', acid: 'chlorous' },
+            { sym: 'ClO3', name: 'chlorate', charge: 1, type: 'poly', root: 'chlor', acid: 'chloric' },
+            { sym: 'ClO4', name: 'perchlorate', charge: 1, type: 'poly', root: 'perchlor', acid: 'perchloric' },
+            { sym: 'NO2', name: 'nitrite', charge: 1, type: 'poly', root: 'nitr', acid: 'nitrous' },
+            { sym: 'NO3', name: 'nitrate', charge: 1, type: 'poly', root: 'nitr', acid: 'nitric' },
+            { sym: 'MnO4', name: 'permanganate', charge: 1, type: 'poly', root: 'permangan', acid: 'permanganic' },
+            { sym: 'OH', name: 'hydroxide', charge: 1, type: 'poly', root: 'none' },
+            { sym: 'BrO3', name: 'bromate', charge: 1, type: 'poly', root: 'brom', acid: 'bromic' },
+            { sym: 'IO3', name: 'iodate', charge: 1, type: 'poly', root: 'iod', acid: 'iodic' },
+            { sym: 'CN', name: 'cyanide', charge: 1, type: 'poly', root: 'cyan', acid: 'hydrocyanic' },
+            { sym: 'OCN', name: 'cyanate', charge: 1, type: 'poly', root: 'cyan', acid: 'cyanic' },
+            { sym: 'SCN', name: 'thiocyanate', charge: 1, type: 'poly', root: 'thiocyan', acid: 'thiocyanic' },
+            { sym: 'H2PO4', name: 'dihydrogen phosphate', charge: 1, type: 'poly', root: 'dihydrogen phosphor', acid: 'phosphoric' },
+            { sym: 'HCO3', name: 'bicarbonate', charge: 1, type: 'poly', root: 'bicarbon', acid: 'carbonic' },
+            { sym: 'HSO3', name: 'bisulfite', charge: 1, type: 'poly', root: 'bisulfur', acid: 'sulfurous' },
+            { sym: 'HSO4', name: 'bisulfate', charge: 1, type: 'poly', root: 'bisulfur', acid: 'sulfuric' },
+            { sym: 'SO3', name: 'sulfite', charge: 2, type: 'poly', root: 'sulfur', acid: 'sulfurous' },
+            { sym: 'SO4', name: 'sulfate', charge: 2, type: 'poly', root: 'sulfur', acid: 'sulfuric' },
+            { sym: 'S2O3', name: 'thiosulfate', charge: 2, type: 'poly', root: 'thiosulfur', acid: 'thiosulfuric' },
+            { sym: 'CrO4', name: 'chromate', charge: 2, type: 'poly', root: 'chrom', acid: 'chromic' },
+            { sym: 'Cr2O7', name: 'dichromate', charge: 2, type: 'poly', root: 'dichrom', acid: 'dichromic' },
+            { sym: 'CO3', name: 'carbonate', charge: 2, type: 'poly', root: 'carbon', acid: 'carbonic' },
+            { sym: 'C2O4', name: 'oxalate', charge: 2, type: 'poly', root: 'oxal', acid: 'oxalic' },
+            { sym: 'O2', name: 'peroxide', charge: 2, type: 'poly', root: 'none' },
+            { sym: 'HPO4', name: 'hydrogen phosphate', charge: 2, type: 'poly', root: 'hydrogen phosphor', acid: 'phosphoric' },
+            { sym: 'AsO4', name: 'arsenate', charge: 3, type: 'poly', root: 'arsen', acid: 'arsenic' },
+            { sym: 'BO3', name: 'borate', charge: 3, type: 'poly', root: 'bor', acid: 'boric' },
+            { sym: 'PO3', name: 'phosphite', charge: 3, type: 'poly', root: 'phosphor', acid: 'phosphorous' },
+            { sym: 'PO4', name: 'phosphate', charge: 3, type: 'poly', root: 'phosphor', acid: 'phosphoric' }
+        ];
+
+        let state = { mode: 'mixed', streak: 0, score: 0, currentCompound: null, askingFor: 'name' };
+
+        function switchDash(section) {
+            document.querySelectorAll('.dash-section').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.dash-nav-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById(`dash-${section}`).classList.add('active');
+            document.getElementById(`nav-${section}`).classList.add('active');
+        }
+
+        function showDashboard() { document.getElementById('dashboard').style.display = 'flex'; }
+        function hideDashboard() { document.getElementById('dashboard').style.display = 'none'; }
+        function formatFormulaHTML(formula) { return formula.replace(/(\d+)/g, '<sub>$1</sub>'); }
+
+        function gcd(a, b) { return b === 0 ? a : gcd(b, a % b); }
+
+        const generators = {
+            covalent: () => {
+                let nm1 = nonmetals[Math.floor(Math.random()*nonmetals.length)];
+                let nm2 = nonmetals.filter(n => n.sym !== nm1.sym)[Math.floor(Math.random()*(nonmetals.length-1))];
+                if (nm1.en > nm2.en) [nm1, nm2] = [nm2, nm1];
+                let s1 = Math.floor(Math.random()*3)+1, s2 = Math.floor(Math.random()*4)+1;
+                let name = (s1 === 1 ? nm1.name : prefixes[s1]+nm1.name) + " " + prefixes[s2] + nm2.root + "ide";
+                return { formula: nm1.sym+(s1>1?s1:"")+nm2.sym+(s2>1?s2:""), name: name.toLowerCase() };
+            },
+            ionic: () => {
+                let cat = cations[Math.floor(Math.random()*cations.length)], ani = anions[Math.floor(Math.random()*anions.length)];
+                let cc = cat.charges[Math.floor(Math.random()*cat.charges.length)], ac = ani.charge;
+                let div = gcd(cc, ac), cs = ac/div, as = cc/div;
+                let f = (cat.type==='poly'&&cs>1 ? `(${cat.sym})${cs}` : cat.sym+(cs>1?cs:"")) + (ani.type==='poly'&&as>1 ? `(${ani.sym})${as}` : ani.sym+(as>1?as:""));
+                let n = cat.name + (cat.trans ? ` (${roman[cc]})` : "") + " " + ani.name;
+                return { formula: f, name: n.toLowerCase() };
+            },
+            acids: () => {
+                let ani = anions.filter(a => a.acid)[Math.floor(Math.random()*anions.filter(a => a.acid).length)];
+                let name = ani.type === 'mono' ? `hydro${ani.root}ic acid` : `${ani.acid} acid`;
+                return { formula: "H"+(ani.charge>1?ani.charge:"")+ani.sym, name: name.toLowerCase() };
+            }
+        };
+
+        function nextQuestion() {
+            document.getElementById('info-panel').classList.add('hidden');
+            document.getElementById('input-area').classList.remove('hidden');
+            let input = document.getElementById('user-input'); input.value = ''; input.focus();
+            let mode = state.mode === 'mixed' ? ['ionic','covalent','acids'][Math.floor(Math.random()*3)] : state.mode;
+            state.currentCompound = generators[mode]();
+            state.askingFor = Math.random() > 0.5 ? 'name' : 'formula';
+            document.getElementById('question-type').innerText = `Provide the ${state.askingFor} for:`;
+            document.getElementById('question-text').innerHTML = state.askingFor === 'name' ? formatFormulaHTML(state.currentCompound.formula) : state.currentCompound.name.toUpperCase();
+        }
+
+        function checkAnswer() {
+            let user = document.getElementById('user-input').value.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+            let target = (state.askingFor === 'name' ? state.currentCompound.name : state.currentCompound.formula).toLowerCase().replace(/[^a-z0-9]/g, '');
+            if (user === target) {
+                state.streak++; state.score += 100 * state.streak; updateStats();
+                document.getElementById('input-area').classList.add('hidden');
+                document.getElementById('info-panel').classList.remove('hidden');
+                document.getElementById('info-title').innerHTML = "Correct!";
+                document.getElementById('info-desc').innerHTML = `${formatFormulaHTML(state.currentCompound.formula)} = ${state.currentCompound.name.toUpperCase()}`;
+            } else {
+                state.streak = 0; updateStats();
+                document.getElementById('prompt-card').classList.add('shake');
+                setTimeout(() => document.getElementById('prompt-card').classList.remove('shake'), 400);
+            }
+        }
+
+        function updateStats() { document.getElementById('streak-val').innerText = state.streak; document.getElementById('score-val').innerText = state.score; }
+        function startGame(m) { state.mode = m; state.streak = 0; updateStats(); hideDashboard(); nextQuestion(); }
+        
+        window.onload = () => {
+            const list = document.getElementById('ref-list');
+            anions.filter(a => a.type === 'poly').forEach(a => {
+                list.innerHTML += `<div class="flex justify-between border-b border-emerald-50 py-1"><span>${a.name}</span><span class="font-mono text-xs">${formatFormulaHTML(a.sym)}<sup>${a.charge}-</sup></span></div>`;
+            });
+        };
+        document.getElementById('user-input').addEventListener('keypress', (e) => { if(e.key === 'Enter') checkAnswer(); });
+    </script>
+</body>
+</html>
