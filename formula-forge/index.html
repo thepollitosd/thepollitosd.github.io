@@ -57,19 +57,29 @@
         .periodic-grid {
             display: grid;
             grid-template-columns: repeat(18, minmax(0, 1fr));
+            grid-template-rows: repeat(10, minmax(0, 1fr));
             gap: 2px;
             background: #e2e8f0;
             padding: 4px;
             border-radius: 8px;
+            height: 100%;
         }
         .elem-btn {
-            aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
-            font-size: 0.7rem; font-weight: bold; border-radius: 4px; transition: transform 0.1s, box-shadow 0.1s;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            font-size: 0.65rem; font-weight: bold; border-radius: 3px; transition: transform 0.1s, box-shadow 0.1s;
             cursor: pointer; background: white;
+            min-height: 24px;
         }
-        .elem-btn:hover { transform: scale(1.15); z-index: 10; box-shadow: 0 4px 10px rgba(0,0,0,0.15); }
+        @media (min-width: 1024px) {
+            .elem-btn { font-size: 0.75rem; min-height: 32px; }
+        }
+        .elem-btn:hover { transform: scale(1.2); z-index: 10; box-shadow: 0 4px 10px rgba(0,0,0,0.15); }
+        
+        /* Element Type Colors */
         .elem-btn.metal { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
         .elem-btn.nonmetal { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+        .elem-btn.metalloid { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
+        .elem-btn.noble { background: #fdf4ff; color: #86198f; border: 1px solid #f5d0fe; }
         .elem-btn.empty { background: transparent; pointer-events: none; border: none; }
 
         /* BUILDER TRAY */
@@ -104,7 +114,7 @@
             <button onclick="showVersionHistory()" class="w-full py-4 bg-white border-2 border-slate-200 text-slate-600 hover:border-emerald-500 hover:text-emerald-600 rounded-xl font-bold tracking-widest transition-all">VERSION HISTORY</button>
         </div>
 
-        <div class="absolute bottom-4 left-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Build 1.4.0 (Honors)</div>
+        <div class="absolute bottom-4 left-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Build 1.5.0 (Full Elements)</div>
     </div>
 
     <div id="version-history" class="modal-overlay p-4">
@@ -113,26 +123,19 @@
             <h2 class="text-2xl font-black text-slate-800 mb-6">Version History</h2>
             <div class="overflow-y-auto custom-scroll pr-2 flex-grow space-y-6">
                 <div>
-                    <h3 class="font-bold text-emerald-600 mb-1">v1.4.0 - Builder Interface Update</h3>
+                    <h3 class="font-bold text-emerald-600 mb-1">v1.5.0 - Complete Periodic Table</h3>
                     <ul class="text-sm text-slate-600 list-disc pl-4 space-y-1">
-                        <li>Rebuilt UI to match Orbital Overdrive architecture.</li>
-                        <li>Interactive Periodic Table integration.</li>
-                        <li>Subscript dropdown selectors added to builder tray.</li>
-                        <li>Auto-formatting for Polyatomic parentheses.</li>
+                        <li>Expanded element database to all 118 elements.</li>
+                        <li>Added Lanthanide & Actinide series layout.</li>
+                        <li>UI scaling adjustments to fit 10-row grid seamlessly.</li>
+                        <li>Added Noble Gas categorizations.</li>
                     </ul>
                 </div>
                 <div>
-                    <h3 class="font-bold text-emerald-600 mb-1">v1.3.0 - Honors Polyatomic Database</h3>
-                    <ul class="text-sm text-slate-600 list-disc pl-4 space-y-1">
-                        <li>Imported full U6 Honors Handout list.</li>
-                        <li>Added charge picker for transition metals.</li>
-                    </ul>
-                </div>
-                <div>
-                    <h3 class="font-bold text-slate-400 mb-1">v1.0.0 - Initial Release</h3>
+                    <h3 class="font-bold text-slate-400 mb-1">v1.4.0 - Builder Interface Update</h3>
                     <ul class="text-sm text-slate-500 list-disc pl-4 space-y-1">
-                        <li>Procedural generation for ionic/covalent compounds.</li>
-                        <li>Basic string matching validation.</li>
+                        <li>Rebuilt UI to match Orbital Overdrive architecture.</li>
+                        <li>Subscript dropdown selectors added to builder tray.</li>
                     </ul>
                 </div>
             </div>
@@ -169,19 +172,21 @@
     <div class="flex-grow grid grid-cols-1 lg:grid-cols-12 gap-4 max-w-[1400px] mx-auto w-full overflow-hidden">
         
         <div class="lg:col-span-8 flex flex-col gap-4 h-full overflow-hidden">
-            <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex-grow flex flex-col">
+            <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex-grow flex flex-col h-full">
                 <div class="flex justify-between items-center mb-3 flex-none">
                     <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest">Interactive Elements</h3>
                     <div class="flex gap-3 text-[10px] font-bold">
                         <span class="flex items-center gap-1"><div class="w-2 h-2 rounded bg-blue-100 border border-blue-200"></div> Metals</span>
                         <span class="flex items-center gap-1"><div class="w-2 h-2 rounded bg-red-100 border border-red-200"></div> Non-Metals</span>
+                        <span class="flex items-center gap-1"><div class="w-2 h-2 rounded bg-green-100 border border-green-200"></div> Metalloids</span>
+                        <span class="flex items-center gap-1"><div class="w-2 h-2 rounded bg-fuchsia-100 border border-fuchsia-200"></div> Noble Gases</span>
                     </div>
                 </div>
                 <div id="periodic-table" class="periodic-grid flex-grow">
                     </div>
             </div>
 
-            <div class="bg-slate-800 p-6 rounded-2xl shadow-lg flex flex-col gap-4 flex-none border border-slate-700">
+            <div class="bg-slate-800 p-4 lg:p-6 rounded-2xl shadow-lg flex flex-col gap-4 flex-none border border-slate-700">
                 <div class="flex justify-between items-center">
                     <h3 class="text-xs font-bold text-emerald-400 uppercase tracking-widest">Assembly Tray</h3>
                     <button onclick="clearTray()" class="text-[10px] text-white/50 hover:text-white underline uppercase tracking-wider transition-colors">Reset Tray</button>
@@ -218,10 +223,10 @@
     </div>
 
     <div id="charge-overlay" class="fixed inset-0 z-50 flex items-center justify-center hidden">
-        <div class="bg-white p-8 rounded-3xl shadow-2xl border border-slate-200 text-center max-w-sm w-full fade-in">
-            <button onclick="document.getElementById('charge-overlay').classList.add('hidden')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 font-bold">&times;</button>
+        <div class="bg-white p-8 rounded-3xl shadow-2xl border border-slate-200 text-center max-w-md w-full fade-in relative">
+            <button onclick="document.getElementById('charge-overlay').classList.add('hidden')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 font-bold text-xl">&times;</button>
             <p id="charge-title" class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Select Oxidation State</p>
-            <div id="charge-options" class="grid grid-cols-2 gap-3">
+            <div id="charge-options" class="grid grid-cols-2 gap-3 max-h-64 overflow-y-auto custom-scroll pr-2">
                 </div>
         </div>
     </div>
@@ -233,7 +238,80 @@
         function showVersionHistory() { document.getElementById('version-history').classList.add('active'); }
         function closeVersionHistory() { document.getElementById('version-history').classList.remove('active'); }
 
-        // --- DATA (Honors PDF + Basics) ---
+        // --- FULL 118 ELEMENT DATABASE ---
+        // Format: {sym, n (name), x (group 1-18), y (period 1-10, where 9=Lanthanides, 10=Actinides), c [charges], t (type)}
+        const elements = [
+            // Period 1
+            {sym:"H",n:"Hydrogen",x:1,y:1,c:[1,-1],t:"nonmetal"}, {sym:"He",n:"Helium",x:18,y:1,c:[0],t:"noble"},
+            // Period 2
+            {sym:"Li",n:"Lithium",x:1,y:2,c:[1],t:"metal"}, {sym:"Be",n:"Beryllium",x:2,y:2,c:[2],t:"metal"},
+            {sym:"B",n:"Boron",x:13,y:2,c:[3],t:"metalloid"}, {sym:"C",n:"Carbon",x:14,y:2,c:[-4,2,4],t:"nonmetal"},
+            {sym:"N",n:"Nitrogen",x:15,y:2,c:[-3],t:"nonmetal"}, {sym:"O",n:"Oxygen",x:16,y:2,c:[-2],t:"nonmetal"},
+            {sym:"F",n:"Fluorine",x:17,y:2,c:[-1],t:"nonmetal"}, {sym:"Ne",n:"Neon",x:18,y:2,c:[0],t:"noble"},
+            // Period 3
+            {sym:"Na",n:"Sodium",x:1,y:3,c:[1],t:"metal"}, {sym:"Mg",n:"Magnesium",x:2,y:3,c:[2],t:"metal"},
+            {sym:"Al",n:"Aluminum",x:13,y:3,c:[3],t:"metal"}, {sym:"Si",n:"Silicon",x:14,y:3,c:[-4,4],t:"metalloid"},
+            {sym:"P",n:"Phosphorus",x:15,y:3,c:[-3,3,5],t:"nonmetal"}, {sym:"S",n:"Sulfur",x:16,y:3,c:[-2,4,6],t:"nonmetal"},
+            {sym:"Cl",n:"Chlorine",x:17,y:3,c:[-1,1,3,5,7],t:"nonmetal"}, {sym:"Ar",n:"Argon",x:18,y:3,c:[0],t:"noble"},
+            // Period 4
+            {sym:"K",n:"Potassium",x:1,y:4,c:[1],t:"metal"}, {sym:"Ca",n:"Calcium",x:2,y:4,c:[2],t:"metal"},
+            {sym:"Sc",n:"Scandium",x:3,y:4,c:[3],t:"metal"}, {sym:"Ti",n:"Titanium",x:4,y:4,c:[2,3,4],t:"metal"},
+            {sym:"V",n:"Vanadium",x:5,y:4,c:[2,3,4,5],t:"metal"}, {sym:"Cr",n:"Chromium",x:6,y:4,c:[2,3,6],t:"metal"},
+            {sym:"Mn",n:"Manganese",x:7,y:4,c:[2,3,4,6,7],t:"metal"}, {sym:"Fe",n:"Iron",x:8,y:4,c:[2,3],t:"metal"},
+            {sym:"Co",n:"Cobalt",x:9,y:4,c:[2,3],t:"metal"}, {sym:"Ni",n:"Nickel",x:10,y:4,c:[2,3],t:"metal"},
+            {sym:"Cu",n:"Copper",x:11,y:4,c:[1,2],t:"metal"}, {sym:"Zn",n:"Zinc",x:12,y:4,c:[2],t:"metal"},
+            {sym:"Ga",n:"Gallium",x:13,y:4,c:[3],t:"metal"}, {sym:"Ge",n:"Germanium",x:14,y:4,c:[2,4],t:"metalloid"},
+            {sym:"As",n:"Arsenic",x:15,y:4,c:[-3,3,5],t:"metalloid"}, {sym:"Se",n:"Selenium",x:16,y:4,c:[-2,4,6],t:"nonmetal"},
+            {sym:"Br",n:"Bromine",x:17,y:4,c:[-1,1,3,5],t:"nonmetal"}, {sym:"Kr",n:"Krypton",x:18,y:4,c:[0],t:"noble"},
+            // Period 5
+            {sym:"Rb",n:"Rubidium",x:1,y:5,c:[1],t:"metal"}, {sym:"Sr",n:"Strontium",x:2,y:5,c:[2],t:"metal"},
+            {sym:"Y",n:"Yttrium",x:3,y:5,c:[3],t:"metal"}, {sym:"Zr",n:"Zirconium",x:4,y:5,c:[4],t:"metal"},
+            {sym:"Nb",n:"Niobium",x:5,y:5,c:[3,5],t:"metal"}, {sym:"Mo",n:"Molybdenum",x:6,y:5,c:[6],t:"metal"},
+            {sym:"Tc",n:"Technetium",x:7,y:5,c:[4,7],t:"metal"}, {sym:"Ru",n:"Ruthenium",x:8,y:5,c:[3,4],t:"metal"},
+            {sym:"Rh",n:"Rhodium",x:9,y:5,c:[3],t:"metal"}, {sym:"Pd",n:"Palladium",x:10,y:5,c:[2,4],t:"metal"},
+            {sym:"Ag",n:"Silver",x:11,y:5,c:[1],t:"metal"}, {sym:"Cd",n:"Cadmium",x:12,y:5,c:[2],t:"metal"},
+            {sym:"In",n:"Indium",x:13,y:5,c:[3],t:"metal"}, {sym:"Sn",n:"Tin",x:14,y:5,c:[2,4],t:"metal"},
+            {sym:"Sb",n:"Antimony",x:15,y:5,c:[-3,3,5],t:"metalloid"}, {sym:"Te",n:"Tellurium",x:16,y:5,c:[-2,4,6],t:"metalloid"},
+            {sym:"I",n:"Iodine",x:17,y:5,c:[-1,1,3,5,7],t:"nonmetal"}, {sym:"Xe",n:"Xenon",x:18,y:5,c:[0],t:"noble"},
+            // Period 6
+            {sym:"Cs",n:"Cesium",x:1,y:6,c:[1],t:"metal"}, {sym:"Ba",n:"Barium",x:2,y:6,c:[2],t:"metal"},
+            {sym:"Lu",n:"Lutetium",x:3,y:6,c:[3],t:"metal"}, {sym:"Hf",n:"Hafnium",x:4,y:6,c:[4],t:"metal"},
+            {sym:"Ta",n:"Tantalum",x:5,y:6,c:[5],t:"metal"}, {sym:"W",n:"Tungsten",x:6,y:6,c:[6],t:"metal"},
+            {sym:"Re",n:"Rhenium",x:7,y:6,c:[4,7],t:"metal"}, {sym:"Os",n:"Osmium",x:8,y:6,c:[4],t:"metal"},
+            {sym:"Ir",n:"Iridium",x:9,y:6,c:[3,4],t:"metal"}, {sym:"Pt",n:"Platinum",x:10,y:6,c:[2,4],t:"metal"},
+            {sym:"Au",n:"Gold",x:11,y:6,c:[1,3],t:"metal"}, {sym:"Hg",n:"Mercury",x:12,y:6,c:[1,2],t:"metal"},
+            {sym:"Tl",n:"Thallium",x:13,y:6,c:[1,3],t:"metal"}, {sym:"Pb",n:"Lead",x:14,y:6,c:[2,4],t:"metal"},
+            {sym:"Bi",n:"Bismuth",x:15,y:6,c:[3,5],t:"metal"}, {sym:"Po",n:"Polonium",x:16,y:6,c:[2,4],t:"metalloid"},
+            {sym:"At",n:"Astatine",x:17,y:6,c:[-1],t:"metalloid"}, {sym:"Rn",n:"Radon",x:18,y:6,c:[0],t:"noble"},
+            // Period 7
+            {sym:"Fr",n:"Francium",x:1,y:7,c:[1],t:"metal"}, {sym:"Ra",n:"Radium",x:2,y:7,c:[2],t:"metal"},
+            {sym:"Lr",n:"Lawrencium",x:3,y:7,c:[3],t:"metal"}, {sym:"Rf",n:"Rutherfordium",x:4,y:7,c:[4],t:"metal"},
+            {sym:"Db",n:"Dubnium",x:5,y:7,c:[5],t:"metal"}, {sym:"Sg",n:"Seaborgium",x:6,y:7,c:[6],t:"metal"},
+            {sym:"Bh",n:"Bohrium",x:7,y:7,c:[7],t:"metal"}, {sym:"Hs",n:"Hassium",x:8,y:7,c:[8],t:"metal"},
+            {sym:"Mt",n:"Meitnerium",x:9,y:7,c:[0],t:"metal"}, {sym:"Ds",n:"Darmstadtium",x:10,y:7,c:[0],t:"metal"},
+            {sym:"Rg",n:"Roentgenium",x:11,y:7,c:[0],t:"metal"}, {sym:"Cn",n:"Copernicium",x:12,y:7,c:[2],t:"metal"},
+            {sym:"Nh",n:"Nihonium",x:13,y:7,c:[0],t:"metal"}, {sym:"Fl",n:"Flerovium",x:14,y:7,c:[0],t:"metal"},
+            {sym:"Mc",n:"Moscovium",x:15,y:7,c:[0],t:"metal"}, {sym:"Lv",n:"Livermorium",x:16,y:7,c:[0],t:"metal"},
+            {sym:"Ts",n:"Tennessine",x:17,y:7,c:[0],t:"nonmetal"}, {sym:"Og",n:"Oganesson",x:18,y:7,c:[0],t:"noble"},
+            // Lanthanides (y=9, x=4 to 17)
+            {sym:"La",n:"Lanthanum",x:4,y:9,c:[3],t:"metal"}, {sym:"Ce",n:"Cerium",x:5,y:9,c:[3,4],t:"metal"},
+            {sym:"Pr",n:"Praseodymium",x:6,y:9,c:[3],t:"metal"}, {sym:"Nd",n:"Neodymium",x:7,y:9,c:[3],t:"metal"},
+            {sym:"Pm",n:"Promethium",x:8,y:9,c:[3],t:"metal"}, {sym:"Sm",n:"Samarium",x:9,y:9,c:[2,3],t:"metal"},
+            {sym:"Eu",n:"Europium",x:10,y:9,c:[2,3],t:"metal"}, {sym:"Gd",n:"Gadolinium",x:11,y:9,c:[3],t:"metal"},
+            {sym:"Tb",n:"Terbium",x:12,y:9,c:[3,4],t:"metal"}, {sym:"Dy",n:"Dysprosium",x:13,y:9,c:[3],t:"metal"},
+            {sym:"Ho",n:"Holmium",x:14,y:9,c:[3],t:"metal"}, {sym:"Er",n:"Erbium",x:15,y:9,c:[3],t:"metal"},
+            {sym:"Tm",n:"Thulium",x:16,y:9,c:[3],t:"metal"}, {sym:"Yb",n:"Ytterbium",x:17,y:9,c:[2,3],t:"metal"},
+            // Actinides (y=10, x=4 to 17)
+            {sym:"Ac",n:"Actinium",x:4,y:10,c:[3],t:"metal"}, {sym:"Th",n:"Thorium",x:5,y:10,c:[4],t:"metal"},
+            {sym:"Pa",n:"Protactinium",x:6,y:10,c:[5],t:"metal"}, {sym:"U",n:"Uranium",x:7,y:10,c:[3,4,5,6],t:"metal"},
+            {sym:"Np",n:"Neptunium",x:8,y:10,c:[5],t:"metal"}, {sym:"Pu",n:"Plutonium",x:9,y:10,c:[4,6],t:"metal"},
+            {sym:"Am",n:"Americium",x:10,y:10,c:[3],t:"metal"}, {sym:"Cm",n:"Curium",x:11,y:10,c:[3],t:"metal"},
+            {sym:"Bk",n:"Berkelium",x:12,y:10,c:[3,4],t:"metal"}, {sym:"Cf",n:"Californium",x:13,y:10,c:[3],t:"metal"},
+            {sym:"Es",n:"Einsteinium",x:14,y:10,c:[3],t:"metal"}, {sym:"Fm",n:"Fermium",x:15,y:10,c:[3],t:"metal"},
+            {sym:"Md",n:"Mendelevium",x:16,y:10,c:[2,3],t:"metal"}, {sym:"No",n:"Nobelium",x:17,y:10,c:[2],t:"metal"}
+        ];
+
+        // Polyatomics from Study List
         const polyatomics = [
             { name: "Acetate", sym: "C2H3O2", charge: -1 }, { name: "Hypochlorite", sym: "ClO", charge: -1 },
             { name: "Chlorite", sym: "ClO2", charge: -1 }, { name: "Chlorate", sym: "ClO3", charge: -1 },
@@ -254,21 +332,6 @@
             { name: "Mercury (I)", sym: "Hg2", charge: 2 } 
         ];
 
-        const elements = [
-            { sym: "H", n: "Hydrogen", x: 1, y: 1, c: [1], t: "nonmetal" }, { sym: "Li", n: "Lithium", x: 1, y: 2, c: [1], t: "metal" },
-            { sym: "Na", n: "Sodium", x: 1, y: 3, c: [1], t: "metal" }, { sym: "K", n: "Potassium", x: 1, y: 4, c: [1], t: "metal" },
-            { sym: "Mg", n: "Magnesium", x: 2, y: 3, c: [2], t: "metal" }, { sym: "Ca", n: "Calcium", x: 2, y: 4, c: [2], t: "metal" },
-            { sym: "Ba", n: "Barium", x: 2, y: 6, c: [2], t: "metal" }, { sym: "Fe", n: "Iron", x: 8, y: 4, c: [2, 3], t: "metal" },
-            { sym: "Cu", n: "Copper", x: 11, y: 4, c: [1, 2], t: "metal" }, { sym: "Ag", n: "Silver", x: 11, y: 5, c: [1], t: "metal" },
-            { sym: "Zn", n: "Zinc", x: 12, y: 4, c: [2], t: "metal" }, { sym: "Al", n: "Aluminum", x: 13, y: 3, c: [3], t: "metal" },
-            { sym: "C", n: "Carbon", x: 14, y: 2, c: [-4], t: "nonmetal" }, { sym: "N", n: "Nitrogen", x: 15, y: 2, c: [-3], t: "nonmetal" },
-            { sym: "P", n: "Phosphorus", x: 15, y: 3, c: [-3], t: "nonmetal" }, { sym: "O", n: "Oxygen", x: 16, y: 2, c: [-2], t: "nonmetal" },
-            { sym: "S", n: "Sulfur", x: 16, y: 3, c: [-2], t: "nonmetal" }, { sym: "F", n: "Fluorine", x: 17, y: 2, c: [-1], t: "nonmetal" },
-            { sym: "Cl", n: "Chlorine", x: 17, y: 3, c: [-1], t: "nonmetal" }, { sym: "Br", n: "Bromine", x: 17, y: 4, c: [-1], t: "nonmetal" },
-            { sym: "I", n: "Iodine", x: 17, y: 5, c: [-1], t: "nonmetal" }, { sym: "Pb", n: "Lead", x: 14, y: 6, c: [2, 4], t: "metal" },
-            { sym: "Sn", n: "Tin", x: 14, y: 5, c: [2, 4], t: "metal" }
-        ];
-
         // --- STATE ---
         let tray = [];
         let state = { score: 0, streak: 0, level: 1, currentTarget: null };
@@ -276,7 +339,8 @@
         // --- INITIALIZATION ---
         function initTable() {
             const container = document.getElementById('periodic-table');
-            for(let y=1; y<=7; y++) {
+            for(let y=1; y<=10; y++) {
+                // y=8 is intentionally left mostly blank for the gap above f-block
                 for(let x=1; x<=18; x++) {
                     const el = elements.find(e => e.x === x && e.y === y);
                     if(el) {
@@ -288,6 +352,9 @@
                     } else {
                         const empty = document.createElement('div');
                         empty.className = 'elem-btn empty';
+                        // Add marker lines pointing to Lanthanides/Actinides if desired
+                        if (x===3 && y===6) empty.innerHTML = '<span class="text-[8px] text-slate-400">*</span>';
+                        if (x===3 && y===7) empty.innerHTML = '<span class="text-[8px] text-slate-400">**</span>';
                         container.appendChild(empty);
                     }
                 }
@@ -326,7 +393,7 @@
 
             el.c.forEach(charge => {
                 const btn = document.createElement('button');
-                btn.className = 'bg-slate-100 hover:bg-emerald-50 hover:border-emerald-500 border-2 border-slate-200 text-slate-800 font-black py-3 rounded-xl text-lg transition-colors';
+                btn.className = 'bg-slate-50 hover:bg-emerald-50 hover:border-emerald-500 border-2 border-slate-200 text-slate-800 font-black py-3 rounded-xl text-lg transition-colors';
                 btn.innerText = charge > 0 ? `+${charge}` : charge;
                 btn.onclick = () => {
                     addToTray(el.sym, charge, false, el.n);
@@ -344,9 +411,7 @@
 
         function formatDisplayFormula(item) {
             let sym = item.symbol;
-            if (item.isPoly && item.subscript > 1) {
-                sym = `(${sym})`;
-            }
+            if (item.isPoly && item.subscript > 1) { sym = `(${sym})`; }
             sym += item.subscript > 1 ? item.subscript : "";
             return sym.replace(/(\d+)/g, '<sub>$1</sub>');
         }
@@ -363,7 +428,7 @@
                 slot.innerHTML = `
                     <button onclick="removeFromTray(${index})" class="absolute -top-2 -right-2 bg-slate-200 text-slate-600 hover:bg-red-500 hover:text-white w-6 h-6 rounded-full text-xs font-bold transition-colors">×</button>
                     <div class="text-2xl font-black text-slate-800">${formatDisplayFormula(item)}</div>
-                    <div class="text-[9px] font-bold text-slate-400 mb-2 uppercase tracking-widest">${item.name} (${chargeLabel})</div>
+                    <div class="text-[9px] font-bold text-slate-400 mb-2 uppercase tracking-widest text-center px-2 line-clamp-1">${item.name} (${chargeLabel})</div>
                     <select onchange="updateSubscript(${index}, this.value)" class="bg-slate-50 text-[10px] font-bold px-2 py-1 rounded-lg outline-none border border-slate-200 cursor-pointer">
                         ${[1,2,3,4,5,6,7,8,9,10].map(n => `<option value="${n}" ${item.subscript == n ? 'selected' : ''}>Qty: ${n}</option>`).join('')}
                     </select>
@@ -388,7 +453,7 @@
 
         // --- GAME MECHANICS ---
         function gcd(a, b) { return b === 0 ? a : gcd(b, a % b); }
-        function roman(n) { return ["", "I", "II", "III", "IV", "V", "VI"][n]; }
+        function roman(n) { return ["", "I", "II", "III", "IV", "V", "VI", "VII"][n]; }
 
         function generateProblem() {
             clearTray();
@@ -398,36 +463,40 @@
             const isPoly = Math.random() > 0.4;
             let cation, anion;
 
+            // Constrain random generation to common elements so it's solvable
+            const commonMetals = elements.filter(e => e.t === 'metal' && e.y <= 6 && e.x <= 15);
+            const commonNonmetals = elements.filter(e => e.t === 'nonmetal' && e.sym !== 'H');
+
             if (!isPoly) {
-                cation = elements.filter(e => e.t === 'metal')[Math.floor(Math.random() * elements.filter(e => e.t === 'metal').length)];
-                anion = elements.filter(e => e.t === 'nonmetal')[Math.floor(Math.random() * elements.filter(e => e.t === 'nonmetal').length)];
+                cation = commonMetals[Math.floor(Math.random() * commonMetals.length)];
+                anion = commonNonmetals[Math.floor(Math.random() * commonNonmetals.length)];
                 
                 const cCharge = cation.c[Math.floor(Math.random() * cation.c.length)];
-                const aCharge = Math.abs(anion.c[0]);
+                const aCharge = Math.abs(anion.c[0] < 0 ? anion.c[0] : -1);
                 const g = gcd(cCharge, aCharge);
 
-                let name = cation.n + (cation.c.length > 1 ? ` (${roman(cCharge)})` : "") + " " + anion.n.toLowerCase().replace(/ine$|ogen$|orus$|ur$/, "") + "ide";
-                if (anion.sym === 'O') name = cation.n + (cation.c.length > 1 ? ` (${roman(cCharge)})` : "") + " oxide";
+                let name = cation.n + (cation.c.length > 1 && cCharge > 0 ? ` (${roman(cCharge)})` : "") + " " + anion.n.toLowerCase().replace(/ine$|ogen$|orus$|ur$/, "") + "ide";
+                if (anion.sym === 'O') name = cation.n + (cation.c.length > 1 && cCharge > 0 ? ` (${roman(cCharge)})` : "") + " oxide";
 
-                state.currentTarget = { name, cSym: cation.sym, cCharge, cSub: aCharge/g, aSym: anion.sym, aCharge: -aCharge, aSub: cCharge/g, isAPoly: false, isCPoly: false };
+                state.currentTarget = { name, cSym: cation.sym, cCharge, cSub: aCharge/g, aSym: anion.sym, aCharge: -aCharge, aSub: cCharge/g };
             } else {
                 const isAmmonium = Math.random() > 0.8;
                 if(isAmmonium) {
                     cation = polyatomics.find(p => p.name === "Ammonium");
-                    anion = elements.filter(e => e.t === 'nonmetal')[Math.floor(Math.random() * 5)];
+                    anion = commonNonmetals[Math.floor(Math.random() * commonNonmetals.length)];
                 } else {
-                    cation = elements.filter(e => e.t === 'metal')[Math.floor(Math.random() * 10)];
+                    cation = commonMetals[Math.floor(Math.random() * commonMetals.length)];
                     anion = polyatomics[Math.floor(Math.random() * polyatomics.length)];
                 }
 
                 const cCharge = cation.c ? cation.c[Math.floor(Math.random() * cation.c.length)] : cation.charge;
                 const aCharge = Math.abs(anion.c ? anion.c[0] : anion.charge);
-                const g = gcd(cCharge, aCharge);
+                const g = gcd(Math.abs(cCharge), Math.abs(aCharge));
                 
                 state.currentTarget = { 
-                    name: (cation.name || cation.n) + (cation.c && cation.c.length > 1 ? ` (${roman(cCharge)})` : "") + " " + (anion.name || anion.n.toLowerCase().replace(/ine$|ogen$|orus$|ur$/, "") + "ide").toLowerCase(), 
-                    cSym: cation.sym, cCharge, cSub: aCharge/g, isCPoly: !cation.c,
-                    aSym: anion.sym, aCharge: anion.charge || anion.c[0], aSub: cCharge/g, isAPoly: !anion.c
+                    name: (cation.name || cation.n) + (cation.c && cation.c.length > 1 && cCharge > 0 ? ` (${roman(cCharge)})` : "") + " " + (anion.name || anion.n.toLowerCase().replace(/ine$|ogen$|orus$|ur$/, "") + "ide").toLowerCase(), 
+                    cSym: cation.sym, cCharge, cSub: aCharge/g,
+                    aSym: anion.sym, aCharge: anion.charge || (anion.c ? anion.c[0] : -1), aSub: cCharge/g
                 };
             }
             document.getElementById('target-name').innerText = state.currentTarget.name;
@@ -443,15 +512,24 @@
             if (tray.length < 2) return alert("Assemble both cation and anion.");
             
             const [c, a] = tray;
-            const matchC = (c.symbol === state.currentTarget.cSym && c.charge === state.currentTarget.cCharge && c.subscript === state.currentTarget.cSub);
-            const matchA = (a.symbol === state.currentTarget.aSym && a.charge === state.currentTarget.aCharge && a.subscript === state.currentTarget.aSub);
+            
+            // Allow them to place anion first or cation first, though conventionally it's cation first.
+            let userCat = c.charge > 0 ? c : a;
+            let userAni = c.charge < 0 ? c : a;
+
+            if (userCat.charge <= 0 || userAni.charge >= 0) {
+                alert("Ensure you have one positive ion and one negative ion.");
+                return;
+            }
+
+            const matchC = (userCat.symbol === state.currentTarget.cSym && userCat.charge === state.currentTarget.cCharge && userCat.subscript === state.currentTarget.cSub);
+            const matchA = (userAni.symbol === state.currentTarget.aSym && userAni.charge === state.currentTarget.aCharge && userAni.subscript === state.currentTarget.aSub);
             
             if (matchC && matchA) {
                 state.streak++; state.score += 100 * state.streak; updateStats();
                 
-                // Construct final formatted string for display
-                let cStr = c.symbol; if(c.isPoly && c.subscript > 1) cStr = `(${cStr})`; cStr += c.subscript > 1 ? c.subscript : "";
-                let aStr = a.symbol; if(a.isPoly && a.subscript > 1) aStr = `(${aStr})`; aStr += a.subscript > 1 ? a.subscript : "";
+                let cStr = userCat.symbol; if(userCat.isPoly && userCat.subscript > 1) cStr = `(${cStr})`; cStr += userCat.subscript > 1 ? userCat.subscript : "";
+                let aStr = userAni.symbol; if(userAni.isPoly && userAni.subscript > 1) aStr = `(${aStr})`; aStr += userAni.subscript > 1 ? userAni.subscript : "";
                 
                 document.getElementById('info-desc').innerHTML = `${(cStr+aStr).replace(/(\d+)/g, '<sub>$1</sub>')}`;
                 
