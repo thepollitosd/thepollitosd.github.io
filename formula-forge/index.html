@@ -3,25 +3,57 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Formula Forge: Builder Edition</title>
+    <title>Formula Forge</title>
+    <link rel="icon" type="image/png" href="/public/favicon/favicon-96x96.png" sizes="96x96" />
+    <link rel="icon" type="image/svg+xml" href="/public/favicon/favicon.svg" />
+    <link rel="shortcut icon" href="/public/favicon/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/public/favicon/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-title" content="Formula Forge" />
+    <link rel="manifest" href="/public/favicon/site.webmanifest" />
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Space+Grotesk:wght@300;500;700&display=swap');
 
         :root {
             --bg-light: #f8fafc;
-            --emerald-main: #10b981;
+            --text-main: #334155;
+            --accent-main: #10b981; /* Emerald */
+            --accent-shadow: rgba(16, 185, 129, 0.25);
+        }
+
+        *, *::before, *::after {
+            user-select: none;
+            box-sizing: border-box;
         }
 
         body {
             background-color: var(--bg-light);
+            color: var(--text-main);
             font-family: 'Outfit', sans-serif;
-            height: 100vh;
             overflow: hidden;
+            height: 100vh;
             display: flex;
             flex-direction: column;
         }
 
+        .font-mono-display { font-family: 'Space Grotesk', monospace; }
+        .custom-scroll::-webkit-scrollbar { width: 6px; }
+        .custom-scroll::-webkit-scrollbar-track { background: transparent; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+
+        .fade-in { animation: fadeIn 0.4s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* MODALS & DASHBOARD */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(248, 250, 252, 0.95); backdrop-filter: blur(8px);
+            z-index: 100; display: none; flex-direction: column; align-items: center; justify-content: center;
+        }
+        .modal-overlay.active { display: flex; animation: fadeIn 0.3s ease-out; }
+        
+        /* PERIODIC GRID */
         .periodic-grid {
             display: grid;
             grid-template-columns: repeat(18, minmax(0, 1fr));
@@ -30,208 +62,216 @@
             padding: 4px;
             border-radius: 8px;
         }
-
         .elem-btn {
-            aspect-ratio: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.65rem;
-            font-weight: bold;
-            border-radius: 4px;
-            transition: all 0.1s;
-            cursor: pointer;
-            background: white;
+            aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            font-size: 0.7rem; font-weight: bold; border-radius: 4px; transition: transform 0.1s, box-shadow 0.1s;
+            cursor: pointer; background: white;
         }
-
-        .elem-btn:hover { transform: scale(1.1); z-index: 10; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        .elem-btn:hover { transform: scale(1.15); z-index: 10; box-shadow: 0 4px 10px rgba(0,0,0,0.15); }
         .elem-btn.metal { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
         .elem-btn.nonmetal { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
-        .elem-btn.metalloid { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
         .elem-btn.empty { background: transparent; pointer-events: none; border: none; }
 
-        .poly-btn {
-            width: 100%;
-            text-align: left;
-            padding: 8px 12px;
-            border-radius: 8px;
-            background: white;
-            border: 1px solid #e2e8f0;
-            margin-bottom: 4px;
-            font-size: 0.8rem;
-            transition: all 0.2s;
-        }
-        .poly-btn:hover { border-color: var(--emerald-main); background: #f0fdf4; }
-
+        /* BUILDER TRAY */
         .builder-slot {
-            background: white;
-            border: 2px dashed #cbd5e1;
-            border-radius: 12px;
-            min-width: 140px;
-            height: 120px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            position: relative;
+            background: white; border: 2px dashed #cbd5e1; border-radius: 12px;
+            min-width: 130px; height: 120px; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; position: relative;
         }
-        .builder-slot.active { border: 2px solid var(--emerald-main); border-style: solid; }
-
-        .custom-scroll::-webkit-scrollbar { width: 5px; }
-        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-
-        #charge-overlay {
-            backdrop-filter: blur(4px);
-            background: rgba(255,255,255,0.8);
+        .builder-slot.active { border: 2px solid var(--accent-main); }
+        
+        .poly-btn {
+            width: 100%; text-align: left; padding: 8px 12px; border-radius: 8px;
+            background: white; border: 1px solid #e2e8f0; margin-bottom: 4px;
+            font-size: 0.8rem; transition: all 0.2s;
         }
+        .poly-btn:hover { border-color: var(--accent-main); background: #f0fdf4; }
+
+        #charge-overlay { backdrop-filter: blur(4px); background: rgba(255,255,255,0.8); }
     </style>
 </head>
-<body class="p-4">
+<body class="p-2 md:p-4">
 
-    <nav class="flex justify-between items-center bg-white p-4 rounded-2xl shadow-sm border border-slate-200 mb-4">
-        <div class="flex items-center gap-4">
-            <div class="bg-emerald-500 text-white w-10 h-10 rounded-xl flex items-center justify-center font-bold text-xl">F</div>
-            <div>
-                <h1 class="font-black text-slate-800 leading-none">FORMULA FORGE</h1>
-                <p class="text-[10px] font-bold text-emerald-500 uppercase tracking-widest mt-1">Honors Builder Mode</p>
+    <div id="dashboard" class="modal-overlay active p-4">
+        <div class="text-center w-full flex-none mb-8">
+            <div class="inline-block w-16 h-16 bg-gradient-to-br from-emerald-400 to-teal-600 rounded-2xl flex items-center justify-center text-white font-bold text-3xl shadow-lg mb-4">F</div>
+            <h1 class="text-4xl font-black text-slate-800 tracking-tighter">FORMULA <span class="text-emerald-500">FORGE</span></h1>
+            <p class="text-xs font-bold text-slate-500 uppercase tracking-widest mt-2">Honors Builder Edition</p>
+        </div>
+
+        <div class="w-full max-w-md flex flex-col gap-4">
+            <button onclick="hideDashboard()" class="w-full py-4 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-bold tracking-widest shadow-lg transition-all active:scale-95">LAUNCH BUILDER</button>
+            <button onclick="showVersionHistory()" class="w-full py-4 bg-white border-2 border-slate-200 text-slate-600 hover:border-emerald-500 hover:text-emerald-600 rounded-xl font-bold tracking-widest transition-all">VERSION HISTORY</button>
+        </div>
+
+        <div class="absolute bottom-4 left-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Build 1.4.0 (Honors)</div>
+    </div>
+
+    <div id="version-history" class="modal-overlay p-4">
+        <div class="bg-white p-8 rounded-3xl shadow-2xl border border-slate-200 max-w-lg w-full max-h-[80vh] flex flex-col relative">
+            <button onclick="closeVersionHistory()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 p-2 text-xl">&times;</button>
+            <h2 class="text-2xl font-black text-slate-800 mb-6">Version History</h2>
+            <div class="overflow-y-auto custom-scroll pr-2 flex-grow space-y-6">
+                <div>
+                    <h3 class="font-bold text-emerald-600 mb-1">v1.4.0 - Builder Interface Update</h3>
+                    <ul class="text-sm text-slate-600 list-disc pl-4 space-y-1">
+                        <li>Rebuilt UI to match Orbital Overdrive architecture.</li>
+                        <li>Interactive Periodic Table integration.</li>
+                        <li>Subscript dropdown selectors added to builder tray.</li>
+                        <li>Auto-formatting for Polyatomic parentheses.</li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="font-bold text-emerald-600 mb-1">v1.3.0 - Honors Polyatomic Database</h3>
+                    <ul class="text-sm text-slate-600 list-disc pl-4 space-y-1">
+                        <li>Imported full U6 Honors Handout list.</li>
+                        <li>Added charge picker for transition metals.</li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="font-bold text-slate-400 mb-1">v1.0.0 - Initial Release</h3>
+                    <ul class="text-sm text-slate-500 list-disc pl-4 space-y-1">
+                        <li>Procedural generation for ionic/covalent compounds.</li>
+                        <li>Basic string matching validation.</li>
+                    </ul>
+                </div>
             </div>
         </div>
-        <div class="flex gap-6 bg-slate-50 px-6 py-2 rounded-xl border border-slate-100">
-            <div class="text-center">
-                <p class="text-[10px] font-bold text-slate-400 uppercase">Streak</p>
-                <p id="streak" class="text-xl font-black text-amber-500">0</p>
+    </div>
+
+    <nav class="flex-none flex flex-col md:flex-row justify-between items-center bg-white p-3 rounded-2xl shadow-sm border border-slate-200 mb-4 mx-auto w-full max-w-[1400px] gap-2">
+        <div class="flex items-center gap-3">
+            <button onclick="showDashboard()" class="p-2 rounded-lg hover:bg-slate-50 text-slate-400 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
+            </button>
+            <div class="leading-tight cursor-pointer" onclick="showDashboard()">
+                <h1 class="text-xl font-bold tracking-tight text-slate-800">FORMULA <span class="text-emerald-500">FORGE</span></h1>
+                <p class="text-[10px] text-emerald-500 font-bold uppercase tracking-wider">Builder Mode</p>
             </div>
-            <div class="text-center">
-                <p class="text-[10px] font-bold text-slate-400 uppercase">Score</p>
-                <p id="score" class="text-xl font-black text-emerald-600">0</p>
+        </div>
+        
+        <div class="flex gap-4 md:gap-8 text-center bg-slate-50 p-2 rounded-xl border border-slate-100 px-6">
+            <div>
+                <p class="text-[10px] text-slate-400 font-bold uppercase">Streak</p>
+                <p id="streak-val" class="text-lg font-mono-display font-bold text-amber-500">0</p>
+            </div>
+            <div>
+                <p class="text-[10px] text-slate-400 font-bold uppercase">Score</p>
+                <p id="score-val" class="text-lg font-mono-display font-bold text-emerald-500">0</p>
+            </div>
+            <div>
+                <p class="text-[10px] text-slate-400 font-bold uppercase">Level</p>
+                <p id="level-val" class="text-lg font-mono-display font-bold text-blue-500">1</p>
             </div>
         </div>
     </nav>
 
-    <div class="flex-grow grid grid-cols-12 gap-4 overflow-hidden">
+    <div class="flex-grow grid grid-cols-1 lg:grid-cols-12 gap-4 max-w-[1400px] mx-auto w-full overflow-hidden">
         
-        <div class="col-span-8 flex flex-col gap-4 overflow-hidden">
-            <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex-grow">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest">Interactive Periodic Table</h3>
-                    <div class="flex gap-4 text-[10px] font-bold">
+        <div class="lg:col-span-8 flex flex-col gap-4 h-full overflow-hidden">
+            <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex-grow flex flex-col">
+                <div class="flex justify-between items-center mb-3 flex-none">
+                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest">Interactive Elements</h3>
+                    <div class="flex gap-3 text-[10px] font-bold">
                         <span class="flex items-center gap-1"><div class="w-2 h-2 rounded bg-blue-100 border border-blue-200"></div> Metals</span>
                         <span class="flex items-center gap-1"><div class="w-2 h-2 rounded bg-red-100 border border-red-200"></div> Non-Metals</span>
                     </div>
                 </div>
-                <div id="periodic-table" class="periodic-grid">
+                <div id="periodic-table" class="periodic-grid flex-grow">
                     </div>
             </div>
 
-            <div class="bg-emerald-900 p-6 rounded-3xl shadow-xl flex flex-col gap-4">
+            <div class="bg-slate-800 p-6 rounded-2xl shadow-lg flex flex-col gap-4 flex-none border border-slate-700">
                 <div class="flex justify-between items-center">
-                    <h3 class="text-xs font-bold text-emerald-400 uppercase tracking-widest">Construction Tray</h3>
-                    <button onclick="clearTray()" class="text-[10px] text-white/50 hover:text-white underline uppercase">Reset Tray</button>
+                    <h3 class="text-xs font-bold text-emerald-400 uppercase tracking-widest">Assembly Tray</h3>
+                    <button onclick="clearTray()" class="text-[10px] text-white/50 hover:text-white underline uppercase tracking-wider transition-colors">Reset Tray</button>
                 </div>
-                <div id="builder-tray" class="flex gap-4 items-center justify-center min-h-[140px]">
+                <div id="builder-tray" class="flex gap-4 items-center justify-center min-h-[130px]">
                     </div>
-                <button onclick="checkFormula()" class="w-full bg-emerald-500 hover:bg-emerald-400 text-white font-bold py-4 rounded-xl shadow-lg transition-all active:scale-[0.98]">
-                    VERIFY CHEMICAL STRUCTURE
+                <button onclick="checkFormula()" class="w-full bg-emerald-500 hover:bg-emerald-400 text-white font-bold py-3.5 rounded-xl tracking-widest transition-all active:scale-[0.98]">
+                    VERIFY STRUCTURE
                 </button>
             </div>
         </div>
 
-        <div class="col-span-4 flex flex-col gap-4 overflow-hidden">
-            <div id="target-card" class="bg-white p-6 rounded-2xl shadow-lg border-2 border-emerald-500 text-center relative overflow-hidden">
-                <div class="absolute top-0 left-0 w-full h-1 bg-emerald-500"></div>
-                <p class="text-[10px] font-bold text-emerald-500 uppercase tracking-tighter mb-1">Assemble this Compound:</p>
+        <div class="lg:col-span-4 flex flex-col gap-4 h-full overflow-hidden relative">
+            
+            <div id="target-card" class="bg-white p-6 rounded-2xl shadow-sm border-2 border-emerald-400 text-center relative flex-none">
+                <p class="text-[10px] font-bold text-emerald-500 uppercase tracking-widest mb-1">Target Compound</p>
                 <h2 id="target-name" class="text-2xl font-black text-slate-800 leading-tight">...</h2>
             </div>
 
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden">
-                <div class="p-4 border-b border-slate-100 bg-slate-50">
-                    <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest">Honors Polyatomic Library</h3>
+            <div id="info-panel" class="hidden absolute top-0 left-0 w-full bg-emerald-50 border-2 border-emerald-400 p-6 rounded-2xl shadow-lg z-20 flex-col items-center justify-center text-center fade-in">
+                <h4 class="text-xl font-black text-emerald-800 mb-1" id="info-title">Structure Verified!</h4>
+                <p class="text-sm font-bold text-emerald-600 mb-4" id="info-desc"></p>
+                <button onclick="nextLevel()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold w-full py-3 rounded-xl transition-colors tracking-widest text-sm">NEXT COMPOUND →</button>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col flex-grow overflow-hidden">
+                <div class="p-3 border-b border-slate-100 bg-slate-50 flex-none">
+                    <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest">Polyatomic Library</h3>
                 </div>
-                <div id="poly-list" class="flex-grow overflow-y-auto p-4 custom-scroll">
+                <div id="poly-list" class="flex-grow overflow-y-auto p-3 custom-scroll">
                     </div>
             </div>
         </div>
     </div>
 
     <div id="charge-overlay" class="fixed inset-0 z-50 flex items-center justify-center hidden">
-        <div class="bg-white p-8 rounded-3xl shadow-2xl border border-slate-200 text-center max-w-sm w-full">
-            <p id="charge-title" class="text-xs font-bold text-slate-400 uppercase mb-4">Select Oxidation State for Iron</p>
-            <div id="charge-options" class="grid grid-cols-2 gap-4">
+        <div class="bg-white p-8 rounded-3xl shadow-2xl border border-slate-200 text-center max-w-sm w-full fade-in">
+            <button onclick="document.getElementById('charge-overlay').classList.add('hidden')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 font-bold">&times;</button>
+            <p id="charge-title" class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Select Oxidation State</p>
+            <div id="charge-options" class="grid grid-cols-2 gap-3">
                 </div>
         </div>
     </div>
 
     <script>
-        // --- DATA ---
-        // Polyatomics from Study List 
+        // --- UI TOGGLES ---
+        function showDashboard() { document.getElementById('dashboard').classList.add('active'); }
+        function hideDashboard() { document.getElementById('dashboard').classList.remove('active'); }
+        function showVersionHistory() { document.getElementById('version-history').classList.add('active'); }
+        function closeVersionHistory() { document.getElementById('version-history').classList.remove('active'); }
+
+        // --- DATA (Honors PDF + Basics) ---
         const polyatomics = [
-            { name: "Acetate", sym: "C2H3O2", charge: -1 },
-            { name: "Hypochlorite", sym: "ClO", charge: -1 },
-            { name: "Chlorite", sym: "ClO2", charge: -1 },
-            { name: "Chlorate", sym: "ClO3", charge: -1 },
-            { name: "Perchlorate", sym: "ClO4", charge: -1 },
-            { name: "Nitrite", sym: "NO2", charge: -1 },
-            { name: "Nitrate", sym: "NO3", charge: -1 },
-            { name: "Permanganate", sym: "MnO4", charge: -1 },
-            { name: "Hydroxide", sym: "OH", charge: -1 },
-            { name: "Bromate", sym: "BrO3", charge: -1 },
-            { name: "Iodate", sym: "IO3", charge: -1 },
-            { name: "Cyanide", sym: "CN", charge: -1 },
-            { name: "Cyanate", sym: "OCN", charge: -1 },
-            { name: "Thiocyanate", sym: "SCN", charge: -1 },
-            { name: "Dihydrogen Phosphate", sym: "H2PO4", charge: -1 },
-            { name: "Bicarbonate", sym: "HCO3", charge: -1 },
-            { name: "Bisulfite", sym: "HSO3", charge: -1 },
-            { name: "Bisulfate", sym: "HSO4", charge: -1 },
-            { name: "Sulfite", sym: "SO3", charge: -2 },
-            { name: "Sulfate", sym: "SO4", charge: -2 },
-            { name: "Thiosulfate", sym: "S2O3", charge: -2 },
-            { name: "Chromate", sym: "CrO4", charge: -2 },
-            { name: "Dichromate", sym: "Cr2O7", charge: -2 },
-            { name: "Carbonate", sym: "CO3", charge: -2 },
-            { name: "Oxalate", sym: "C2O4", charge: -2 },
-            { name: "Peroxide", sym: "O2", charge: -2 },
-            { name: "Hydrogen Phosphate", sym: "HPO4", charge: -2 },
-            { name: "Arsenate", sym: "AsO4", charge: -3 },
-            { name: "Borate", sym: "BO3", charge: -3 },
-            { name: "Phosphite", sym: "PO3", charge: -3 },
-            { name: "Phosphate", sym: "PO4", charge: -3 },
-            { name: "Ammonium", sym: "NH4", charge: 1 },
-            { name: "Mercury (I)", sym: "Hg2", charge: 2 } // Note: Hg2 is +2 (two Hg+ ions bonded)
+            { name: "Acetate", sym: "C2H3O2", charge: -1 }, { name: "Hypochlorite", sym: "ClO", charge: -1 },
+            { name: "Chlorite", sym: "ClO2", charge: -1 }, { name: "Chlorate", sym: "ClO3", charge: -1 },
+            { name: "Perchlorate", sym: "ClO4", charge: -1 }, { name: "Nitrite", sym: "NO2", charge: -1 },
+            { name: "Nitrate", sym: "NO3", charge: -1 }, { name: "Permanganate", sym: "MnO4", charge: -1 },
+            { name: "Hydroxide", sym: "OH", charge: -1 }, { name: "Bromate", sym: "BrO3", charge: -1 },
+            { name: "Iodate", sym: "IO3", charge: -1 }, { name: "Cyanide", sym: "CN", charge: -1 },
+            { name: "Cyanate", sym: "OCN", charge: -1 }, { name: "Thiocyanate", sym: "SCN", charge: -1 },
+            { name: "Dihydrogen Phosphate", sym: "H2PO4", charge: -1 }, { name: "Bicarbonate", sym: "HCO3", charge: -1 },
+            { name: "Bisulfite", sym: "HSO3", charge: -1 }, { name: "Bisulfate", sym: "HSO4", charge: -1 },
+            { name: "Sulfite", sym: "SO3", charge: -2 }, { name: "Sulfate", sym: "SO4", charge: -2 },
+            { name: "Thiosulfate", sym: "S2O3", charge: -2 }, { name: "Chromate", sym: "CrO4", charge: -2 },
+            { name: "Dichromate", sym: "Cr2O7", charge: -2 }, { name: "Carbonate", sym: "CO3", charge: -2 },
+            { name: "Oxalate", sym: "C2O4", charge: -2 }, { name: "Peroxide", sym: "O2", charge: -2 },
+            { name: "Hydrogen Phosphate", sym: "HPO4", charge: -2 }, { name: "Arsenate", sym: "AsO4", charge: -3 },
+            { name: "Borate", sym: "BO3", charge: -3 }, { name: "Phosphite", sym: "PO3", charge: -3 },
+            { name: "Phosphate", sym: "PO4", charge: -3 }, { name: "Ammonium", sym: "NH4", charge: 1 },
+            { name: "Mercury (I)", sym: "Hg2", charge: 2 } 
         ];
 
         const elements = [
-            { sym: "H", n: "Hydrogen", x: 1, y: 1, c: [1], t: "nonmetal" },
-            { sym: "Li", n: "Lithium", x: 1, y: 2, c: [1], t: "metal" },
-            { sym: "Na", n: "Sodium", x: 1, y: 3, c: [1], t: "metal" },
-            { sym: "K", n: "Potassium", x: 1, y: 4, c: [1], t: "metal" },
-            { sym: "Mg", n: "Magnesium", x: 2, y: 3, c: [2], t: "metal" },
-            { sym: "Ca", n: "Calcium", x: 2, y: 4, c: [2], t: "metal" },
-            { sym: "Ba", n: "Barium", x: 2, y: 6, c: [2], t: "metal" },
-            { sym: "Fe", n: "Iron", x: 8, y: 4, c: [2, 3], t: "metal" },
-            { sym: "Cu", n: "Copper", x: 11, y: 4, c: [1, 2], t: "metal" },
-            { sym: "Ag", n: "Silver", x: 11, y: 5, c: [1], t: "metal" },
-            { sym: "Zn", n: "Zinc", x: 12, y: 4, c: [2], t: "metal" },
-            { sym: "Al", n: "Aluminum", x: 13, y: 3, c: [3], t: "metal" },
-            { sym: "C", n: "Carbon", x: 14, y: 2, c: [-4], t: "nonmetal" },
-            { sym: "N", n: "Nitrogen", x: 15, y: 2, c: [-3], t: "nonmetal" },
-            { sym: "P", n: "Phosphorus", x: 15, y: 3, c: [-3], t: "nonmetal" },
-            { sym: "O", n: "Oxygen", x: 16, y: 2, c: [-2], t: "nonmetal" },
-            { sym: "S", n: "Sulfur", x: 16, y: 3, c: [-2], t: "nonmetal" },
-            { sym: "F", n: "Fluorine", x: 17, y: 2, c: [-1], t: "nonmetal" },
-            { sym: "Cl", n: "Chlorine", x: 17, y: 3, c: [-1], t: "nonmetal" },
-            { sym: "Br", n: "Bromine", x: 17, y: 4, c: [-1], t: "nonmetal" },
-            { sym: "I", n: "Iodine", x: 17, y: 5, c: [-1], t: "nonmetal" },
-            { sym: "Pb", n: "Lead", x: 14, y: 6, c: [2, 4], t: "metal" },
+            { sym: "H", n: "Hydrogen", x: 1, y: 1, c: [1], t: "nonmetal" }, { sym: "Li", n: "Lithium", x: 1, y: 2, c: [1], t: "metal" },
+            { sym: "Na", n: "Sodium", x: 1, y: 3, c: [1], t: "metal" }, { sym: "K", n: "Potassium", x: 1, y: 4, c: [1], t: "metal" },
+            { sym: "Mg", n: "Magnesium", x: 2, y: 3, c: [2], t: "metal" }, { sym: "Ca", n: "Calcium", x: 2, y: 4, c: [2], t: "metal" },
+            { sym: "Ba", n: "Barium", x: 2, y: 6, c: [2], t: "metal" }, { sym: "Fe", n: "Iron", x: 8, y: 4, c: [2, 3], t: "metal" },
+            { sym: "Cu", n: "Copper", x: 11, y: 4, c: [1, 2], t: "metal" }, { sym: "Ag", n: "Silver", x: 11, y: 5, c: [1], t: "metal" },
+            { sym: "Zn", n: "Zinc", x: 12, y: 4, c: [2], t: "metal" }, { sym: "Al", n: "Aluminum", x: 13, y: 3, c: [3], t: "metal" },
+            { sym: "C", n: "Carbon", x: 14, y: 2, c: [-4], t: "nonmetal" }, { sym: "N", n: "Nitrogen", x: 15, y: 2, c: [-3], t: "nonmetal" },
+            { sym: "P", n: "Phosphorus", x: 15, y: 3, c: [-3], t: "nonmetal" }, { sym: "O", n: "Oxygen", x: 16, y: 2, c: [-2], t: "nonmetal" },
+            { sym: "S", n: "Sulfur", x: 16, y: 3, c: [-2], t: "nonmetal" }, { sym: "F", n: "Fluorine", x: 17, y: 2, c: [-1], t: "nonmetal" },
+            { sym: "Cl", n: "Chlorine", x: 17, y: 3, c: [-1], t: "nonmetal" }, { sym: "Br", n: "Bromine", x: 17, y: 4, c: [-1], t: "nonmetal" },
+            { sym: "I", n: "Iodine", x: 17, y: 5, c: [-1], t: "nonmetal" }, { sym: "Pb", n: "Lead", x: 14, y: 6, c: [2, 4], t: "metal" },
             { sym: "Sn", n: "Tin", x: 14, y: 5, c: [2, 4], t: "metal" }
         ];
 
         // --- STATE ---
         let tray = [];
-        let score = 0;
-        let streak = 0;
-        let currentTarget = null;
+        let state = { score: 0, streak: 0, level: 1, currentTarget: null };
 
         // --- INITIALIZATION ---
         function initTable() {
@@ -262,8 +302,8 @@
                 const superStr = p.charge > 0 ? `${Math.abs(p.charge)}+` : `${Math.abs(p.charge)}-`;
                 btn.innerHTML = `
                     <div class="flex justify-between items-center">
-                        <span class="font-bold">${p.name}</span>
-                        <span class="font-mono text-[10px] bg-slate-100 px-1.5 py-0.5 rounded">${p.sym}<sup>${superStr}</sup></span>
+                        <span class="font-bold text-slate-700">${p.name}</span>
+                        <span class="font-mono text-[10px] bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">${p.sym.replace(/(\d+)/g, '<sub>$1</sub>')}<sup>${superStr}</sup></span>
                     </div>
                 `;
                 btn.onclick = () => addToTray(p.sym, p.charge, true, p.name);
@@ -271,27 +311,22 @@
             });
         }
 
-        // --- CORE LOGIC ---
+        // --- CORE BUILDER LOGIC ---
         function selectElement(el) {
-            if (el.c.length > 1) {
-                showChargePicker(el);
-            } else {
-                addToTray(el.sym, el.c[0], false, el.n);
-            }
+            if (el.c.length > 1) { showChargePicker(el); } 
+            else { addToTray(el.sym, el.c[0], false, el.n); }
         }
 
         function showChargePicker(el) {
             const overlay = document.getElementById('charge-overlay');
             const options = document.getElementById('charge-options');
-            const title = document.getElementById('charge-title');
-            
-            title.innerText = `Select Charge for ${el.n}`;
+            document.getElementById('charge-title').innerText = `Oxidation State for ${el.n}`;
             options.innerHTML = '';
             overlay.classList.remove('hidden');
 
             el.c.forEach(charge => {
                 const btn = document.createElement('button');
-                btn.className = 'bg-emerald-500 hover:bg-emerald-600 text-white font-black py-4 rounded-2xl text-xl shadow-md';
+                btn.className = 'bg-slate-100 hover:bg-emerald-50 hover:border-emerald-500 border-2 border-slate-200 text-slate-800 font-black py-3 rounded-xl text-lg transition-colors';
                 btn.innerText = charge > 0 ? `+${charge}` : charge;
                 btn.onclick = () => {
                     addToTray(el.sym, charge, false, el.n);
@@ -307,6 +342,15 @@
             renderTray();
         }
 
+        function formatDisplayFormula(item) {
+            let sym = item.symbol;
+            if (item.isPoly && item.subscript > 1) {
+                sym = `(${sym})`;
+            }
+            sym += item.subscript > 1 ? item.subscript : "";
+            return sym.replace(/(\d+)/g, '<sub>$1</sub>');
+        }
+
         function renderTray() {
             const container = document.getElementById('builder-tray');
             container.innerHTML = '';
@@ -314,23 +358,19 @@
             tray.forEach((item, index) => {
                 const slot = document.createElement('div');
                 slot.className = 'builder-slot active';
-                
-                // Display Formula
-                let display = item.symbol.replace(/(\d+)/g, '<sub>$1</sub>');
                 const chargeLabel = item.charge > 0 ? `+${item.charge}` : item.charge;
                 
                 slot.innerHTML = `
-                    <button onclick="removeFromTray(${index})" class="absolute -top-2 -right-2 bg-red-500 text-white w-6 h-6 rounded-full text-xs font-bold">×</button>
-                    <div class="text-2xl font-black text-slate-800">${display}</div>
-                    <div class="text-[10px] font-bold text-slate-400 mb-2 uppercase">${item.name} (${chargeLabel})</div>
-                    <select onchange="updateSubscript(${index}, this.value)" class="bg-slate-100 text-[10px] font-bold px-2 py-1 rounded-lg outline-none border border-slate-200">
+                    <button onclick="removeFromTray(${index})" class="absolute -top-2 -right-2 bg-slate-200 text-slate-600 hover:bg-red-500 hover:text-white w-6 h-6 rounded-full text-xs font-bold transition-colors">×</button>
+                    <div class="text-2xl font-black text-slate-800">${formatDisplayFormula(item)}</div>
+                    <div class="text-[9px] font-bold text-slate-400 mb-2 uppercase tracking-widest">${item.name} (${chargeLabel})</div>
+                    <select onchange="updateSubscript(${index}, this.value)" class="bg-slate-50 text-[10px] font-bold px-2 py-1 rounded-lg outline-none border border-slate-200 cursor-pointer">
                         ${[1,2,3,4,5,6,7,8,9,10].map(n => `<option value="${n}" ${item.subscript == n ? 'selected' : ''}>Qty: ${n}</option>`).join('')}
                     </select>
                 `;
                 container.appendChild(slot);
             });
 
-            // Add empty slots if needed
             for(let i=tray.length; i<2; i++) {
                 const empty = document.createElement('div');
                 empty.className = 'builder-slot';
@@ -341,47 +381,36 @@
 
         function updateSubscript(index, val) {
             tray[index].subscript = parseInt(val);
+            renderTray(); // Re-render to show parentheses properly
         }
-
-        function removeFromTray(index) {
-            tray.splice(index, 1);
-            renderTray();
-        }
-
-        function clearTray() {
-            tray = [];
-            renderTray();
-        }
+        function removeFromTray(index) { tray.splice(index, 1); renderTray(); }
+        function clearTray() { tray = []; renderTray(); }
 
         // --- GAME MECHANICS ---
+        function gcd(a, b) { return b === 0 ? a : gcd(b, a % b); }
+        function roman(n) { return ["", "I", "II", "III", "IV", "V", "VI"][n]; }
+
         function generateProblem() {
             clearTray();
-            const types = ['ionic', 'poly'];
-            const type = types[Math.floor(Math.random() * types.length)];
+            document.getElementById('info-panel').classList.add('hidden');
+            document.getElementById('target-card').style.opacity = '1';
             
+            const isPoly = Math.random() > 0.4;
             let cation, anion;
 
-            if (type === 'ionic') {
+            if (!isPoly) {
                 cation = elements.filter(e => e.t === 'metal')[Math.floor(Math.random() * elements.filter(e => e.t === 'metal').length)];
                 anion = elements.filter(e => e.t === 'nonmetal')[Math.floor(Math.random() * elements.filter(e => e.t === 'nonmetal').length)];
                 
                 const cCharge = cation.c[Math.floor(Math.random() * cation.c.length)];
                 const aCharge = Math.abs(anion.c[0]);
-                
                 const g = gcd(cCharge, aCharge);
-                const cSub = aCharge / g;
-                const aSub = cCharge / g;
 
-                let name = cation.n;
-                if (cation.c.length > 1) {
-                    name += ` (${roman(cCharge)})`;
-                }
-                name += " " + anion.n.toLowerCase().replace(/ine$|ogen$|orus$|ur$/, "") + "ide";
-                if (anion.sym === 'O') name = cation.n + " oxide";
+                let name = cation.n + (cation.c.length > 1 ? ` (${roman(cCharge)})` : "") + " " + anion.n.toLowerCase().replace(/ine$|ogen$|orus$|ur$/, "") + "ide";
+                if (anion.sym === 'O') name = cation.n + (cation.c.length > 1 ? ` (${roman(cCharge)})` : "") + " oxide";
 
-                currentTarget = { name, cSym: cation.sym, cCharge, cSub, aSym: anion.sym, aCharge: -aCharge, aSub };
+                state.currentTarget = { name, cSym: cation.sym, cCharge, cSub: aCharge/g, aSym: anion.sym, aCharge: -aCharge, aSub: cCharge/g, isAPoly: false, isCPoly: false };
             } else {
-                // Polyatomic Problem
                 const isAmmonium = Math.random() > 0.8;
                 if(isAmmonium) {
                     cation = polyatomics.find(p => p.name === "Ammonium");
@@ -393,56 +422,64 @@
 
                 const cCharge = cation.c ? cation.c[Math.floor(Math.random() * cation.c.length)] : cation.charge;
                 const aCharge = Math.abs(anion.c ? anion.c[0] : anion.charge);
-                
                 const g = gcd(cCharge, aCharge);
-                currentTarget = { 
-                    name: cation.name || cation.n, 
-                    cSym: cation.sym, cCharge, cSub: aCharge/g,
-                    aSym: anion.sym, aCharge: (anion.charge || anion.c[0]), aSub: cCharge/g
+                
+                state.currentTarget = { 
+                    name: (cation.name || cation.n) + (cation.c && cation.c.length > 1 ? ` (${roman(cCharge)})` : "") + " " + (anion.name || anion.n.toLowerCase().replace(/ine$|ogen$|orus$|ur$/, "") + "ide").toLowerCase(), 
+                    cSym: cation.sym, cCharge, cSub: aCharge/g, isCPoly: !cation.c,
+                    aSym: anion.sym, aCharge: anion.charge || anion.c[0], aSub: cCharge/g, isAPoly: !anion.c
                 };
-
-                if (cation.c && cation.c.length > 1) currentTarget.name += ` (${roman(cCharge)})`;
-                currentTarget.name += " " + (anion.name).toLowerCase();
             }
-
-            document.getElementById('target-name').innerText = currentTarget.name;
+            document.getElementById('target-name').innerText = state.currentTarget.name;
         }
 
+        window.nextLevel = () => {
+            state.level++;
+            updateStats();
+            generateProblem();
+        };
+
         function checkFormula() {
-            if (tray.length < 2) return alert("Select both components first.");
+            if (tray.length < 2) return alert("Assemble both cation and anion.");
             
             const [c, a] = tray;
-            
-            // Validate Logic
-            const matchC = (c.symbol === currentTarget.cSym && c.charge === currentTarget.cCharge && c.subscript === currentTarget.cSub);
-            const matchA = (a.symbol === currentTarget.aSym && a.charge === currentTarget.aCharge && a.subscript === currentTarget.aSub);
+            const matchC = (c.symbol === state.currentTarget.cSym && c.charge === state.currentTarget.cCharge && c.subscript === state.currentTarget.cSub);
+            const matchA = (a.symbol === state.currentTarget.aSym && a.charge === state.currentTarget.aCharge && a.subscript === state.currentTarget.aSub);
             
             if (matchC && matchA) {
-                streak++;
-                score += 100 * streak;
-                alert("STABLE STRUCTURE CONFIRMED!");
-                updateStats();
-                generateProblem();
+                state.streak++; state.score += 100 * state.streak; updateStats();
+                
+                // Construct final formatted string for display
+                let cStr = c.symbol; if(c.isPoly && c.subscript > 1) cStr = `(${cStr})`; cStr += c.subscript > 1 ? c.subscript : "";
+                let aStr = a.symbol; if(a.isPoly && a.subscript > 1) aStr = `(${aStr})`; aStr += a.subscript > 1 ? a.subscript : "";
+                
+                document.getElementById('info-desc').innerHTML = `${(cStr+aStr).replace(/(\d+)/g, '<sub>$1</sub>')}`;
+                
+                document.getElementById('target-card').style.opacity = '0';
+                document.getElementById('info-panel').classList.remove('hidden');
+                document.getElementById('info-panel').style.display = 'flex';
             } else {
-                streak = 0;
-                updateStats();
-                alert("BONDING ERROR: Check your subscripts or oxidation states.");
+                state.streak = 0; updateStats();
+                const btn = document.querySelector('button[onclick="checkFormula()"]');
+                btn.classList.add('bg-red-500', 'hover:bg-red-600');
+                btn.innerText = "BONDING ERROR";
+                setTimeout(() => {
+                    btn.classList.remove('bg-red-500', 'hover:bg-red-600');
+                    btn.innerText = "VERIFY STRUCTURE";
+                }, 1500);
             }
         }
 
         function updateStats() {
-            document.getElementById('score').innerText = score;
-            document.getElementById('streak').innerText = streak;
+            document.getElementById('score-val').innerText = state.score;
+            document.getElementById('streak-val').innerText = state.streak;
+            document.getElementById('level-val').innerText = state.level;
         }
-
-        function gcd(a, b) { return b === 0 ? a : gcd(b, a % b); }
-        function roman(n) { return ["", "I", "II", "III", "IV", "V"][n]; }
 
         window.onload = () => {
             initTable();
             initPolyList();
             generateProblem();
-            renderTray();
         };
     </script>
 </body>
