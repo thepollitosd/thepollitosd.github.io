@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- Crucial for Mobile: Prevents double-tap zoom and scales correctly -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Pro-Adaptive Chess Engine</title>
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.css">
@@ -11,35 +12,109 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.js"></script>
 
 <style>
-  html { touch-action:none; overscroll-behavior:none; }
+  html { touch-action: manipulation; overscroll-behavior: none; }
   :root { --bg: #1e1e24; --panel: #2b2b36; --text: #e0e0e0; --accent: #4caf50; }
-  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; flex-direction: row; overflow: hidden; }
   
-  #left-panel, #right-panel { width: 300px; background: var(--panel); padding: 20px; box-sizing: border-box; display: flex; flex-direction: column; gap: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); z-index: 2; overflow-y: auto;}
-  #center-area { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative;}
+  body { 
+    margin: 0; 
+    height: 100vh; 
+    background: var(--bg); 
+    color: var(--text); 
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+    display: flex; 
+    flex-direction: row; 
+    overflow: hidden; 
+  }
   
-  #board-container { position: relative; width: 520px; max-width: 90vw; }
+  /* Layout Panels */
+  #left-panel, #right-panel { 
+    width: 300px; 
+    background: var(--panel); 
+    padding: 20px; 
+    box-sizing: border-box; 
+    display: flex; 
+    flex-direction: column; 
+    gap: 15px; 
+    box-shadow: 0 4px 10px rgba(0,0,0,0.5); 
+    z-index: 2; 
+    overflow-y: auto;
+  }
+  
+  #center-area { 
+    flex: 1; 
+    display: flex; 
+    flex-direction: column; 
+    align-items: center; 
+    justify-content: flex-start; /* Changed to accommodate top status */
+    padding-top: 20px;
+    position: relative;
+    overflow-y: auto;
+  }
+
+  /* Status Box moved to center */
+  #status-container {
+    width: 520px;
+    max-width: 95vw;
+    margin-bottom: 15px;
+    box-sizing: border-box;
+  }
+  
+  /* Board & Arrows */
+  #board-container { position: relative; width: 520px; max-width: 95vw; touch-action: none; }
   #board { width: 100%; }
   #arrow-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
   
   /* Premove Highlight Style */
   .premove-square { box-shadow: inset 0 0 0 50px rgba(220, 50, 50, 0.5) !important; }
 
+  /* Typography & Elements */
   h2, h3 { margin: 0; padding-bottom: 5px; border-bottom: 1px solid #444; font-weight: 500;}
   .box { background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; }
   
-  .setting { display: flex; flex-direction: column; gap: 5px; margin-bottom: 15px; }
-  .setting label { font-size: 0.9em; color: #bbb; display: flex; justify-content: space-between;}
-  input[type="range"] { accent-color: var(--accent); }
+  .setting { display: flex; flex-direction: column; gap: 8px; margin-bottom: 15px; }
+  .setting label { font-size: 0.95em; color: #bbb; display: flex; justify-content: space-between;}
+  input[type="range"] { accent-color: var(--accent); height: 20px; } /* Thicker for touch */
   
-  button { background: var(--accent); color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer; font-weight: bold; text-transform: uppercase; transition: 0.2s;}
+  button { background: var(--accent); color: white; border: none; padding: 15px; border-radius: 5px; cursor: pointer; font-weight: bold; text-transform: uppercase; transition: 0.2s; font-size: 1em;}
   button:hover { filter: brightness(1.2); }
   
-  #moves { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; font-family: monospace; font-size: 1.1em; max-height: 400px; overflow-y: auto;}
+  #moves { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-family: monospace; font-size: 1.1em; max-height: 100%; overflow-y: auto;}
   .move-num { color: #888; text-align: right; padding-right: 10px;}
   
   #commentary { font-style: italic; color: #aaa; margin-top: 10px; font-size: 0.95em; line-height: 1.4; min-height: 40px; word-wrap: break-word;}
-  #status-badge { display: inline-block; padding: 3px 8px; border-radius: 4px; background: #555; font-size: 0.8em; margin-bottom: 10px;}
+  #status-badge { display: inline-block; padding: 4px 10px; border-radius: 4px; background: #555; font-size: 0.9em; margin-bottom: 10px; font-weight: bold;}
+  #eval-bar { font-size: 1.1em; font-weight: bold; }
+
+  /* =======================================================
+     MOBILE RESPONSIVENESS
+  ======================================================== */
+  @media (max-width: 850px) {
+    body { 
+      flex-direction: column; 
+      overflow-y: auto; 
+    }
+    #center-area { 
+      order: 1; 
+      padding-top: 10px; 
+      padding-bottom: 20px;
+      min-height: auto;
+    }
+    #right-panel { 
+      order: 2; 
+      width: 100%; 
+      height: auto;
+      box-shadow: none;
+      border-top: 1px solid #444;
+    }
+    #left-panel { 
+      order: 3; 
+      width: 100%; 
+      height: auto;
+      box-shadow: none;
+      border-top: 1px solid #444;
+    }
+    #moves { max-height: 250px; } /* Prevent log from taking over mobile screen */
+  }
 </style>
 </head>
 
@@ -47,15 +122,17 @@
 
 <div id="left-panel">
   <h2>Game Log</h2>
-  <div class="box">
-    <div id="status-badge">Your Turn</div>
-    <div id="eval-bar">Eval: 0.00</div>
-    <div id="commentary">Waiting to start...</div>
-  </div>
   <div id="moves"></div>
 </div>
 
 <div id="center-area">
+  <!-- Status moved to center so it's always above the board on mobile -->
+  <div id="status-container" class="box">
+    <div id="status-badge">Your Turn</div>
+    <div id="eval-bar">Eval: 0.00</div>
+    <div id="commentary">Waiting to start...</div>
+  </div>
+
   <div id="board-container">
     <div id="board"></div>
     <svg id="arrow-svg"></svg>
@@ -90,7 +167,7 @@
 const game = new Chess();
 let abortSearch = false; 
 let isBotThinking = false;
-let currentPremove = null; // Stores human premove
+let currentPremove = null; 
 
 const board = Chessboard('board', {
   position: 'start',
@@ -166,7 +243,6 @@ function clearPremove() {
   currentPremove = null;
 }
 
-// Right-click anywhere on the board cancels the premove
 document.addEventListener('contextmenu', e => {
   if (e.target.closest('#board-container')) {
     e.preventDefault();
@@ -174,8 +250,15 @@ document.addEventListener('contextmenu', e => {
   }
 });
 
+/* MOBILE FIX: Prevent page scroll when dragging pieces */
+document.addEventListener('touchmove', function(e) {
+  if (e.target.closest('#board-container')) {
+    e.preventDefault();
+  }
+}, { passive: false });
+
 /* =======================================================================
-   3. OPENING BOOK & EVALUATION (PST, Knowledge)
+   3. OPENING BOOK & EVALUATION
 ======================================================================== */
 const openingBook = {
   "e4": { "e5": { "Nf3": { "Nc6": { "Bb5": "Ruy Lopez", "Bc4": "Italian Game", "d4": "Scotch Game" }}}, "c5": { "Nf3": { "d6": { "d4": "Sicilian Defense", "Bb5+": "Sicilian Rossolimo" }}}, "e6": { "d4": { "d5": "French Defense" }}, "c6": { "d4": { "d5": "Caro-Kann Defense" }}},
@@ -210,9 +293,7 @@ function evaluateBoard(g) {
   let agg = parseInt(document.getElementById('agg').value);
   let style = parseInt(document.getElementById('style').value);
 
-  let wMat = 0, bMat = 0;
-  let wKing = null, bKing = null;
-  let pawnCount = 0;
+  let wMat = 0, bMat = 0, wKing = null, bKing = null, pawnCount = 0;
 
   for (let r = 0; r < 8; r++) {
     for (let c = 0; c < 8; c++) {
@@ -221,51 +302,45 @@ function evaluateBoard(g) {
 
       let val = PIECE_VALUES[piece.type];
       let rank = piece.color === 'w' ? r : 7 - r;
-      let pstVal = PST[piece.type][rank][c];
-      let score = val + pstVal;
+      let score = val + PST[piece.type][rank][c];
 
       if (agg > 5 && (piece.type === 'n' || piece.type === 'b' || piece.type === 'r')) score += (agg - 5) * 5; 
       
       if (piece.color === 'w') { totalEval += score; wMat += val; if(piece.type==='k') wKing = {r,c}; }
       else { totalEval -= score; bMat += val; if(piece.type==='k') bKing = {r,c}; }
-
       if (piece.type === 'p') pawnCount++;
     }
   }
 
-  let opennessBonus = (16 - pawnCount) * (style * 5);
-  totalEval += g.turn() === 'w' ? opennessBonus : -opennessBonus;
+  totalEval += g.turn() === 'w' ? (16 - pawnCount) * (style * 5) : -((16 - pawnCount) * (style * 5));
 
   if (wMat < 1500 || bMat < 1500) {
-    let winningColor = totalEval > 200 ? 'w' : totalEval < -200 ? 'b' : null;
-    if (winningColor === 'w') totalEval += getMatingEval(wKing, bKing);
-    else if (winningColor === 'b') totalEval -= getMatingEval(bKing, wKing);
+    let wCol = totalEval > 200 ? 'w' : totalEval < -200 ? 'b' : null;
+    if (wCol === 'w') totalEval += getMatingEval(wKing, bKing);
+    else if (wCol === 'b') totalEval -= getMatingEval(bKing, wKing);
   }
-
   return g.turn() === 'w' ? totalEval : -totalEval;
 }
 
-function getMatingEval(winnerK, loserK) {
-  let edgeScore = (Math.max(3 - loserK.r, loserK.r - 4) + Math.max(3 - loserK.c, loserK.c - 4)) * 10;
-  let distScore = (14 - (Math.abs(winnerK.r - loserK.r) + Math.abs(winnerK.c - loserK.c))) * 5;
-  return edgeScore + distScore;
+function getMatingEval(wk, lk) {
+  return ((Math.max(3 - lk.r, lk.r - 4) + Math.max(3 - lk.c, lk.c - 4)) * 10) + 
+         ((14 - (Math.abs(wk.r - lk.r) + Math.abs(wk.c - lk.c))) * 5);
 }
 
 /* =======================================================================
-   4. ASYNC SEARCH ALGORITHM (With PV Line Extraction)
+   4. ASYNC SEARCH ALGORITHM 
 ======================================================================== */
 let nodesEvals = 0;
 
 function getOrderedMoves(g) {
-  let moves = g.moves({ verbose: true });
-  for (let m of moves) {
-    let score = 0;
-    if (m.captured) score += 10 * PIECE_VALUES[m.captured] - PIECE_VALUES[m.piece];
-    if (m.promotion) score += 900;
-    if (m.san.includes('+')) score += 50;
-    m.score = score;
-  }
-  return moves.sort((a, b) => b.score - a.score);
+  return g.moves({ verbose: true }).map(m => {
+    let s = 0;
+    if (m.captured) s += 10 * PIECE_VALUES[m.captured] - PIECE_VALUES[m.piece];
+    if (m.promotion) s += 900;
+    if (m.san.includes('+')) s += 50;
+    m.score = s;
+    return m;
+  }).sort((a, b) => b.score - a.score);
 }
 
 function quiesce(g, alpha, beta, depth = 0, pline = []) {
@@ -282,11 +357,7 @@ function quiesce(g, alpha, beta, depth = 0, pline = []) {
     g.undo();
 
     if (score >= beta) return beta;
-    if (score > alpha) {
-      alpha = score;
-      pline.length = 0;
-      pline.push(m, ...childLine);
-    }
+    if (score > alpha) { alpha = score; pline.length = 0; pline.push(m, ...childLine); }
   }
   return alpha;
 }
@@ -305,11 +376,7 @@ function alphaBeta(g, depth, alpha, beta, pline = []) {
     g.undo();
 
     if (score >= beta) return beta;
-    if (score > alpha) {
-      alpha = score;
-      pline.length = 0;
-      pline.push(m, ...childLine);
-    }
+    if (score > alpha) { alpha = score; pline.length = 0; pline.push(m, ...childLine); }
   }
   return alpha;
 }
@@ -347,7 +414,7 @@ async function findBestMoveAsync(g, depth) {
 }
 
 /* =======================================================================
-   5. ASYNC AI CONTROLLER & PREMOVE HANDLER
+   5. AI CONTROLLER & PREMOVE
 ======================================================================== */
 async function makeAIMove() {
   if (game.game_over()) return;
@@ -392,15 +459,14 @@ async function makeAIMove() {
     return;
   }
 
-  // --- PREMOVE EXECUTION ---
   if (currentPremove) {
     let pm = currentPremove;
-    clearPremove(); // Clear UI flags
+    clearPremove(); 
     let move = game.move(pm);
     if (move) {
       board.position(game.fen());
       updateLog();
-      window.setTimeout(makeAIMove, 200); // Fire engine cycle again
+      window.setTimeout(makeAIMove, 200); 
     }
   }
 }
@@ -408,26 +474,23 @@ async function makeAIMove() {
 /* =======================================================================
    6. CHESSBOARD.JS BINDINGS
 ======================================================================== */
-function onDragStart (source, piece, position, orientation) {
-  if (game.game_over()) return false;
-  if (piece.search(/^b/) !== -1) return false; 
+function onDragStart (source, piece) {
+  if (game.game_over() || piece.search(/^b/) !== -1) return false; 
   clearArrows();
-  clearPremove(); // Clear old premove if they touch a new piece
+  clearPremove(); 
 }
 
 function onDrop (source, target) {
   if (source === target) return 'snapback';
 
-  // If it's the bot's turn, register a Premove
   if (isBotThinking || game.turn() === 'b') {
     currentPremove = { from: source, to: target, promotion: 'q' };
     $('.square-55d63').removeClass('premove-square');
     $('.square-' + source).addClass('premove-square');
     $('.square-' + target).addClass('premove-square');
-    return 'snapback'; // Return piece to origin (visually handled via CSS highlight now)
+    return 'snapback'; 
   }
 
-  // Normal Move
   let move = game.move({ from: source, to: target, promotion: 'q' });
   if (move === null) return 'snapback';
 
