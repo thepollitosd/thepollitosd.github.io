@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pro-Adaptive Chess Engine</title>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.12.0/chess.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.js"></script>
+
+<style>
+  html { touch-action:none; overscroll-behavior:none; }
+  :root { --bg: #1e1e24; --panel: #2b2b36; --text: #e0e0e0; --accent: #4caf50; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; flex-direction: row; overflow: hidden; }
+  
+  #left-panel, #right-panel { width: 300px; background: var(--panel); padding: 20px; box-sizing: border-box; display: flex; flex-direction: column; gap: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); z-index: 2; overflow-y: auto;}
+  #center-area { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative;}
+  
+  #board-container { position: relative; width: 520px; max-width: 90vw; }
+  #board { width: 100%; }
+  #arrow-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
+  
+  h2, h3 { margin: 0; padding-bottom: 5px; border-bottom: 1px solid #444; font-weight: 500;}
+  .box { background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; }
+  
+  .setting { display: flex; flex-direction: column; gap: 5px; margin-bottom: 15px; }
+  .setting label { font-size: 0.9em; color: #bbb; display: flex; justify-content: space-between;}
+  input[type="range"] { accent-color: var(--accent); }
+  
+  button { background: var(--accent); color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer; font-weight: bold; text-transform: uppercase; transition: 0.2s;}
+  button:hover { filter: brightness(1.2); }
+  
+  #moves { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; font-family: monospace; font-size: 1.1em; max-height: 400px; overflow-y: auto;}
+  .move-num { color: #888; text-align: right; padding-right: 10px;}
+  
+  #commentary { font-style: italic; color: #aaa; margin-top: 10px; font-size: 0.95em; line-height: 1.4; min-height: 40px; word-wrap: break-word;}
+  #status-badge { display: inline-block; padding: 3px 8px; border-radius: 4px; background: #555; font-size: 0.8em; margin-bottom: 10px;}
+</style>
+</head>
+
+<body>
+
+<div id="left-panel">
+  <h2>Game Log</h2>
+  <div class="box">
+    <div id="status-badge">Your Turn</div>
+    <div id="eval-bar">Eval: 0.00</div>
+    <div id="commentary">Waiting to start...</div>
+  </div>
+  <div id="moves"></div>
+</div>
+
+<div id="center-area">
+  <div id="board-container">
+    <div id="board"></div>
+    <svg id="arrow-svg"></svg>
+  </div>
+</div>
+
+<div id="right-panel">
+  <h2>Bot Settings</h2>
+  
+  <div class="setting">
+    <label><span>Bot Elo</span> <span id="elo-val">1500</span></label>
+    <input type="range" id="elo" min="800" max="2500" step="100" value="1500" oninput="updateUI()">
+  </div>
+
+  <div class="setting">
+    <label><span>Aggression</span> <span id="agg-val">Normal</span></label>
+    <input type="range" id="agg" min="1" max="10" value="5" oninput="updateUI()">
+  </div>
+
+  <div class="setting">
+    <label><span>Playstyle</span> <span id="style-val">Balanced</span></label>
+    <input type="range" id="style" min="-5" max="5" value="0" oninput="updateUI()">
+  </div>
+
+  <button onclick="resetGame()">New Game</button>
+</div>
+
+<script>
+/* =======================================================================
+   1. SETUP & UI INITIALIZATION
+======================================================================== */
+const game = new Chess();
+let abortSearch = false; 
+
+const board = Chessboard('board', {
+  position: 'start',
+  draggable: true,
+  pieceTheme: "https://lichess1.org/assets/piece/cburnett/{piece}.svg",
+  onDragStart: onDragStart,
+  onDrop: onDrop,
+  onSnapEnd: onSnapEnd
+});
+
+function updateUI() {
+  document.getElementById('elo-val').innerText = document.getElementById('elo').value;
+  let agg = document.getElementById('agg').value;
+  document.getElementById('agg-val').innerText = agg < 4 ? "Passive" : agg > 7 ? "Violent" : "Normal";
+  let style = document.getElementById('style').value;
+  document.getElementById('style-val').innerText = style < -2 ? "Closed/Solid" : style > 2 ? "Open/Tactical" : "Balanced";
+}
+
+function setStatus(text, isThinking) {
+  const badge = document.getElementById("status-badge");
+  badge.innerText = text;
+  badge.style.background = isThinking ? "#d32f2f" : "#4caf50";
+}
+
+function updateLog() {
+  const movesDiv = document.getElementById("moves");
+  movesDiv.innerHTML = "";
+  let h = game.history();
+  for (let i = 0; i < h.length; i += 2) {
+    movesDiv.innerHTML += `<div class="move-num">${(i/2)+1}.</div><div>${h[i]}</div><div>${h[i+1] ? h[i+1] : ''}</div>`;
+  }
+  movesDiv.scrollTop = movesDiv.scrollHeight;
+}
+
+/* =======================================================================
+   2. VISUALIZATION (ARROWS & LINES)
+======================================================================== */
+function drawArrow(from, to, color = "rgba(255, 170, 0, 0.6)", width = 2.5) {
+  const files = { a:0, b:1, c:2, d:3, e:4, f:5, g:6, h:7 };
+  const ranks = { 1:7, 2:6, 3:5, 4:4, 5:3, 6:2, 7:1, 8:0 };
+
+  let fx = (files[from[0]] * 12.5) + 6.25;
+  let fy = (ranks[from[1]] * 12.5) + 6.25;
+  let tx = (files[to[0]] * 12.5) + 6.25;
+  let ty = (ranks[to[1]] * 12.5) + 6.25;
+
+  const svg = document.getElementById("arrow-svg");
+  const markerId = "head-" + color.replace(/[^a-zA-Z0-9]/g, "") + width.toString().replace(".","");
+
+  svg.innerHTML += `
+    <defs>
+      <marker id="${markerId}" orient="auto" markerWidth="4" markerHeight="6" refX="3.5" refY="3">
+        <path d="M0,0 V6 L4,3 Z" fill="${color}" />
+      </marker>
+    </defs>
+    <line x1="${fx}%" y1="${fy}%" x2="${tx}%" y2="${ty}%" stroke="${color}" stroke-width="${width}%" marker-end="url(#${markerId})" />
+  `;
+}
+
+// Draws the expected sequence of moves (Principal Variation)
+function drawPV(lineArray, rootColor, branchColor) {
+  if (!lineArray || lineArray.length === 0) return;
+  
+  // Draw root move
+  drawArrow(lineArray[0].from, lineArray[0].to, rootColor, 2.5);
+  
+  // Draw predicted continuation moves (getting slightly thinner as they go deeper)
+  for (let i = 1; i < lineArray.length; i++) {
+    let width = Math.max(0.6, 2.0 - (i * 0.4));
+    drawArrow(lineArray[i].from, lineArray[i].to, branchColor, width);
+  }
+}
+
+function clearArrows() { document.getElementById("arrow-svg").innerHTML = ""; }
+
+/* =======================================================================
+   3. OPENING BOOK
+======================================================================== */
+const openingBook = {
+  "e4": { "e5": { "Nf3": { "Nc6": { "Bb5": "Ruy Lopez", "Bc4": "Italian Game", "d4": "Scotch Game" }}}, "c5": { "Nf3": { "d6": { "d4": "Sicilian Defense", "Bb5+": "Sicilian Rossolimo" }}}, "e6": { "d4": { "d5": "French Defense" }}, "c6": { "d4": { "d5": "Caro-Kann Defense" }}},
+  "d4": { "d5": { "c4": { "e6": "Queen's Gambit Declined", "c6": "Slav Defense" }}, "Nf6": { "c4": { "g6": "King's Indian", "e6": "Nimzo-Indian" }}}
+};
+
+function getBookMove() {
+  let node = openingBook;
+  let hist = game.history();
+  for (let m of hist) {
+    if (!node || !node[m]) return null;
+    node = node[m];
+  }
+  if (typeof node === "string") return null;
+  let keys = Object.keys(node);
+  return keys[Math.floor(Math.random() * keys.length)];
+}
+
+/* =======================================================================
+   4. EVALUATION & KNOWLEDGE
+======================================================================== */
+const PIECE_VALUES = { p: 100, n: 320, b: 330, r: 500, q: 900, k: 20000 };
+
+const PST = {
+  p: [ [0,0,0,0,0,0,0,0], [50,50,50,50,50,50,50,50], [10,10,20,30,30,20,10,10], [5,5,10,25,25,10,5,5], [0,0,0,20,20,0,0,0], [5,-5,-10,0,0,-10,-5,5], [5,10,10,-20,-20,10,10,5], [0,0,0,0,0,0,0,0] ],
+  n: [ [-50,-40,-30,-30,-30,-30,-40,-50], [-40,-20,0,0,0,0,-20,-40], [-30,0,10,15,15,10,0,-30], [-30,5,15,20,20,15,5,-30], [-30,0,15,20,20,15,0,-30], [-30,5,10,15,15,10,5,-30], [-40,-20,0,5,5,0,-20,-40], [-50,-40,-30,-30,-30,-30,-40,-50] ],
+  b: [ [-20,-10,-10,-10,-10,-10,-10,-20], [-10,0,0,0,0,0,0,-10], [-10,0,5,10,10,5,0,-10], [-10,5,5,10,10,5,5,-10], [-10,0,10,10,10,10,0,-10], [-10,10,10,10,10,10,10,-10], [-10,5,0,0,0,0,5,-10], [-20,-10,-10,-10,-10,-10,-10,-20] ],
+  r: [ [0,0,0,0,0,0,0,0], [5,10,10,10,10,10,10,5], [-5,0,0,0,0,0,0,-5], [-5,0,0,0,0,0,0,-5], [-5,0,0,0,0,0,0,-5], [-5,0,0,0,0,0,0,-5], [-5,0,0,0,0,0,0,-5], [0,0,0,5,5,0,0,0] ],
+  q: [ [-20,-10,-10,-5,-5,-10,-10,-20], [-10,0,0,0,0,0,0,-10], [-10,0,5,5,5,5,0,-10], [-5,0,5,5,5,5,0,-5], [0,0,5,5,5,5,0,-5], [-10,5,5,5,5,5,0,-10], [-10,0,5,0,0,0,0,-10], [-20,-10,-10,-5,-5,-10,-10,-20] ],
+  k: [ [-30,-40,-40,-50,-50,-40,-40,-30], [-30,-40,-40,-50,-50,-40,-40,-30], [-30,-40,-40,-50,-50,-40,-40,-30], [-30,-40,-40,-50,-50,-40,-40,-30], [-20,-30,-30,-40,-40,-30,-30,-20], [-10,-20,-20,-20,-20,-20,-20,-10], [20,20,0,0,0,0,20,20], [20,30,10,0,0,10,30,20] ]
+};
+
+function evaluateBoard(g) {
+  let totalEval = 0;
+  let boardArr = g.board();
+  
+  let agg = parseInt(document.getElementById('agg').value);
+  let style = parseInt(document.getElementById('style').value);
+
+  let wMat = 0, bMat = 0;
+  let wKing = null, bKing = null;
+  let pawnCount = 0;
+
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      let piece = boardArr[r][c];
+      if (!piece) continue;
+
+      let val = PIECE_VALUES[piece.type];
+      let rank = piece.color === 'w' ? r : 7 - r;
+      let pstVal = PST[piece.type][rank][c];
+      let score = val + pstVal;
+
+      if (agg > 5 && (piece.type === 'n' || piece.type === 'b' || piece.type === 'r')) score += (agg - 5) * 5; 
+      
+      if (piece.color === 'w') { totalEval += score; wMat += val; if(piece.type==='k') wKing = {r,c}; }
+      else { totalEval -= score; bMat += val; if(piece.type==='k') bKing = {r,c}; }
+
+      if (piece.type === 'p') pawnCount++;
+    }
+  }
+
+  let opennessBonus = (16 - pawnCount) * (style * 5);
+  totalEval += g.turn() === 'w' ? opennessBonus : -opennessBonus;
+
+  let isEndgame = (wMat < 1500 || bMat < 1500);
+  if (isEndgame) {
+    let winningColor = totalEval > 200 ? 'w' : totalEval < -200 ? 'b' : null;
+    if (winningColor === 'w') totalEval += getMatingEval(wKing, bKing);
+    else if (winningColor === 'b') totalEval -= getMatingEval(bKing, wKing);
+  }
+
+  return g.turn() === 'w' ? totalEval : -totalEval;
+}
+
+function getMatingEval(winnerK, loserK) {
+  let loserRankEdge = Math.max(3 - loserK.r, loserK.r - 4);
+  let loserFileEdge = Math.max(3 - loserK.c, loserK.c - 4);
+  let edgeScore = (loserRankEdge + loserFileEdge) * 10;
+  let dist = Math.abs(winnerK.r - loserK.r) + Math.abs(winnerK.c - loserK.c);
+  let distScore = (14 - dist) * 5;
+  return edgeScore + distScore;
+}
+
+/* =======================================================================
+   5. ASYNC SEARCH ALGORITHM (With PV Line Extraction)
+======================================================================== */
+let nodesEvals = 0;
+
+function getOrderedMoves(g) {
+  let moves = g.moves({ verbose: true });
+  for (let i = 0; i < moves.length; i++) {
+    let m = moves[i];
+    let score = 0;
+    if (m.captured) score += 10 * PIECE_VALUES[m.captured] - PIECE_VALUES[m.piece];
+    if (m.promotion) score += 900;
+    if (m.san.includes('+')) score += 50;
+    m.score = score;
+  }
+  return moves.sort((a, b) => b.score - a.score);
+}
+
+// Deep inner search captures expected sequences via the `pline` array
+function quiesce(g, alpha, beta, depth = 0, pline = []) {
+  let stand_pat = evaluateBoard(g);
+  if (stand_pat >= beta) return beta;
+  if (alpha < stand_pat) {
+    alpha = stand_pat;
+    pline.length = 0; // If standing pat is best, expected line ends here
+  }
+  if (depth > 4) return alpha;
+
+  let moves = getOrderedMoves(g).filter(m => m.captured || m.promotion);
+  
+  for (let m of moves) {
+    g.move(m);
+    let childLine = [];
+    let score = -quiesce(g, -beta, -alpha, depth + 1, childLine);
+    g.undo();
+
+    if (score >= beta) return beta;
+    if (score > alpha) {
+      alpha = score;
+      pline.length = 0;
+      pline.push(m);
+      pline.push(...childLine);
+    }
+  }
+  return alpha;
+}
+
+function alphaBeta(g, depth, alpha, beta, pline = []) {
+  nodesEvals++;
+  if (depth === 0) return quiesce(g, alpha, beta, 0, pline);
+
+  let moves = getOrderedMoves(g);
+  if (moves.length === 0) {
+    if (g.in_checkmate()) return -99999 + (100 - depth); 
+    return 0; 
+  }
+
+  for (let m of moves) {
+    g.move(m);
+    let childLine = [];
+    let score = -alphaBeta(g, depth - 1, -beta, -alpha, childLine);
+    g.undo();
+
+    if (score >= beta) return beta;
+    if (score > alpha) {
+      alpha = score;
+      pline.length = 0;
+      pline.push(m);
+      pline.push(...childLine);
+    }
+  }
+  return alpha;
+}
+
+// Root loop handles rendering the live arrows to the screen
+async function findBestMoveAsync(g, depth) {
+  let moves = getOrderedMoves(g);
+  let bestMove = moves[0]; 
+  let bestScore = -Infinity;
+  let alpha = -Infinity;
+  let beta = Infinity;
+  let bestLine = [];
+
+  for (let i = 0; i < moves.length; i++) {
+    if (abortSearch) return { move: bestMove, score: bestScore, line: bestLine };
+
+    let m = moves[i];
+    let childLine = [];
+
+    // Yield control BEFORE evaluation to show what move it's *about* to look at
+    clearArrows();
+    if (bestLine.length > 0) {
+       drawPV(bestLine, "rgba(0, 255, 100, 0.7)", "rgba(0, 200, 255, 0.5)"); // Green/Blue = Best Line
+    }
+    drawArrow(m.from, m.to, "rgba(255, 200, 0, 0.8)", 2.5); // Yellow = Scanning
+    await new Promise(r => setTimeout(r, 0)); 
+
+    // Heavy Engine Work
+    g.move(m);
+    let score = -alphaBeta(g, depth - 1, -beta, -alpha, childLine);
+    g.undo();
+
+    let fullCurrentLine = [m, ...childLine]; // The complete sequence for this root move
+
+    // Yield control AFTER evaluation to draw the full line of what it just discovered
+    clearArrows();
+    if (bestLine.length > 0) {
+       drawPV(bestLine, "rgba(0, 255, 100, 0.7)", "rgba(0, 200, 255, 0.5)");
+    }
+    drawPV(fullCurrentLine, "rgba(255, 200, 0, 0.9)", "rgba(255, 120, 0, 0.6)"); // Yellow/Orange = Just Analyzed
+    
+    let pvText = fullCurrentLine.map(x => x.san).join(' ');
+    document.getElementById("commentary").innerText = `Depth ${depth} | Nodes: ${nodesEvals} \nEvaluating Line: ${pvText}`;
+    
+    await new Promise(r => setTimeout(r, 1)); 
+
+    // Update Alpha-Beta
+    if (score > bestScore) {
+      bestScore = score;
+      bestMove = m;
+      bestLine = fullCurrentLine;
+    }
+    if (score > alpha) {
+      alpha = score;
+    }
+  }
+
+  clearArrows();
+  return { move: bestMove, score: bestScore, line: bestLine };
+}
+
+/* =======================================================================
+   6. ASYNC AI CONTROLLER & GAME LOOP
+======================================================================== */
+async function makeAIMove() {
+  if (game.game_over()) return;
+
+  abortSearch = false;
+  setStatus("Bot Thinking...", true);
+  nodesEvals = 0;
+  clearArrows();
+
+  let finalMove = null;
+  let isBook = false;
+
+  let bookMoveSan = getBookMove();
+  if (bookMoveSan) {
+    finalMove = game.move(bookMoveSan);
+    isBook = true;
+    document.getElementById("commentary").innerText = "Book move: " + openingBook[finalMove.from];
+    await new Promise(r => setTimeout(r, 400)); 
+  } 
+  else {
+    let elo = parseInt(document.getElementById('elo').value);
+    let depth = elo < 1100 ? 2 : elo < 2000 ? 3 : 4;
+
+    // Wait for the async AI thought process to calculate the move and draw its arrows
+    let bestMoveObj = await findBestMoveAsync(game, depth);
+    if (abortSearch) return; 
+
+    finalMove = game.move(bestMoveObj.move);
+    
+    let displayEval = (bestMoveObj.score * (game.turn() === 'w' ? -1 : 1) / 100).toFixed(2);
+    document.getElementById("eval-bar").innerText = `Eval: ${displayEval > 0 ? '+' : ''}${displayEval}`;
+    
+    let bestLineText = bestMoveObj.line.map(x => x.san).join(' ');
+    document.getElementById("commentary").innerText = `Expected continuation:\n${bestLineText}`;
+  }
+
+  board.position(game.fen());
+  updateLog();
+  
+  if (finalMove) {
+    drawArrow(finalMove.from, finalMove.to, isBook ? "rgba(50, 200, 255, 0.6)" : "rgba(255, 50, 50, 0.7)");
+  }
+
+  setStatus("Your Turn", false);
+  
+  if (game.game_over()) {
+    if (game.in_checkmate()) alert("Checkmate!");
+    else if (game.in_draw()) alert("Draw!");
+  }
+}
+
+/* =======================================================================
+   7. CHESSBOARD.JS BINDINGS
+======================================================================== */
+function onDragStart (source, piece, position, orientation) {
+  if (game.game_over()) return false;
+  if (piece.search(/^b/) !== -1) return false; 
+  clearArrows();
+}
+
+function onDrop (source, target) {
+  let move = game.move({ from: source, to: target, promotion: 'q' });
+  if (move === null) return 'snapback';
+
+  updateLog();
+  window.setTimeout(makeAIMove, 250);
+}
+
+function onSnapEnd () { board.position(game.fen()); }
+
+function resetGame() {
+  abortSearch = true; 
+  game.reset();
+  board.start();
+  clearArrows();
+  updateLog();
+  setStatus("Your Turn", false);
+  document.getElementById("eval-bar").innerText = "Eval: 0.00";
+  document.getElementById("commentary").innerText = "New game started.";
+}
+
+updateUI();
+
+</script>
+</body>
+</html>
