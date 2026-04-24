@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Chess Engine</title>
+<title>Pro-Adaptive Chess Engine</title>
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
@@ -150,7 +150,7 @@ document.addEventListener('contextmenu', e => { if (e.target.closest('#board-con
 document.addEventListener('touchmove', function(e) { if (e.target.closest('#board-container')) e.preventDefault(); }, { passive: false });
 
 /* =======================================================================
-   3. OPENING BOOK & KNOWLEDGE (Mid vs Endgame Kings)
+   3. OPENING BOOK & KNOWLEDGE
 ======================================================================== */
 const openingBook = {
   "e4": { "e5": { "Nf3": { "Nc6": { "Bb5": "Ruy Lopez", "Bc4": "Italian Game" }}}, "c5": { "Nf3": { "d6": { "d4": "Sicilian Defense" }}}, "e6": { "d4": { "d5": "French Defense" }}, "c6": { "d4": { "d5": "Caro-Kann" }}},
@@ -176,7 +176,10 @@ const PST = {
   k_end: [ [-50,-40,-30,-20,-20,-30,-40,-50], [-30,-20,-10,0,0,-10,-20,-30], [-30,-10,20,30,30,20,-10,-30], [-30,-10,30,40,40,30,-10,-30], [-30,-10,30,40,40,30,-10,-30], [-30,-10,20,30,30,20,-10,-30], [-30,-30,0,0,0,0,-30,-30], [-50,-30,-30,-30,-30,-30,-30,-50] ]
 };
 
-let CURRENT_MAX_Q = 4; // Throttle limit for Quiescence
+let CURRENT_MAX_Q = 4;
+let searchStartTime = 0;
+let timeoutReached = false;
+const MAX_THINK_TIME = 2500; // Force stop at 2.5 seconds to prevent slow endgames
 
 function evaluateBoard(g) {
   let totalEval = 0;
@@ -195,13 +198,12 @@ function evaluateBoard(g) {
 
       let val = PIECE_VALUES[piece.type];
       let rank = piece.color === 'w' ? r : 7 - r;
-      
       let score = val;
       
       if (piece.type === 'k') {
         let mid = PST.k_mid[rank][c];
         let end = PST.k_end[rank][c];
-        score += mid; // Default to mid, adjust later if endgame
+        score += mid; 
         if (piece.color === 'w') { wKing = {r,c}; wKingMidScore = mid; wKingEndScore = end; }
         else { bKing = {r,c}; bKingMidScore = mid; bKingEndScore = end; }
       } else {
@@ -212,23 +214,15 @@ function evaluateBoard(g) {
       }
 
       if (agg > 5 && (piece.type === 'n' || piece.type === 'b' || piece.type === 'r')) score += (agg - 5) * 5; 
-      
-      if (piece.color === 'w') totalEval += score;
-      else totalEval -= score;
+      if (piece.color === 'w') totalEval += score; else totalEval -= score;
     }
   }
 
-  // Playstyle Modifier
   totalEval += g.turn() === 'w' ? (16 - pawnCount) * (style * 5) : -((16 - pawnCount) * (style * 5));
 
-  // ENDGAME LOGIC
-  let isEndgame = (wMatNonPawn < 1500 && bMatNonPawn < 1500);
-  if (isEndgame) {
-    // 1. Swap King PST Maps (Move Kings to center)
+  if (wMatNonPawn < 1500 && bMatNonPawn < 1500) {
     totalEval -= wKingMidScore; totalEval += wKingEndScore;
-    totalEval -= -bKingMidScore; totalEval += -bKingEndScore; // Subtracted from black initially, so add back negated
-
-    // 2. Heavy Mating Progression Bonus
+    totalEval -= -bKingMidScore; totalEval += -bKingEndScore; 
     let wCol = totalEval > 300 ? 'w' : totalEval < -300 ? 'b' : null;
     if (wCol === 'w') totalEval += getMatingEval(wKing, bKing);
     else if (wCol === 'b') totalEval -= getMatingEval(bKing, wKing);
@@ -240,12 +234,11 @@ function evaluateBoard(g) {
 function getMatingEval(wk, lk) {
   let edgeScore = ((Math.max(3 - lk.r, lk.r - 4) + Math.max(3 - lk.c, lk.c - 4)) * 10);
   let distScore = ((14 - (Math.abs(wk.r - lk.r) + Math.abs(wk.c - lk.c))) * 5);
-  // MASSIVE multiplier to ensure engine aggressively hunts the mate rather than shuffling
   return (edgeScore + distScore) * 15; 
 }
 
 /* =======================================================================
-   4. DYNAMIC SEARCH ALGORITHM
+   4. DYNAMIC SEARCH ALGORITHM (Optimized for Speed)
 ======================================================================== */
 let nodesEvals = 0;
 
@@ -255,17 +248,26 @@ function getOrderedMoves(g) {
     if (m.captured) s += 10 * PIECE_VALUES[m.captured] - PIECE_VALUES[m.piece];
     if (m.promotion) s += 900;
     if (m.san.includes('+')) s += 50;
+    
+    // NEW: Heavy priority to advancing pawns in endgames to speed up Alpha-Beta pruning
+    if (m.piece === 'p') {
+      if (m.to.includes('7') || m.to.includes('2')) s += 150;
+      else if (m.to.includes('6') || m.to.includes('3')) s += 75;
+    }
+
     m.score = s;
     return m;
   }).sort((a, b) => b.score - a.score);
 }
 
 function quiesce(g, alpha, beta, depth = 0, pline = []) {
+  if (++nodesEvals % 2000 === 0 && Date.now() - searchStartTime > MAX_THINK_TIME) timeoutReached = true;
+  if (timeoutReached) return alpha;
+
   let stand_pat = evaluateBoard(g);
   if (stand_pat >= beta) return beta;
   if (alpha < stand_pat) { alpha = stand_pat; pline.length = 0; }
   
-  // Throttle Quiescence depth based on Elo to simulate realistic blindspots
   if (depth >= CURRENT_MAX_Q) return alpha;
 
   let moves = getOrderedMoves(g).filter(m => m.captured || m.promotion);
@@ -282,7 +284,9 @@ function quiesce(g, alpha, beta, depth = 0, pline = []) {
 }
 
 function alphaBeta(g, depth, alpha, beta, pline = []) {
-  nodesEvals++;
+  if (++nodesEvals % 2000 === 0 && Date.now() - searchStartTime > MAX_THINK_TIME) timeoutReached = true;
+  if (timeoutReached) return alpha;
+
   if (depth === 0) return quiesce(g, alpha, beta, 0, pline);
 
   let moves = getOrderedMoves(g);
@@ -301,16 +305,13 @@ function alphaBeta(g, depth, alpha, beta, pline = []) {
 }
 
 async function findBestMoveAsync(g, depth) {
+  searchStartTime = Date.now();
+  timeoutReached = false;
   let moves = getOrderedMoves(g);
   let bestMove = moves[0], bestScore = -Infinity, alpha = -Infinity, beta = Infinity, bestLine = [];
 
   for (let m of moves) {
-    if (abortSearch) return { move: bestMove, score: bestScore, line: bestLine };
-
-    clearArrows();
-    if (bestLine.length > 0) drawPV(bestLine, "rgba(0, 255, 100, 0.7)", "rgba(0, 200, 255, 0.5)"); 
-    drawArrow(m.from, m.to, "rgba(255, 200, 0, 0.8)", 2.5); 
-    await new Promise(r => setTimeout(r, 0)); 
+    if (abortSearch || timeoutReached) break;
 
     let childLine = [];
     g.move(m);
@@ -318,22 +319,27 @@ async function findBestMoveAsync(g, depth) {
     g.undo();
 
     let fullCurrentLine = [m, ...childLine]; 
-    clearArrows();
-    if (bestLine.length > 0) drawPV(bestLine, "rgba(0, 255, 100, 0.7)", "rgba(0, 200, 255, 0.5)");
-    drawPV(fullCurrentLine, "rgba(255, 200, 0, 0.9)", "rgba(255, 120, 0, 0.6)"); 
-    
-    document.getElementById("commentary").innerText = `Depth ${depth} | Nodes: ${nodesEvals} \nEvaluating: ${fullCurrentLine.map(x => x.san).join(' ')}`;
-    await new Promise(r => setTimeout(r, 1)); 
 
-    if (score > bestScore) { bestScore = score; bestMove = m; bestLine = fullCurrentLine; }
+    if (score > bestScore) { 
+      bestScore = score; 
+      bestMove = m; 
+      bestLine = fullCurrentLine; 
+      
+      // Only draw heavy UI elements when a NEW best move is found to save JS thread time
+      clearArrows();
+      drawPV(bestLine, "rgba(0, 255, 100, 0.7)", "rgba(0, 200, 255, 0.5)"); 
+      document.getElementById("commentary").innerText = `Depth ${depth} | Nodes: ${nodesEvals} \nEvaluating: ${bestLine.map(x => x.san).join(' ')}`;
+      await new Promise(r => setTimeout(r, 0)); 
+    }
+    
     if (score > alpha) alpha = score;
   }
   clearArrows();
-  return { move: bestMove, score: bestScore, line: bestLine };
+  return { move: bestMove, score: bestScore, line: bestLine, aborted: timeoutReached };
 }
 
 /* =======================================================================
-   5. AI CONTROLLER & PREMOVE
+   5. AI CONTROLLER 
 ======================================================================== */
 async function makeAIMove() {
   if (game.game_over()) return;
@@ -354,27 +360,27 @@ async function makeAIMove() {
     await new Promise(r => setTimeout(r, 400)); 
   } 
   else {
-    // Determine Board State for Dynamic Depth
     let pieceCount = 0;
     game.board().forEach(r => r.forEach(p => { if (p) pieceCount++; }));
-    
     let elo = parseInt(document.getElementById('elo').value);
     
-    // Dynamic Scaled Depth Maps
     let baseDepth = elo < 1200 ? 2 : elo < 1600 ? 3 : 4;
     CURRENT_MAX_Q = elo < 1400 ? 2 : elo < 2000 ? 4 : 8;
 
-    // Endgame Depth Boost (Makes the engine a genius in low-piece situations)
     if (pieceCount <= 14) baseDepth += 1;
-    if (pieceCount <= 6) baseDepth += 2; // Super deep calculation in king/pawn endgames
+    if (pieceCount <= 6) baseDepth += 2; 
 
     let bestMoveObj = await findBestMoveAsync(game, baseDepth);
     if (abortSearch) return; 
 
     finalMove = game.move(bestMoveObj.move);
     let displayEval = (bestMoveObj.score * (game.turn() === 'w' ? -1 : 1) / 100).toFixed(2);
+    
+    let commText = `Search Depth: ${baseDepth}\nContinuation:\n${bestMoveObj.line.map(x => x.san).join(' ')}`;
+    if (bestMoveObj.aborted) commText += `\n(Time limit 2.5s reached)`;
+    
     document.getElementById("eval-bar").innerText = `Eval: ${displayEval > 0 ? '+' : ''}${displayEval}`;
-    document.getElementById("commentary").innerText = `Search Depth: ${baseDepth}\nContinuation:\n${bestMoveObj.line.map(x => x.san).join(' ')}`;
+    document.getElementById("commentary").innerText = commText;
   }
 
   board.position(game.fen());
@@ -427,7 +433,7 @@ function onDrop (source, target) {
 
   clearPremove();
   updateLog();
-  window.setTimeout(makeAIMove, 250);
+  window.setTimeout(makeAIMove, 50);
 }
 
 function onSnapEnd () { board.position(game.fen()); }
