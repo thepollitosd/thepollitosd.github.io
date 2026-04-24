@@ -22,6 +22,9 @@
   #board { width: 100%; }
   #arrow-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
   
+  /* Premove Highlight Style */
+  .premove-square { box-shadow: inset 0 0 0 50px rgba(220, 50, 50, 0.5) !important; }
+
   h2, h3 { margin: 0; padding-bottom: 5px; border-bottom: 1px solid #444; font-weight: 500;}
   .box { background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; }
   
@@ -86,6 +89,8 @@
 ======================================================================== */
 const game = new Chess();
 let abortSearch = false; 
+let isBotThinking = false;
+let currentPremove = null; // Stores human premove
 
 const board = Chessboard('board', {
   position: 'start',
@@ -121,7 +126,7 @@ function updateLog() {
 }
 
 /* =======================================================================
-   2. VISUALIZATION (ARROWS & LINES)
+   2. VISUALIZATION (ARROWS & PREMOVES)
 ======================================================================== */
 function drawArrow(from, to, color = "rgba(255, 170, 0, 0.6)", width = 2.5) {
   const files = { a:0, b:1, c:2, d:3, e:4, f:5, g:6, h:7 };
@@ -145,14 +150,9 @@ function drawArrow(from, to, color = "rgba(255, 170, 0, 0.6)", width = 2.5) {
   `;
 }
 
-// Draws the expected sequence of moves (Principal Variation)
 function drawPV(lineArray, rootColor, branchColor) {
   if (!lineArray || lineArray.length === 0) return;
-  
-  // Draw root move
   drawArrow(lineArray[0].from, lineArray[0].to, rootColor, 2.5);
-  
-  // Draw predicted continuation moves (getting slightly thinner as they go deeper)
   for (let i = 1; i < lineArray.length; i++) {
     let width = Math.max(0.6, 2.0 - (i * 0.4));
     drawArrow(lineArray[i].from, lineArray[i].to, branchColor, width);
@@ -161,8 +161,21 @@ function drawPV(lineArray, rootColor, branchColor) {
 
 function clearArrows() { document.getElementById("arrow-svg").innerHTML = ""; }
 
+function clearPremove() {
+  $('.square-55d63').removeClass('premove-square');
+  currentPremove = null;
+}
+
+// Right-click anywhere on the board cancels the premove
+document.addEventListener('contextmenu', e => {
+  if (e.target.closest('#board-container')) {
+    e.preventDefault();
+    clearPremove();
+  }
+});
+
 /* =======================================================================
-   3. OPENING BOOK
+   3. OPENING BOOK & EVALUATION (PST, Knowledge)
 ======================================================================== */
 const openingBook = {
   "e4": { "e5": { "Nf3": { "Nc6": { "Bb5": "Ruy Lopez", "Bc4": "Italian Game", "d4": "Scotch Game" }}}, "c5": { "Nf3": { "d6": { "d4": "Sicilian Defense", "Bb5+": "Sicilian Rossolimo" }}}, "e6": { "d4": { "d5": "French Defense" }}, "c6": { "d4": { "d5": "Caro-Kann Defense" }}},
@@ -171,8 +184,7 @@ const openingBook = {
 
 function getBookMove() {
   let node = openingBook;
-  let hist = game.history();
-  for (let m of hist) {
+  for (let m of game.history()) {
     if (!node || !node[m]) return null;
     node = node[m];
   }
@@ -181,11 +193,7 @@ function getBookMove() {
   return keys[Math.floor(Math.random() * keys.length)];
 }
 
-/* =======================================================================
-   4. EVALUATION & KNOWLEDGE
-======================================================================== */
 const PIECE_VALUES = { p: 100, n: 320, b: 330, r: 500, q: 900, k: 20000 };
-
 const PST = {
   p: [ [0,0,0,0,0,0,0,0], [50,50,50,50,50,50,50,50], [10,10,20,30,30,20,10,10], [5,5,10,25,25,10,5,5], [0,0,0,20,20,0,0,0], [5,-5,-10,0,0,-10,-5,5], [5,10,10,-20,-20,10,10,5], [0,0,0,0,0,0,0,0] ],
   n: [ [-50,-40,-30,-30,-30,-30,-40,-50], [-40,-20,0,0,0,0,-20,-40], [-30,0,10,15,15,10,0,-30], [-30,5,15,20,20,15,5,-30], [-30,0,15,20,20,15,0,-30], [-30,5,10,15,15,10,5,-30], [-40,-20,0,5,5,0,-20,-40], [-50,-40,-30,-30,-30,-30,-40,-50] ],
@@ -228,8 +236,7 @@ function evaluateBoard(g) {
   let opennessBonus = (16 - pawnCount) * (style * 5);
   totalEval += g.turn() === 'w' ? opennessBonus : -opennessBonus;
 
-  let isEndgame = (wMat < 1500 || bMat < 1500);
-  if (isEndgame) {
+  if (wMat < 1500 || bMat < 1500) {
     let winningColor = totalEval > 200 ? 'w' : totalEval < -200 ? 'b' : null;
     if (winningColor === 'w') totalEval += getMatingEval(wKing, bKing);
     else if (winningColor === 'b') totalEval -= getMatingEval(bKing, wKing);
@@ -239,23 +246,19 @@ function evaluateBoard(g) {
 }
 
 function getMatingEval(winnerK, loserK) {
-  let loserRankEdge = Math.max(3 - loserK.r, loserK.r - 4);
-  let loserFileEdge = Math.max(3 - loserK.c, loserK.c - 4);
-  let edgeScore = (loserRankEdge + loserFileEdge) * 10;
-  let dist = Math.abs(winnerK.r - loserK.r) + Math.abs(winnerK.c - loserK.c);
-  let distScore = (14 - dist) * 5;
+  let edgeScore = (Math.max(3 - loserK.r, loserK.r - 4) + Math.max(3 - loserK.c, loserK.c - 4)) * 10;
+  let distScore = (14 - (Math.abs(winnerK.r - loserK.r) + Math.abs(winnerK.c - loserK.c))) * 5;
   return edgeScore + distScore;
 }
 
 /* =======================================================================
-   5. ASYNC SEARCH ALGORITHM (With PV Line Extraction)
+   4. ASYNC SEARCH ALGORITHM (With PV Line Extraction)
 ======================================================================== */
 let nodesEvals = 0;
 
 function getOrderedMoves(g) {
   let moves = g.moves({ verbose: true });
-  for (let i = 0; i < moves.length; i++) {
-    let m = moves[i];
+  for (let m of moves) {
     let score = 0;
     if (m.captured) score += 10 * PIECE_VALUES[m.captured] - PIECE_VALUES[m.piece];
     if (m.promotion) score += 900;
@@ -265,18 +268,13 @@ function getOrderedMoves(g) {
   return moves.sort((a, b) => b.score - a.score);
 }
 
-// Deep inner search captures expected sequences via the `pline` array
 function quiesce(g, alpha, beta, depth = 0, pline = []) {
   let stand_pat = evaluateBoard(g);
   if (stand_pat >= beta) return beta;
-  if (alpha < stand_pat) {
-    alpha = stand_pat;
-    pline.length = 0; // If standing pat is best, expected line ends here
-  }
+  if (alpha < stand_pat) { alpha = stand_pat; pline.length = 0; }
   if (depth > 4) return alpha;
 
   let moves = getOrderedMoves(g).filter(m => m.captured || m.promotion);
-  
   for (let m of moves) {
     g.move(m);
     let childLine = [];
@@ -287,8 +285,7 @@ function quiesce(g, alpha, beta, depth = 0, pline = []) {
     if (score > alpha) {
       alpha = score;
       pline.length = 0;
-      pline.push(m);
-      pline.push(...childLine);
+      pline.push(m, ...childLine);
     }
   }
   return alpha;
@@ -299,10 +296,7 @@ function alphaBeta(g, depth, alpha, beta, pline = []) {
   if (depth === 0) return quiesce(g, alpha, beta, 0, pline);
 
   let moves = getOrderedMoves(g);
-  if (moves.length === 0) {
-    if (g.in_checkmate()) return -99999 + (100 - depth); 
-    return 0; 
-  }
+  if (moves.length === 0) return g.in_checkmate() ? -99999 + (100 - depth) : 0;
 
   for (let m of moves) {
     g.move(m);
@@ -314,85 +308,59 @@ function alphaBeta(g, depth, alpha, beta, pline = []) {
     if (score > alpha) {
       alpha = score;
       pline.length = 0;
-      pline.push(m);
-      pline.push(...childLine);
+      pline.push(m, ...childLine);
     }
   }
   return alpha;
 }
 
-// Root loop handles rendering the live arrows to the screen
 async function findBestMoveAsync(g, depth) {
   let moves = getOrderedMoves(g);
-  let bestMove = moves[0]; 
-  let bestScore = -Infinity;
-  let alpha = -Infinity;
-  let beta = Infinity;
-  let bestLine = [];
+  let bestMove = moves[0], bestScore = -Infinity, alpha = -Infinity, beta = Infinity, bestLine = [];
 
-  for (let i = 0; i < moves.length; i++) {
+  for (let m of moves) {
     if (abortSearch) return { move: bestMove, score: bestScore, line: bestLine };
 
-    let m = moves[i];
-    let childLine = [];
-
-    // Yield control BEFORE evaluation to show what move it's *about* to look at
     clearArrows();
-    if (bestLine.length > 0) {
-       drawPV(bestLine, "rgba(0, 255, 100, 0.7)", "rgba(0, 200, 255, 0.5)"); // Green/Blue = Best Line
-    }
-    drawArrow(m.from, m.to, "rgba(255, 200, 0, 0.8)", 2.5); // Yellow = Scanning
+    if (bestLine.length > 0) drawPV(bestLine, "rgba(0, 255, 100, 0.7)", "rgba(0, 200, 255, 0.5)"); 
+    drawArrow(m.from, m.to, "rgba(255, 200, 0, 0.8)", 2.5); 
     await new Promise(r => setTimeout(r, 0)); 
 
-    // Heavy Engine Work
+    let childLine = [];
     g.move(m);
     let score = -alphaBeta(g, depth - 1, -beta, -alpha, childLine);
     g.undo();
 
-    let fullCurrentLine = [m, ...childLine]; // The complete sequence for this root move
-
-    // Yield control AFTER evaluation to draw the full line of what it just discovered
+    let fullCurrentLine = [m, ...childLine]; 
     clearArrows();
-    if (bestLine.length > 0) {
-       drawPV(bestLine, "rgba(0, 255, 100, 0.7)", "rgba(0, 200, 255, 0.5)");
-    }
-    drawPV(fullCurrentLine, "rgba(255, 200, 0, 0.9)", "rgba(255, 120, 0, 0.6)"); // Yellow/Orange = Just Analyzed
+    if (bestLine.length > 0) drawPV(bestLine, "rgba(0, 255, 100, 0.7)", "rgba(0, 200, 255, 0.5)");
+    drawPV(fullCurrentLine, "rgba(255, 200, 0, 0.9)", "rgba(255, 120, 0, 0.6)"); 
     
-    let pvText = fullCurrentLine.map(x => x.san).join(' ');
-    document.getElementById("commentary").innerText = `Depth ${depth} | Nodes: ${nodesEvals} \nEvaluating Line: ${pvText}`;
-    
+    document.getElementById("commentary").innerText = `Depth ${depth} | Nodes: ${nodesEvals} \nEvaluating: ${fullCurrentLine.map(x => x.san).join(' ')}`;
     await new Promise(r => setTimeout(r, 1)); 
 
-    // Update Alpha-Beta
-    if (score > bestScore) {
-      bestScore = score;
-      bestMove = m;
-      bestLine = fullCurrentLine;
-    }
-    if (score > alpha) {
-      alpha = score;
-    }
+    if (score > bestScore) { bestScore = score; bestMove = m; bestLine = fullCurrentLine; }
+    if (score > alpha) alpha = score;
   }
-
   clearArrows();
   return { move: bestMove, score: bestScore, line: bestLine };
 }
 
 /* =======================================================================
-   6. ASYNC AI CONTROLLER & GAME LOOP
+   5. ASYNC AI CONTROLLER & PREMOVE HANDLER
 ======================================================================== */
 async function makeAIMove() {
   if (game.game_over()) return;
 
   abortSearch = false;
+  isBotThinking = true;
   setStatus("Bot Thinking...", true);
   nodesEvals = 0;
   clearArrows();
 
-  let finalMove = null;
-  let isBook = false;
-
+  let finalMove = null, isBook = false;
   let bookMoveSan = getBookMove();
+
   if (bookMoveSan) {
     finalMove = game.move(bookMoveSan);
     isBook = true;
@@ -402,48 +370,68 @@ async function makeAIMove() {
   else {
     let elo = parseInt(document.getElementById('elo').value);
     let depth = elo < 1100 ? 2 : elo < 2000 ? 3 : 4;
-
-    // Wait for the async AI thought process to calculate the move and draw its arrows
     let bestMoveObj = await findBestMoveAsync(game, depth);
     if (abortSearch) return; 
 
     finalMove = game.move(bestMoveObj.move);
-    
     let displayEval = (bestMoveObj.score * (game.turn() === 'w' ? -1 : 1) / 100).toFixed(2);
     document.getElementById("eval-bar").innerText = `Eval: ${displayEval > 0 ? '+' : ''}${displayEval}`;
-    
-    let bestLineText = bestMoveObj.line.map(x => x.san).join(' ');
-    document.getElementById("commentary").innerText = `Expected continuation:\n${bestLineText}`;
+    document.getElementById("commentary").innerText = `Expected continuation:\n${bestMoveObj.line.map(x => x.san).join(' ')}`;
   }
 
   board.position(game.fen());
   updateLog();
-  
-  if (finalMove) {
-    drawArrow(finalMove.from, finalMove.to, isBook ? "rgba(50, 200, 255, 0.6)" : "rgba(255, 50, 50, 0.7)");
-  }
+  if (finalMove) drawArrow(finalMove.from, finalMove.to, isBook ? "rgba(50, 200, 255, 0.6)" : "rgba(255, 50, 50, 0.7)");
 
+  isBotThinking = false;
   setStatus("Your Turn", false);
   
   if (game.game_over()) {
     if (game.in_checkmate()) alert("Checkmate!");
     else if (game.in_draw()) alert("Draw!");
+    return;
+  }
+
+  // --- PREMOVE EXECUTION ---
+  if (currentPremove) {
+    let pm = currentPremove;
+    clearPremove(); // Clear UI flags
+    let move = game.move(pm);
+    if (move) {
+      board.position(game.fen());
+      updateLog();
+      window.setTimeout(makeAIMove, 200); // Fire engine cycle again
+    }
   }
 }
 
 /* =======================================================================
-   7. CHESSBOARD.JS BINDINGS
+   6. CHESSBOARD.JS BINDINGS
 ======================================================================== */
 function onDragStart (source, piece, position, orientation) {
   if (game.game_over()) return false;
   if (piece.search(/^b/) !== -1) return false; 
   clearArrows();
+  clearPremove(); // Clear old premove if they touch a new piece
 }
 
 function onDrop (source, target) {
+  if (source === target) return 'snapback';
+
+  // If it's the bot's turn, register a Premove
+  if (isBotThinking || game.turn() === 'b') {
+    currentPremove = { from: source, to: target, promotion: 'q' };
+    $('.square-55d63').removeClass('premove-square');
+    $('.square-' + source).addClass('premove-square');
+    $('.square-' + target).addClass('premove-square');
+    return 'snapback'; // Return piece to origin (visually handled via CSS highlight now)
+  }
+
+  // Normal Move
   let move = game.move({ from: source, to: target, promotion: 'q' });
   if (move === null) return 'snapback';
 
+  clearPremove();
   updateLog();
   window.setTimeout(makeAIMove, 250);
 }
@@ -452,9 +440,11 @@ function onSnapEnd () { board.position(game.fen()); }
 
 function resetGame() {
   abortSearch = true; 
+  isBotThinking = false;
   game.reset();
   board.start();
   clearArrows();
+  clearPremove();
   updateLog();
   setStatus("Your Turn", false);
   document.getElementById("eval-bar").innerText = "Eval: 0.00";
