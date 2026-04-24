@@ -2,9 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<!-- Crucial for Mobile: Prevents double-tap zoom and scales correctly -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Chess Engine</title>
+<title>Pro-Adaptive Chess Engine</title>
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
@@ -15,105 +14,38 @@
   html { touch-action: manipulation; overscroll-behavior: none; }
   :root { --bg: #1e1e24; --panel: #2b2b36; --text: #e0e0e0; --accent: #4caf50; }
   
-  body { 
-    margin: 0; 
-    height: 100vh; 
-    background: var(--bg); 
-    color: var(--text); 
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-    display: flex; 
-    flex-direction: row; 
-    overflow: hidden; 
-  }
+  body { margin: 0; height: 100vh; background: var(--bg); color: var(--text); font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; flex-direction: row; overflow: hidden; }
   
-  /* Layout Panels */
-  #left-panel, #right-panel { 
-    width: 300px; 
-    background: var(--panel); 
-    padding: 20px; 
-    box-sizing: border-box; 
-    display: flex; 
-    flex-direction: column; 
-    gap: 15px; 
-    box-shadow: 0 4px 10px rgba(0,0,0,0.5); 
-    z-index: 2; 
-    overflow-y: auto;
-  }
-  
-  #center-area { 
-    flex: 1; 
-    display: flex; 
-    flex-direction: column; 
-    align-items: center; 
-    justify-content: flex-start; /* Changed to accommodate top status */
-    padding-top: 20px;
-    position: relative;
-    overflow-y: auto;
-  }
-
-  /* Status Box moved to center */
-  #status-container {
-    width: 520px;
-    max-width: 95vw;
-    margin-bottom: 15px;
-    box-sizing: border-box;
-  }
-  
-  /* Board & Arrows */
+  #left-panel, #right-panel { width: 300px; background: var(--panel); padding: 20px; box-sizing: border-box; display: flex; flex-direction: column; gap: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); z-index: 2; overflow-y: auto;}
+  #center-area { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 20px; position: relative; overflow-y: auto;}
+  #status-container { width: 520px; max-width: 95vw; margin-bottom: 15px; box-sizing: border-box;}
   #board-container { position: relative; width: 520px; max-width: 95vw; touch-action: none; }
   #board { width: 100%; }
   #arrow-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
   
-  /* Premove Highlight Style */
   .premove-square { box-shadow: inset 0 0 0 50px rgba(220, 50, 50, 0.5) !important; }
 
-  /* Typography & Elements */
   h2, h3 { margin: 0; padding-bottom: 5px; border-bottom: 1px solid #444; font-weight: 500;}
   .box { background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; }
-  
   .setting { display: flex; flex-direction: column; gap: 8px; margin-bottom: 15px; }
   .setting label { font-size: 0.95em; color: #bbb; display: flex; justify-content: space-between;}
-  input[type="range"] { accent-color: var(--accent); height: 20px; } /* Thicker for touch */
+  input[type="range"] { accent-color: var(--accent); height: 20px; } 
   
   button { background: var(--accent); color: white; border: none; padding: 15px; border-radius: 5px; cursor: pointer; font-weight: bold; text-transform: uppercase; transition: 0.2s; font-size: 1em;}
   button:hover { filter: brightness(1.2); }
   
   #moves { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-family: monospace; font-size: 1.1em; max-height: 100%; overflow-y: auto;}
   .move-num { color: #888; text-align: right; padding-right: 10px;}
-  
   #commentary { font-style: italic; color: #aaa; margin-top: 10px; font-size: 0.95em; line-height: 1.4; min-height: 40px; word-wrap: break-word;}
   #status-badge { display: inline-block; padding: 4px 10px; border-radius: 4px; background: #555; font-size: 0.9em; margin-bottom: 10px; font-weight: bold;}
   #eval-bar { font-size: 1.1em; font-weight: bold; }
 
-  /* =======================================================
-     MOBILE RESPONSIVENESS
-  ======================================================== */
   @media (max-width: 850px) {
-    body { 
-      flex-direction: column; 
-      overflow-y: auto; 
-    }
-    #center-area { 
-      order: 1; 
-      padding-top: 10px; 
-      padding-bottom: 20px;
-      min-height: auto;
-    }
-    #right-panel { 
-      order: 2; 
-      width: 100%; 
-      height: auto;
-      box-shadow: none;
-      border-top: 1px solid #444;
-    }
-    #left-panel { 
-      order: 3; 
-      width: 100%; 
-      height: auto;
-      box-shadow: none;
-      border-top: 1px solid #444;
-    }
-    #moves { max-height: 250px; } /* Prevent log from taking over mobile screen */
+    body { flex-direction: column; overflow-y: auto; }
+    #center-area { order: 1; padding-top: 10px; padding-bottom: 20px; min-height: auto;}
+    #right-panel { order: 2; width: 100%; height: auto; box-shadow: none; border-top: 1px solid #444;}
+    #left-panel { order: 3; width: 100%; height: auto; box-shadow: none; border-top: 1px solid #444;}
+    #moves { max-height: 250px; } 
   }
 </style>
 </head>
@@ -126,13 +58,11 @@
 </div>
 
 <div id="center-area">
-  <!-- Status moved to center so it's always above the board on mobile -->
   <div id="status-container" class="box">
     <div id="status-badge">Your Turn</div>
     <div id="eval-bar">Eval: 0.00</div>
     <div id="commentary">Waiting to start...</div>
   </div>
-
   <div id="board-container">
     <div id="board"></div>
     <svg id="arrow-svg"></svg>
@@ -141,22 +71,18 @@
 
 <div id="right-panel">
   <h2>Bot Settings</h2>
-  
   <div class="setting">
     <label><span>Bot Elo</span> <span id="elo-val">1500</span></label>
     <input type="range" id="elo" min="800" max="2500" step="100" value="1500" oninput="updateUI()">
   </div>
-
   <div class="setting">
     <label><span>Aggression</span> <span id="agg-val">Normal</span></label>
     <input type="range" id="agg" min="1" max="10" value="5" oninput="updateUI()">
   </div>
-
   <div class="setting">
     <label><span>Playstyle</span> <span id="style-val">Balanced</span></label>
     <input type="range" id="style" min="-5" max="5" value="0" oninput="updateUI()">
   </div>
-
   <button onclick="resetGame()">New Game</button>
 </div>
 
@@ -170,12 +96,8 @@ let isBotThinking = false;
 let currentPremove = null; 
 
 const board = Chessboard('board', {
-  position: 'start',
-  draggable: true,
-  pieceTheme: "https://lichess1.org/assets/piece/cburnett/{piece}.svg",
-  onDragStart: onDragStart,
-  onDrop: onDrop,
-  onSnapEnd: onSnapEnd
+  position: 'start', draggable: true, pieceTheme: "https://lichess1.org/assets/piece/cburnett/{piece}.svg",
+  onDragStart: onDragStart, onDrop: onDrop, onSnapEnd: onSnapEnd
 });
 
 function updateUI() {
@@ -208,69 +130,36 @@ function updateLog() {
 function drawArrow(from, to, color = "rgba(255, 170, 0, 0.6)", width = 2.5) {
   const files = { a:0, b:1, c:2, d:3, e:4, f:5, g:6, h:7 };
   const ranks = { 1:7, 2:6, 3:5, 4:4, 5:3, 6:2, 7:1, 8:0 };
-
-  let fx = (files[from[0]] * 12.5) + 6.25;
-  let fy = (ranks[from[1]] * 12.5) + 6.25;
-  let tx = (files[to[0]] * 12.5) + 6.25;
-  let ty = (ranks[to[1]] * 12.5) + 6.25;
-
+  let fx = (files[from[0]] * 12.5) + 6.25, fy = (ranks[from[1]] * 12.5) + 6.25;
+  let tx = (files[to[0]] * 12.5) + 6.25, ty = (ranks[to[1]] * 12.5) + 6.25;
   const svg = document.getElementById("arrow-svg");
   const markerId = "head-" + color.replace(/[^a-zA-Z0-9]/g, "") + width.toString().replace(".","");
-
-  svg.innerHTML += `
-    <defs>
-      <marker id="${markerId}" orient="auto" markerWidth="4" markerHeight="6" refX="3.5" refY="3">
-        <path d="M0,0 V6 L4,3 Z" fill="${color}" />
-      </marker>
-    </defs>
-    <line x1="${fx}%" y1="${fy}%" x2="${tx}%" y2="${ty}%" stroke="${color}" stroke-width="${width}%" marker-end="url(#${markerId})" />
-  `;
+  svg.innerHTML += `<defs><marker id="${markerId}" orient="auto" markerWidth="4" markerHeight="6" refX="3.5" refY="3"><path d="M0,0 V6 L4,3 Z" fill="${color}" /></marker></defs><line x1="${fx}%" y1="${fy}%" x2="${tx}%" y2="${ty}%" stroke="${color}" stroke-width="${width}%" marker-end="url(#${markerId})" />`;
 }
 
 function drawPV(lineArray, rootColor, branchColor) {
   if (!lineArray || lineArray.length === 0) return;
   drawArrow(lineArray[0].from, lineArray[0].to, rootColor, 2.5);
-  for (let i = 1; i < lineArray.length; i++) {
-    let width = Math.max(0.6, 2.0 - (i * 0.4));
-    drawArrow(lineArray[i].from, lineArray[i].to, branchColor, width);
-  }
+  for (let i = 1; i < lineArray.length; i++) drawArrow(lineArray[i].from, lineArray[i].to, branchColor, Math.max(0.6, 2.0 - (i * 0.4)));
 }
 
 function clearArrows() { document.getElementById("arrow-svg").innerHTML = ""; }
+function clearPremove() { $('.square-55d63').removeClass('premove-square'); currentPremove = null; }
 
-function clearPremove() {
-  $('.square-55d63').removeClass('premove-square');
-  currentPremove = null;
-}
-
-document.addEventListener('contextmenu', e => {
-  if (e.target.closest('#board-container')) {
-    e.preventDefault();
-    clearPremove();
-  }
-});
-
-/* MOBILE FIX: Prevent page scroll when dragging pieces */
-document.addEventListener('touchmove', function(e) {
-  if (e.target.closest('#board-container')) {
-    e.preventDefault();
-  }
-}, { passive: false });
+document.addEventListener('contextmenu', e => { if (e.target.closest('#board-container')) { e.preventDefault(); clearPremove(); } });
+document.addEventListener('touchmove', function(e) { if (e.target.closest('#board-container')) e.preventDefault(); }, { passive: false });
 
 /* =======================================================================
-   3. OPENING BOOK & EVALUATION
+   3. OPENING BOOK & KNOWLEDGE (Mid vs Endgame Kings)
 ======================================================================== */
 const openingBook = {
-  "e4": { "e5": { "Nf3": { "Nc6": { "Bb5": "Ruy Lopez", "Bc4": "Italian Game", "d4": "Scotch Game" }}}, "c5": { "Nf3": { "d6": { "d4": "Sicilian Defense", "Bb5+": "Sicilian Rossolimo" }}}, "e6": { "d4": { "d5": "French Defense" }}, "c6": { "d4": { "d5": "Caro-Kann Defense" }}},
-  "d4": { "d5": { "c4": { "e6": "Queen's Gambit Declined", "c6": "Slav Defense" }}, "Nf6": { "c4": { "g6": "King's Indian", "e6": "Nimzo-Indian" }}}
+  "e4": { "e5": { "Nf3": { "Nc6": { "Bb5": "Ruy Lopez", "Bc4": "Italian Game" }}}, "c5": { "Nf3": { "d6": { "d4": "Sicilian Defense" }}}, "e6": { "d4": { "d5": "French Defense" }}, "c6": { "d4": { "d5": "Caro-Kann" }}},
+  "d4": { "d5": { "c4": { "e6": "QGD", "c6": "Slav Defense" }}, "Nf6": { "c4": { "g6": "King's Indian", "e6": "Nimzo-Indian" }}}
 };
 
 function getBookMove() {
   let node = openingBook;
-  for (let m of game.history()) {
-    if (!node || !node[m]) return null;
-    node = node[m];
-  }
+  for (let m of game.history()) { if (!node || !node[m]) return null; node = node[m]; }
   if (typeof node === "string") return null;
   let keys = Object.keys(node);
   return keys[Math.floor(Math.random() * keys.length)];
@@ -283,17 +172,21 @@ const PST = {
   b: [ [-20,-10,-10,-10,-10,-10,-10,-20], [-10,0,0,0,0,0,0,-10], [-10,0,5,10,10,5,0,-10], [-10,5,5,10,10,5,5,-10], [-10,0,10,10,10,10,0,-10], [-10,10,10,10,10,10,10,-10], [-10,5,0,0,0,0,5,-10], [-20,-10,-10,-10,-10,-10,-10,-20] ],
   r: [ [0,0,0,0,0,0,0,0], [5,10,10,10,10,10,10,5], [-5,0,0,0,0,0,0,-5], [-5,0,0,0,0,0,0,-5], [-5,0,0,0,0,0,0,-5], [-5,0,0,0,0,0,0,-5], [-5,0,0,0,0,0,0,-5], [0,0,0,5,5,0,0,0] ],
   q: [ [-20,-10,-10,-5,-5,-10,-10,-20], [-10,0,0,0,0,0,0,-10], [-10,0,5,5,5,5,0,-10], [-5,0,5,5,5,5,0,-5], [0,0,5,5,5,5,0,-5], [-10,5,5,5,5,5,0,-10], [-10,0,5,0,0,0,0,-10], [-20,-10,-10,-5,-5,-10,-10,-20] ],
-  k: [ [-30,-40,-40,-50,-50,-40,-40,-30], [-30,-40,-40,-50,-50,-40,-40,-30], [-30,-40,-40,-50,-50,-40,-40,-30], [-30,-40,-40,-50,-50,-40,-40,-30], [-20,-30,-30,-40,-40,-30,-30,-20], [-10,-20,-20,-20,-20,-20,-20,-10], [20,20,0,0,0,0,20,20], [20,30,10,0,0,10,30,20] ]
+  k_mid: [ [-30,-40,-40,-50,-50,-40,-40,-30], [-30,-40,-40,-50,-50,-40,-40,-30], [-30,-40,-40,-50,-50,-40,-40,-30], [-30,-40,-40,-50,-50,-40,-40,-30], [-20,-30,-30,-40,-40,-30,-30,-20], [-10,-20,-20,-20,-20,-20,-20,-10], [20,20,0,0,0,0,20,20], [20,30,10,0,0,10,30,20] ],
+  k_end: [ [-50,-40,-30,-20,-20,-30,-40,-50], [-30,-20,-10,0,0,-10,-20,-30], [-30,-10,20,30,30,20,-10,-30], [-30,-10,30,40,40,30,-10,-30], [-30,-10,30,40,40,30,-10,-30], [-30,-10,20,30,30,20,-10,-30], [-30,-30,0,0,0,0,-30,-30], [-50,-30,-30,-30,-30,-30,-30,-50] ]
 };
+
+let CURRENT_MAX_Q = 4; // Throttle limit for Quiescence
 
 function evaluateBoard(g) {
   let totalEval = 0;
   let boardArr = g.board();
-  
   let agg = parseInt(document.getElementById('agg').value);
   let style = parseInt(document.getElementById('style').value);
 
-  let wMat = 0, bMat = 0, wKing = null, bKing = null, pawnCount = 0;
+  let wMatNonPawn = 0, bMatNonPawn = 0;
+  let wKing = null, bKing = null, pawnCount = 0;
+  let wKingMidScore = 0, bKingMidScore = 0, wKingEndScore = 0, bKingEndScore = 0;
 
   for (let r = 0; r < 8; r++) {
     for (let c = 0; c < 8; c++) {
@@ -302,33 +195,57 @@ function evaluateBoard(g) {
 
       let val = PIECE_VALUES[piece.type];
       let rank = piece.color === 'w' ? r : 7 - r;
-      let score = val + PST[piece.type][rank][c];
+      
+      let score = val;
+      
+      if (piece.type === 'k') {
+        let mid = PST.k_mid[rank][c];
+        let end = PST.k_end[rank][c];
+        score += mid; // Default to mid, adjust later if endgame
+        if (piece.color === 'w') { wKing = {r,c}; wKingMidScore = mid; wKingEndScore = end; }
+        else { bKing = {r,c}; bKingMidScore = mid; bKingEndScore = end; }
+      } else {
+        score += PST[piece.type][rank][c];
+        if (piece.type === 'p') pawnCount++;
+        else if (piece.color === 'w') wMatNonPawn += val;
+        else bMatNonPawn += val;
+      }
 
       if (agg > 5 && (piece.type === 'n' || piece.type === 'b' || piece.type === 'r')) score += (agg - 5) * 5; 
       
-      if (piece.color === 'w') { totalEval += score; wMat += val; if(piece.type==='k') wKing = {r,c}; }
-      else { totalEval -= score; bMat += val; if(piece.type==='k') bKing = {r,c}; }
-      if (piece.type === 'p') pawnCount++;
+      if (piece.color === 'w') totalEval += score;
+      else totalEval -= score;
     }
   }
 
+  // Playstyle Modifier
   totalEval += g.turn() === 'w' ? (16 - pawnCount) * (style * 5) : -((16 - pawnCount) * (style * 5));
 
-  if (wMat < 1500 || bMat < 1500) {
-    let wCol = totalEval > 200 ? 'w' : totalEval < -200 ? 'b' : null;
+  // ENDGAME LOGIC
+  let isEndgame = (wMatNonPawn < 1500 && bMatNonPawn < 1500);
+  if (isEndgame) {
+    // 1. Swap King PST Maps (Move Kings to center)
+    totalEval -= wKingMidScore; totalEval += wKingEndScore;
+    totalEval -= -bKingMidScore; totalEval += -bKingEndScore; // Subtracted from black initially, so add back negated
+
+    // 2. Heavy Mating Progression Bonus
+    let wCol = totalEval > 300 ? 'w' : totalEval < -300 ? 'b' : null;
     if (wCol === 'w') totalEval += getMatingEval(wKing, bKing);
     else if (wCol === 'b') totalEval -= getMatingEval(bKing, wKing);
   }
+
   return g.turn() === 'w' ? totalEval : -totalEval;
 }
 
 function getMatingEval(wk, lk) {
-  return ((Math.max(3 - lk.r, lk.r - 4) + Math.max(3 - lk.c, lk.c - 4)) * 10) + 
-         ((14 - (Math.abs(wk.r - lk.r) + Math.abs(wk.c - lk.c))) * 5);
+  let edgeScore = ((Math.max(3 - lk.r, lk.r - 4) + Math.max(3 - lk.c, lk.c - 4)) * 10);
+  let distScore = ((14 - (Math.abs(wk.r - lk.r) + Math.abs(wk.c - lk.c))) * 5);
+  // MASSIVE multiplier to ensure engine aggressively hunts the mate rather than shuffling
+  return (edgeScore + distScore) * 15; 
 }
 
 /* =======================================================================
-   4. ASYNC SEARCH ALGORITHM 
+   4. DYNAMIC SEARCH ALGORITHM
 ======================================================================== */
 let nodesEvals = 0;
 
@@ -347,7 +264,9 @@ function quiesce(g, alpha, beta, depth = 0, pline = []) {
   let stand_pat = evaluateBoard(g);
   if (stand_pat >= beta) return beta;
   if (alpha < stand_pat) { alpha = stand_pat; pline.length = 0; }
-  if (depth > 4) return alpha;
+  
+  // Throttle Quiescence depth based on Elo to simulate realistic blindspots
+  if (depth >= CURRENT_MAX_Q) return alpha;
 
   let moves = getOrderedMoves(g).filter(m => m.captured || m.promotion);
   for (let m of moves) {
@@ -435,15 +354,27 @@ async function makeAIMove() {
     await new Promise(r => setTimeout(r, 400)); 
   } 
   else {
+    // Determine Board State for Dynamic Depth
+    let pieceCount = 0;
+    game.board().forEach(r => r.forEach(p => { if (p) pieceCount++; }));
+    
     let elo = parseInt(document.getElementById('elo').value);
-    let depth = elo < 1100 ? 2 : elo < 2000 ? 3 : 4;
-    let bestMoveObj = await findBestMoveAsync(game, depth);
+    
+    // Dynamic Scaled Depth Maps
+    let baseDepth = elo < 1200 ? 2 : elo < 1600 ? 3 : 4;
+    CURRENT_MAX_Q = elo < 1400 ? 2 : elo < 2000 ? 4 : 8;
+
+    // Endgame Depth Boost (Makes the engine a genius in low-piece situations)
+    if (pieceCount <= 14) baseDepth += 1;
+    if (pieceCount <= 6) baseDepth += 2; // Super deep calculation in king/pawn endgames
+
+    let bestMoveObj = await findBestMoveAsync(game, baseDepth);
     if (abortSearch) return; 
 
     finalMove = game.move(bestMoveObj.move);
     let displayEval = (bestMoveObj.score * (game.turn() === 'w' ? -1 : 1) / 100).toFixed(2);
     document.getElementById("eval-bar").innerText = `Eval: ${displayEval > 0 ? '+' : ''}${displayEval}`;
-    document.getElementById("commentary").innerText = `Expected continuation:\n${bestMoveObj.line.map(x => x.san).join(' ')}`;
+    document.getElementById("commentary").innerText = `Search Depth: ${baseDepth}\nContinuation:\n${bestMoveObj.line.map(x => x.san).join(' ')}`;
   }
 
   board.position(game.fen());
