@@ -65,8 +65,8 @@
   #eval-bar { font-size: 1.1em; font-weight: bold; }
 
   @media (max-width: 1024px) {
-    #left-panel { position: absolute; left: 0; height: 100%; transform: translateX(-100%); }
-    #right-panel { position: absolute; right: 0; height: 100%; transform: translateX(100%); }
+    #left-panel { position: absolute; left: 0; height: 100%; transform: translateX(-100%); z-index: 20;}
+    #right-panel { position: absolute; right: 0; height: 100%; transform: translateX(100%); z-index: 20;}
     .side-panel.open { transform: translateX(0) !important; box-shadow: 0 0 20px rgba(0,0,0,0.8); }
   }
   @media (min-width: 1025px) { #header { display: none; } }
@@ -77,7 +77,7 @@
 
 <div id="header">
   <button class="menu-btn" onclick="togglePanel('left-panel')">☰ Log</button>
-  <h1>maybe it can beat an IM</h1>
+  <h1>V2</h1>
   <button class="menu-btn" onclick="togglePanel('right-panel')">⚙️ Set</button>
 </div>
 
@@ -131,13 +131,13 @@
     </div>
 
     <div class="setting">
-      <label><span>Bot Elo</span> <span id="elo-val">1500</span></label>
-      <input type="range" id="elo" min="800" max="2500" step="100" value="1500" oninput="updateUI()">
+      <label><span>Bot Elo</span> <span id="elo-val">3000</span></label>
+      <input type="range" id="elo" min="800" max="3000" step="100" value="3000" oninput="updateUI()">
     </div>
     
     <div class="setting">
-      <label><span>Think Time (s)</span> <span id="time-val">2.0s</span></label>
-      <input type="range" id="think-time" min="0.5" max="10" step="0.5" value="2.0" oninput="updateUI()">
+      <label><span>Think Time (s)</span> <span id="time-val">5.0s</span></label>
+      <input type="range" id="think-time" min="0.5" max="30" step="0.5" value="5.0" oninput="updateUI()">
     </div>
 
     <div class="setting">
@@ -187,6 +187,12 @@
         let rank = p.color==='w' ? r : 7-r;
         let val = p.type === 'k' ? V.k : V[p.type] * currentConfig.greed; 
         
+        // Passed Pawn Bonus
+        if (p.type === 'p') {
+          if (p.color === 'w' && r < 4) val += (4 - r) * 30; 
+          if (p.color === 'b' && r > 3) val += (r - 3) * 30; 
+        }
+
         if(p.type==='k') {
           let s = val + PST.k_mid[rank][c];
           if(p.color==='w') { wk={r,c,m:PST.k_mid[rank][c],e:PST.k_end[rank][c]}; t+=s; }
@@ -209,10 +215,15 @@
     return game.turn()==='w'?t:-t;
   }
 
-  function getMoves() {
+  function getMoves(prevBestMove = null) {
     return game.moves({verbose:true}).map(m=>{
-      // Explicit Checkmate Bonus ensures mates are searched absolute first
-      m.score = (m.captured ? 10*V[m.captured]-V[m.piece] : 0) + (m.promotion ? 900 : 0) + (m.san.includes('#') ? 100000 : (m.san.includes('+') ? 50 : 0));
+      let s = 0;
+      if (prevBestMove && m.san === prevBestMove) s += 200000; 
+      else if (m.san.includes('#')) s += 100000;
+      else if (m.captured) s += 10 * V[m.captured] - V[m.piece];
+      else if (m.promotion) s += 900;
+      else if (m.san.includes('+')) s += 50;
+      m.score = s;
       return m;
     }).sort((a,b)=>b.score-a.score);
   }
@@ -234,7 +245,6 @@
     let mvs = getMoves();
     if (!inCheck) mvs = mvs.filter(m=>m.captured||m.promotion);
     
-    // Checkmate check during Quiescence Evasions
     if (mvs.length === 0) return inCheck ? (game.in_checkmate() ? -90000 : 0) : pat; 
     
     for(let m of mvs) {
@@ -247,15 +257,12 @@
     return alpha;
   }
 
-  // Adding Ply parameter to prioritize FASTEST checkmates
-  function alphaBeta(depth, alpha, beta, pline, ply = 0) {
+  function alphaBeta(depth, alpha, beta, pline, ply = 0, prevBest = null) {
     if((nodes++ & 2047)===0 && Date.now()-startTime > searchLimitMs) timeUp = true;
     if(timeUp) return alpha;
     if(depth<=0) return quiesce(alpha, beta, 0);
 
-    let mvs = getMoves();
-    
-    // Penalize slower mates by subtracting Ply
+    let mvs = getMoves(prevBest);
     if(mvs.length===0) return game.in_checkmate() ? -90000 + ply : 0; 
 
     for(let m of mvs) {
@@ -272,18 +279,24 @@
     let { fen, elo, style, greed, timeLimit } = e.data;
     game.load(fen);
     searchLimitMs = timeLimit * 1000;
-    currentConfig = { style, greed, qDepth: elo<1400?2:elo<2000?4:8 };
+    currentConfig = { style, greed, qDepth: elo<1500 ? 2 : elo<2200 ? 4 : 8 };
     startTime = Date.now();
     timeUp = false; nodes = 0;
 
-    let targetDepth = elo<1200 ? 2 : elo<1600 ? 3 : 5;
+    let targetDepth = 3; 
+    if (elo >= 1600) targetDepth = 4;
+    if (elo >= 2200) targetDepth = 5;
+    if (elo >= 2600) targetDepth = 6;
+    if (elo >= 2900) targetDepth = 7; 
+
     let pieceCount = game.board().reduce((acc, r)=>acc+r.filter(p=>p).length, 0);
-    if(pieceCount <= 12) targetDepth += 2;
+    if(pieceCount <= 12) targetDepth += 2; 
 
     let bestMove = null, bestScore = 0, bestLine = [];
+    let prevBestSan = null;
     
     for(let d=1; d<=targetDepth; d++) {
-      let mvs = getMoves();
+      let mvs = getMoves(prevBestSan);
       let alpha = -Infinity, beta = Infinity, curBest = null, curScore = -Infinity, curLine = [];
       
       for(let m of mvs) {
@@ -298,11 +311,11 @@
       
       if(!timeUp && curBest) {
         bestMove = curBest; bestScore = curScore; bestLine = curLine;
+        prevBestSan = curBest.san; 
         postMessage({ status: 'thinking', move: bestMove.san, eval: bestScore, line: bestLine, depth: d, nodes });
       }
       
-      // Stop deep searching if forced mate is found!
-      if (bestScore > 80000) break;
+      if (bestScore > 80000) break; // Forced mate found
     }
     
     postMessage({ status: 'done', move: bestMove || getMoves()[0], eval: bestScore, line: bestLine, depth: targetDepth, nodes });
@@ -323,7 +336,7 @@ let selectedSquare = null;
 
 /* ---------------- OPENING BOOK ---------------- */
 const openingBook = {
-  "e4": { "e5": { "Nf3": { "Nc6": { "Bb5": "Ruy Lopez", "Bc4": "Italian Game" }}}, "c5": { "Nf3": { "d6": { "d4": "Sicilian Defense" }}}, "e6": { "d4": { "d5": "French Defense" }}, "c6": { "d4": { "d5": "Caro-Kann" }}},
+  "e4": { "e5": { "Nf3": { "Nc6": { "Bb5": "Ruy Lopez", "Bc4": "Italian Game", "d4": "Scotch Game" }}}, "c5": { "Nf3": { "d6": { "d4": "Sicilian Defense", "Bb5+": "Sicilian Rossolimo" }}}, "e6": { "d4": { "d5": "French Defense" }}, "c6": { "d4": { "d5": "Caro-Kann" }}},
   "d4": { "d5": { "c4": { "e6": "QGD", "c6": "Slav Defense" }}, "Nf6": { "c4": { "g6": "King's Indian", "e6": "Nimzo-Indian" }}}
 };
 
@@ -345,7 +358,9 @@ const themes = {
 };
 
 function togglePanel(id) { document.getElementById(id).classList.toggle('open'); }
-function closePanels() { document.querySelectorAll('.side-panel').forEach(p => p.classList.remove('open')); }
+function closePanels() { 
+  if(window.innerWidth <= 1024) document.querySelectorAll('.side-panel').forEach(p => p.classList.remove('open')); 
+}
 
 function updateUI() {
   document.getElementById('elo-val').innerText = document.getElementById('elo').value;
@@ -462,7 +477,7 @@ function initWorker() {
     if (d.status === 'thinking') {
       let ev = d.eval;
       if (Math.abs(ev) > 80000) {
-        document.getElementById("eval-bar").innerText = `Eval: M${ev > 0 ? '+' : '-'}`; // UI fix for Checkmate string
+        document.getElementById("eval-bar").innerText = `Eval: M${ev > 0 ? '+' : '-'}`; 
       } else {
         let disp = (ev * (game.turn()==='w'?-1:1) / 100).toFixed(2);
         document.getElementById("eval-bar").innerText = `Eval: ${disp>0?'+':''}${disp}`;
