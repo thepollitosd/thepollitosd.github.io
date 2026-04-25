@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Pro-Adaptive Chess Engine</title>
+<title>Chess Engine</title>
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
@@ -11,28 +11,52 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.js"></script>
 
 <style>
+  :root { 
+    --bg: #1e1e24; --panel: #2b2b36; --text: #e0e0e0; --accent: #4caf50; 
+    --light-sq: #eeeed2; --dark-sq: #769656; 
+  }
   html { touch-action: manipulation; overscroll-behavior: none; }
-  :root { --bg: #1e1e24; --panel: #2b2b36; --text: #e0e0e0; --accent: #4caf50; }
+  body { margin: 0; height: 100vh; background: var(--bg); color: var(--text); font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; flex-direction: column; overflow: hidden; }
   
-  body { margin: 0; height: 100vh; background: var(--bg); color: var(--text); font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; flex-direction: row; overflow: hidden; }
+  #header { display: flex; justify-content: space-between; padding: 10px 15px; background: #1a1a20; align-items: center; z-index: 100; border-bottom: 1px solid #333;}
+  #header h1 { margin: 0; font-size: 1.2em; font-weight: 600;}
+  .menu-btn { background: #444; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-weight: bold;}
   
-  #left-panel, #right-panel { width: 300px; background: var(--panel); padding: 20px; box-sizing: border-box; display: flex; flex-direction: column; gap: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); z-index: 2; overflow-y: auto;}
-  #center-area { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 20px; position: relative; overflow-y: auto;}
-  #status-container { width: 520px; max-width: 95vw; margin-bottom: 15px; box-sizing: border-box;}
-  #board-container { position: relative; width: 520px; max-width: 95vw; touch-action: none; }
+  #main-container { display: flex; flex: 1; flex-direction: row; overflow: hidden; position: relative; }
+  .side-panel { width: 320px; background: var(--panel); padding: 20px; box-sizing: border-box; display: flex; flex-direction: column; gap: 15px; overflow-y: auto; transition: transform 0.3s ease; z-index: 10;}
+  #center-area { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; overflow-y: auto; padding: 20px 10px;}
+  
+  #status-container { width: 100%; max-width: 520px; margin-bottom: 10px; box-sizing: border-box;}
+  #board-container { position: relative; width: 100%; max-width: 520px; touch-action: none; }
   #board { width: 100%; }
   #arrow-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
   
-  .premove-square { box-shadow: inset 0 0 0 50px rgba(220, 50, 50, 0.5) !important; }
+  .white-1e1d7 { background-color: var(--light-sq) !important; color: var(--dark-sq) !important; }
+  .black-3c85d { background-color: var(--dark-sq) !important; color: var(--light-sq) !important; }
+  
+  /* Highlights & Move Dots */
+  .premove-square { box-shadow: inset 0 0 0 50px rgba(220, 50, 50, 0.6) !important; }
+  .highlight-selected { background-color: rgba(200, 200, 50, 0.5) !important; }
+  
+  .highlight-dot::after {
+    content: ''; position: absolute; top: 35%; left: 35%; width: 30%; height: 30%;
+    background: rgba(0,0,0,0.3); border-radius: 50%; pointer-events: none;
+  }
+  .highlight-capture::after {
+    content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    border: 6px solid rgba(0,0,0,0.25); box-sizing: border-box; border-radius: 50%; pointer-events: none;
+  }
 
   h2, h3 { margin: 0; padding-bottom: 5px; border-bottom: 1px solid #444; font-weight: 500;}
   .box { background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; }
-  .setting { display: flex; flex-direction: column; gap: 8px; margin-bottom: 15px; }
-  .setting label { font-size: 0.95em; color: #bbb; display: flex; justify-content: space-between;}
-  input[type="range"] { accent-color: var(--accent); height: 20px; } 
+  .setting { display: flex; flex-direction: column; gap: 5px; margin-bottom: 10px; }
+  .setting label { font-size: 0.9em; color: #bbb; display: flex; justify-content: space-between; align-items: center;}
+  input[type="range"] { accent-color: var(--accent); height: 18px; cursor: pointer;} 
+  input[type="checkbox"] { transform: scale(1.3); accent-color: var(--accent); cursor: pointer;}
+  select { background: #333; color: white; border: 1px solid #555; padding: 6px; border-radius: 4px; cursor: pointer;}
   
-  button { background: var(--accent); color: white; border: none; padding: 15px; border-radius: 5px; cursor: pointer; font-weight: bold; text-transform: uppercase; transition: 0.2s; font-size: 1em;}
-  button:hover { filter: brightness(1.2); }
+  button.primary { background: var(--accent); color: white; border: none; padding: 12px; border-radius: 5px; cursor: pointer; font-weight: bold; text-transform: uppercase; margin-top: 10px;}
+  button.primary:hover { filter: brightness(1.2); }
   
   #moves { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-family: monospace; font-size: 1.1em; max-height: 100%; overflow-y: auto;}
   .move-num { color: #888; text-align: right; padding-right: 10px;}
@@ -40,124 +64,271 @@
   #status-badge { display: inline-block; padding: 4px 10px; border-radius: 4px; background: #555; font-size: 0.9em; margin-bottom: 10px; font-weight: bold;}
   #eval-bar { font-size: 1.1em; font-weight: bold; }
 
-  @media (max-width: 850px) {
-    body { flex-direction: column; overflow-y: auto; }
-    #center-area { order: 1; padding-top: 10px; padding-bottom: 20px; min-height: auto;}
-    #right-panel { order: 2; width: 100%; height: auto; box-shadow: none; border-top: 1px solid #444;}
-    #left-panel { order: 3; width: 100%; height: auto; box-shadow: none; border-top: 1px solid #444;}
-    #moves { max-height: 250px; } 
+  @media (max-width: 1024px) {
+    #left-panel { position: absolute; left: 0; height: 100%; transform: translateX(-100%); }
+    #right-panel { position: absolute; right: 0; height: 100%; transform: translateX(100%); }
+    .side-panel.open { transform: translateX(0) !important; box-shadow: 0 0 20px rgba(0,0,0,0.8); }
   }
+  @media (min-width: 1025px) { #header { display: none; } }
 </style>
 </head>
 
 <body>
 
-<div id="left-panel">
-  <h2>Game Log</h2>
-  <div id="moves"></div>
+<div id="header">
+  <button class="menu-btn" onclick="togglePanel('left-panel')">☰ Log</button>
+  <h1>maybe it can beat an IM</h1>
+  <button class="menu-btn" onclick="togglePanel('right-panel')">⚙️ Set</button>
 </div>
 
-<div id="center-area">
-  <div id="status-container" class="box">
-    <div id="status-badge">Your Turn</div>
-    <div id="eval-bar">Eval: 0.00</div>
-    <div id="commentary">Waiting to start...</div>
+<div id="main-container">
+  <div id="left-panel" class="side-panel">
+    <h2>Game Log</h2>
+    <div id="moves"></div>
   </div>
-  <div id="board-container">
-    <div id="board"></div>
-    <svg id="arrow-svg"></svg>
+
+  <div id="center-area" onclick="closePanels()">
+    <div id="status-container" class="box">
+      <div id="status-badge">Your Turn</div>
+      <div id="eval-bar">Eval: 0.00</div>
+      <div id="commentary">Waiting to start...</div>
+    </div>
+    <div id="board-container">
+      <div id="board"></div>
+      <svg id="arrow-svg">
+        <g id="user-arrows"></g>
+        <g id="bot-arrows"></g>
+      </svg>
+    </div>
+  </div>
+
+  <div id="right-panel" class="side-panel">
+    <h2>Settings</h2>
+    
+    <div class="setting">
+      <label>Board Theme</label>
+      <select id="board-theme" onchange="applyThemes()">
+        <option value="classic">Classic Green</option>
+        <option value="wood">Wooden</option>
+        <option value="ocean">Ocean Blue</option>
+        <option value="slate">Slate Gray</option>
+      </select>
+    </div>
+    
+    <div class="setting">
+      <label>Piece Set</label>
+      <select id="piece-theme" onchange="applyThemes()">
+        <option value="cburnett">CBurnett (Lichess)</option>
+        <option value="alpha">Alpha</option>
+        <option value="wikipedia">Wikipedia</option>
+      </select>
+    </div>
+
+    <hr style="border: 0; border-top: 1px solid #444; width: 100%; margin: 10px 0;">
+
+    <div class="setting">
+      <label><span>Use Opening Book</span> <input type="checkbox" id="use-book" checked></label>
+    </div>
+
+    <div class="setting">
+      <label><span>Bot Elo</span> <span id="elo-val">1500</span></label>
+      <input type="range" id="elo" min="800" max="2500" step="100" value="1500" oninput="updateUI()">
+    </div>
+    
+    <div class="setting">
+      <label><span>Think Time (s)</span> <span id="time-val">2.0s</span></label>
+      <input type="range" id="think-time" min="0.5" max="10" step="0.5" value="2.0" oninput="updateUI()">
+    </div>
+
+    <div class="setting">
+      <label><span>Greed (Materialism)</span> <span id="greed-val">Normal</span></label>
+      <input type="range" id="greed" min="0.5" max="2.0" step="0.1" value="1.0" oninput="updateUI()">
+    </div>
+
+    <div class="setting">
+      <label><span>Playstyle</span> <span id="style-val">Balanced</span></label>
+      <input type="range" id="style" min="-5" max="5" value="0" oninput="updateUI()">
+    </div>
+
+    <button class="primary" onclick="resetGame()">New Game</button>
   </div>
 </div>
 
-<div id="right-panel">
-  <h2>Bot Settings</h2>
-  <div class="setting">
-    <label><span>Bot Elo</span> <span id="elo-val">1500</span></label>
-    <input type="range" id="elo" min="800" max="2500" step="100" value="1500" oninput="updateUI()">
-  </div>
-  <div class="setting">
-    <label><span>Aggression</span> <span id="agg-val">Normal</span></label>
-    <input type="range" id="agg" min="1" max="10" value="5" oninput="updateUI()">
-  </div>
-  <div class="setting">
-    <label><span>Playstyle</span> <span id="style-val">Balanced</span></label>
-    <input type="range" id="style" min="-5" max="5" value="0" oninput="updateUI()">
-  </div>
-  <button onclick="resetGame()">New Game</button>
-</div>
+<!-- =======================================================================
+     WEB WORKER (Pure AI Logic runs in background thread)
+======================================================================== -->
+<script type="javascript/worker" id="worker-code">
+  importScripts('https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.12.0/chess.min.js');
+  
+  let game = new Chess();
+  let searchLimitMs = 2000;
+  let startTime = 0;
+  let timeUp = false;
+  let nodes = 0;
+  let currentConfig = {};
 
-<script>
-/* =======================================================================
-   1. SETUP & UI INITIALIZATION
-======================================================================== */
-const game = new Chess();
-let abortSearch = false; 
-let isBotThinking = false;
-let currentPremove = null; 
+  const V = { p: 100, n: 320, b: 330, r: 500, q: 900, k: 20000 };
+  const PST = {
+    p: [ [0,0,0,0,0,0,0,0], [50,50,50,50,50,50,50,50], [10,10,20,30,30,20,10,10], [5,5,10,25,25,10,5,5], [0,0,0,20,20,0,0,0], [5,-5,-10,0,0,-10,-5,5], [5,10,10,-20,-20,10,10,5], [0,0,0,0,0,0,0,0] ],
+    n: [ [-50,-40,-30,-30,-30,-30,-40,-50], [-40,-20,0,0,0,0,-20,-40], [-30,0,10,15,15,10,0,-30], [-30,5,15,20,20,15,5,-30], [-30,0,15,20,20,15,0,-30], [-30,5,10,15,15,10,5,-30], [-40,-20,0,5,5,0,-20,-40], [-50,-40,-30,-30,-30,-30,-40,-50] ],
+    b: [ [-20,-10,-10,-10,-10,-10,-10,-20], [-10,0,0,0,0,0,0,-10], [-10,0,5,10,10,5,0,-10], [-10,5,5,10,10,5,5,-10], [-10,0,10,10,10,10,0,-10], [-10,10,10,10,10,10,10,-10], [-10,5,0,0,0,0,5,-10], [-20,-10,-10,-10,-10,-10,-10,-20] ],
+    r: [ [0,0,0,0,0,0,0,0], [5,10,10,10,10,10,10,5], [-5,0,0,0,0,0,0,-5], [-5,0,0,0,0,0,0,-5], [-5,0,0,0,0,0,0,-5], [-5,0,0,0,0,0,0,-5], [-5,0,0,0,0,0,0,-5], [0,0,0,5,5,0,0,0] ],
+    q: [ [-20,-10,-10,-5,-5,-10,-10,-20], [-10,0,0,0,0,0,0,-10], [-10,0,5,5,5,5,0,-10], [-5,0,5,5,5,5,0,-5], [0,0,5,5,5,5,0,-5], [-10,5,5,5,5,5,0,-10], [-10,0,5,0,0,0,0,-10], [-20,-10,-10,-5,-5,-10,-10,-20] ],
+    k_mid: [ [-30,-40,-40,-50,-50,-40,-40,-30], [-30,-40,-40,-50,-50,-40,-40,-30], [-30,-40,-40,-50,-50,-40,-40,-30], [-30,-40,-40,-50,-50,-40,-40,-30], [-20,-30,-30,-40,-40,-30,-30,-20], [-10,-20,-20,-20,-20,-20,-20,-10], [20,20,0,0,0,0,20,20], [20,30,10,0,0,10,30,20] ],
+    k_end: [ [-50,-40,-30,-20,-20,-30,-40,-50], [-30,-20,-10,0,0,-10,-20,-30], [-30,-10,20,30,30,20,-10,-30], [-30,-10,30,40,40,30,-10,-30], [-30,-10,30,40,40,30,-10,-30], [-30,-10,20,30,30,20,-10,-30], [-30,-30,0,0,0,0,-30,-30], [-50,-30,-30,-30,-30,-30,-30,-50] ]
+  };
 
-const board = Chessboard('board', {
-  position: 'start', draggable: true, pieceTheme: "https://lichess1.org/assets/piece/cburnett/{piece}.svg",
-  onDragStart: onDragStart, onDrop: onDrop, onSnapEnd: onSnapEnd
-});
-
-function updateUI() {
-  document.getElementById('elo-val').innerText = document.getElementById('elo').value;
-  let agg = document.getElementById('agg').value;
-  document.getElementById('agg-val').innerText = agg < 4 ? "Passive" : agg > 7 ? "Violent" : "Normal";
-  let style = document.getElementById('style').value;
-  document.getElementById('style-val').innerText = style < -2 ? "Closed/Solid" : style > 2 ? "Open/Tactical" : "Balanced";
-}
-
-function setStatus(text, isThinking) {
-  const badge = document.getElementById("status-badge");
-  badge.innerText = text;
-  badge.style.background = isThinking ? "#d32f2f" : "#4caf50";
-}
-
-function updateLog() {
-  const movesDiv = document.getElementById("moves");
-  movesDiv.innerHTML = "";
-  let h = game.history();
-  for (let i = 0; i < h.length; i += 2) {
-    movesDiv.innerHTML += `<div class="move-num">${(i/2)+1}.</div><div>${h[i]}</div><div>${h[i+1] ? h[i+1] : ''}</div>`;
+  function evalBoard() {
+    let t = 0, wp = 0, bp = 0, wm = 0, bm = 0, wk = null, bk = null;
+    let b = game.board();
+    for(let r=0; r<8; r++) {
+      for(let c=0; c<8; c++) {
+        let p = b[r][c]; if(!p) continue;
+        let rank = p.color==='w' ? r : 7-r;
+        let val = p.type === 'k' ? V.k : V[p.type] * currentConfig.greed; 
+        
+        if(p.type==='k') {
+          let s = val + PST.k_mid[rank][c];
+          if(p.color==='w') { wk={r,c,m:PST.k_mid[rank][c],e:PST.k_end[rank][c]}; t+=s; }
+          else { bk={r,c,m:PST.k_mid[rank][c],e:PST.k_end[rank][c]}; t-=s; }
+        } else {
+          let s = val + PST[p.type][rank][c];
+          if(p.type==='p') p.color==='w'?wp++:bp++;
+          else p.color==='w'?wm+=val:bm+=val;
+          p.color==='w'?t+=s:t-=s;
+        }
+      }
+    }
+    t += game.turn()==='w' ? (16-(wp+bp))*currentConfig.style*5 : -((16-(wp+bp))*currentConfig.style*5);
+    
+    if(wm<1500 && bm<1500) { 
+      t -= wk.m; t += wk.e; t -= -bk.m; t += -bk.e;
+      if(t>300) t += ((Math.max(3-bk.r,bk.r-4)+Math.max(3-bk.c,bk.c-4))*10 + (14-(Math.abs(wk.r-bk.r)+Math.abs(wk.c-bk.c)))*5)*15;
+      else if(t<-300) t -= ((Math.max(3-wk.r,wk.r-4)+Math.max(3-wk.c,wk.c-4))*10 + (14-(Math.abs(bk.r-wk.r)+Math.abs(bk.c-wk.c)))*5)*15;
+    }
+    return game.turn()==='w'?t:-t;
   }
-  movesDiv.scrollTop = movesDiv.scrollHeight;
-}
 
-/* =======================================================================
-   2. VISUALIZATION (ARROWS & PREMOVES)
-======================================================================== */
-function drawArrow(from, to, color = "rgba(255, 170, 0, 0.6)", width = 2.5) {
-  const files = { a:0, b:1, c:2, d:3, e:4, f:5, g:6, h:7 };
-  const ranks = { 1:7, 2:6, 3:5, 4:4, 5:3, 6:2, 7:1, 8:0 };
-  let fx = (files[from[0]] * 12.5) + 6.25, fy = (ranks[from[1]] * 12.5) + 6.25;
-  let tx = (files[to[0]] * 12.5) + 6.25, ty = (ranks[to[1]] * 12.5) + 6.25;
-  const svg = document.getElementById("arrow-svg");
-  const markerId = "head-" + color.replace(/[^a-zA-Z0-9]/g, "") + width.toString().replace(".","");
-  svg.innerHTML += `<defs><marker id="${markerId}" orient="auto" markerWidth="4" markerHeight="6" refX="3.5" refY="3"><path d="M0,0 V6 L4,3 Z" fill="${color}" /></marker></defs><line x1="${fx}%" y1="${fy}%" x2="${tx}%" y2="${ty}%" stroke="${color}" stroke-width="${width}%" marker-end="url(#${markerId})" />`;
-}
+  function getMoves() {
+    return game.moves({verbose:true}).map(m=>{
+      // Explicit Checkmate Bonus ensures mates are searched absolute first
+      m.score = (m.captured ? 10*V[m.captured]-V[m.piece] : 0) + (m.promotion ? 900 : 0) + (m.san.includes('#') ? 100000 : (m.san.includes('+') ? 50 : 0));
+      return m;
+    }).sort((a,b)=>b.score-a.score);
+  }
 
-function drawPV(lineArray, rootColor, branchColor) {
-  if (!lineArray || lineArray.length === 0) return;
-  drawArrow(lineArray[0].from, lineArray[0].to, rootColor, 2.5);
-  for (let i = 1; i < lineArray.length; i++) drawArrow(lineArray[i].from, lineArray[i].to, branchColor, Math.max(0.6, 2.0 - (i * 0.4)));
-}
+  function quiesce(alpha, beta, depth) {
+    if((nodes++ & 2047)===0 && Date.now()-startTime > searchLimitMs) timeUp = true;
+    if(timeUp) return alpha;
+    
+    let inCheck = game.in_check();
+    let pat = -99999;
+    
+    if (!inCheck) {
+      pat = evalBoard();
+      if(pat >= beta) return beta;
+      if(pat > alpha) alpha = pat;
+      if(depth > currentConfig.qDepth) return alpha;
+    }
+    
+    let mvs = getMoves();
+    if (!inCheck) mvs = mvs.filter(m=>m.captured||m.promotion);
+    
+    // Checkmate check during Quiescence Evasions
+    if (mvs.length === 0) return inCheck ? (game.in_checkmate() ? -90000 : 0) : pat; 
+    
+    for(let m of mvs) {
+      game.move(m);
+      let s = -quiesce(-beta, -alpha, depth+1);
+      game.undo();
+      if(s >= beta) return beta;
+      if(s > alpha) alpha = s;
+    }
+    return alpha;
+  }
 
-function clearArrows() { document.getElementById("arrow-svg").innerHTML = ""; }
-function clearPremove() { $('.square-55d63').removeClass('premove-square'); currentPremove = null; }
+  // Adding Ply parameter to prioritize FASTEST checkmates
+  function alphaBeta(depth, alpha, beta, pline, ply = 0) {
+    if((nodes++ & 2047)===0 && Date.now()-startTime > searchLimitMs) timeUp = true;
+    if(timeUp) return alpha;
+    if(depth<=0) return quiesce(alpha, beta, 0);
 
-document.addEventListener('contextmenu', e => { if (e.target.closest('#board-container')) { e.preventDefault(); clearPremove(); } });
-document.addEventListener('touchmove', function(e) { if (e.target.closest('#board-container')) e.preventDefault(); }, { passive: false });
+    let mvs = getMoves();
+    
+    // Penalize slower mates by subtracting Ply
+    if(mvs.length===0) return game.in_checkmate() ? -90000 + ply : 0; 
 
-/* =======================================================================
-   3. OPENING BOOK & KNOWLEDGE
-======================================================================== */
+    for(let m of mvs) {
+      game.move(m); let cl = [];
+      let s = -alphaBeta(depth-1, -beta, -alpha, cl, ply+1);
+      game.undo();
+      if(s >= beta) return beta;
+      if(s > alpha) { alpha=s; pline.length=0; pline.push(m, ...cl); }
+    }
+    return alpha;
+  }
+
+  self.onmessage = function(e) {
+    let { fen, elo, style, greed, timeLimit } = e.data;
+    game.load(fen);
+    searchLimitMs = timeLimit * 1000;
+    currentConfig = { style, greed, qDepth: elo<1400?2:elo<2000?4:8 };
+    startTime = Date.now();
+    timeUp = false; nodes = 0;
+
+    let targetDepth = elo<1200 ? 2 : elo<1600 ? 3 : 5;
+    let pieceCount = game.board().reduce((acc, r)=>acc+r.filter(p=>p).length, 0);
+    if(pieceCount <= 12) targetDepth += 2;
+
+    let bestMove = null, bestScore = 0, bestLine = [];
+    
+    for(let d=1; d<=targetDepth; d++) {
+      let mvs = getMoves();
+      let alpha = -Infinity, beta = Infinity, curBest = null, curScore = -Infinity, curLine = [];
+      
+      for(let m of mvs) {
+        if(timeUp) break;
+        game.move(m); let cl=[];
+        let s = -alphaBeta(d-1, -beta, -alpha, cl, 1);
+        game.undo();
+        
+        if(s > curScore) { curScore=s; curBest=m; curLine=[m,...cl]; }
+        if(s > alpha) alpha=s;
+      }
+      
+      if(!timeUp && curBest) {
+        bestMove = curBest; bestScore = curScore; bestLine = curLine;
+        postMessage({ status: 'thinking', move: bestMove.san, eval: bestScore, line: bestLine, depth: d, nodes });
+      }
+      
+      // Stop deep searching if forced mate is found!
+      if (bestScore > 80000) break;
+    }
+    
+    postMessage({ status: 'done', move: bestMove || getMoves()[0], eval: bestScore, line: bestLine, depth: targetDepth, nodes });
+  };
+</script>
+
+<!-- =======================================================================
+     MAIN THREAD UI SCRIPT (UI, Clicks, Premoves, Arrows, Themes)
+======================================================================== -->
+<script>
+let game = new Chess();
+let board = null;
+let currentPremove = null; 
+let isBotThinking = false;
+let engineWorker = null;
+let userArrows = [];
+let selectedSquare = null;
+
+/* ---------------- OPENING BOOK ---------------- */
 const openingBook = {
   "e4": { "e5": { "Nf3": { "Nc6": { "Bb5": "Ruy Lopez", "Bc4": "Italian Game" }}}, "c5": { "Nf3": { "d6": { "d4": "Sicilian Defense" }}}, "e6": { "d4": { "d5": "French Defense" }}, "c6": { "d4": { "d5": "Caro-Kann" }}},
   "d4": { "d5": { "c4": { "e6": "QGD", "c6": "Slav Defense" }}, "Nf6": { "c4": { "g6": "King's Indian", "e6": "Nimzo-Indian" }}}
 };
 
 function getBookMove() {
+  if (!document.getElementById('use-book').checked) return null;
   let node = openingBook;
   for (let m of game.history()) { if (!node || !node[m]) return null; node = node[m]; }
   if (typeof node === "string") return null;
@@ -165,264 +336,205 @@ function getBookMove() {
   return keys[Math.floor(Math.random() * keys.length)];
 }
 
-const PIECE_VALUES = { p: 100, n: 320, b: 330, r: 500, q: 900, k: 20000 };
-const PST = {
-  p: [ [0,0,0,0,0,0,0,0], [50,50,50,50,50,50,50,50], [10,10,20,30,30,20,10,10], [5,5,10,25,25,10,5,5], [0,0,0,20,20,0,0,0], [5,-5,-10,0,0,-10,-5,5], [5,10,10,-20,-20,10,10,5], [0,0,0,0,0,0,0,0] ],
-  n: [ [-50,-40,-30,-30,-30,-30,-40,-50], [-40,-20,0,0,0,0,-20,-40], [-30,0,10,15,15,10,0,-30], [-30,5,15,20,20,15,5,-30], [-30,0,15,20,20,15,0,-30], [-30,5,10,15,15,10,5,-30], [-40,-20,0,5,5,0,-20,-40], [-50,-40,-30,-30,-30,-30,-40,-50] ],
-  b: [ [-20,-10,-10,-10,-10,-10,-10,-20], [-10,0,0,0,0,0,0,-10], [-10,0,5,10,10,5,0,-10], [-10,5,5,10,10,5,5,-10], [-10,0,10,10,10,10,0,-10], [-10,10,10,10,10,10,10,-10], [-10,5,0,0,0,0,5,-10], [-20,-10,-10,-10,-10,-10,-10,-20] ],
-  r: [ [0,0,0,0,0,0,0,0], [5,10,10,10,10,10,10,5], [-5,0,0,0,0,0,0,-5], [-5,0,0,0,0,0,0,-5], [-5,0,0,0,0,0,0,-5], [-5,0,0,0,0,0,0,-5], [-5,0,0,0,0,0,0,-5], [0,0,0,5,5,0,0,0] ],
-  q: [ [-20,-10,-10,-5,-5,-10,-10,-20], [-10,0,0,0,0,0,0,-10], [-10,0,5,5,5,5,0,-10], [-5,0,5,5,5,5,0,-5], [0,0,5,5,5,5,0,-5], [-10,5,5,5,5,5,0,-10], [-10,0,5,0,0,0,0,-10], [-20,-10,-10,-5,-5,-10,-10,-20] ],
-  k_mid: [ [-30,-40,-40,-50,-50,-40,-40,-30], [-30,-40,-40,-50,-50,-40,-40,-30], [-30,-40,-40,-50,-50,-40,-40,-30], [-30,-40,-40,-50,-50,-40,-40,-30], [-20,-30,-30,-40,-40,-30,-30,-20], [-10,-20,-20,-20,-20,-20,-20,-10], [20,20,0,0,0,0,20,20], [20,30,10,0,0,10,30,20] ],
-  k_end: [ [-50,-40,-30,-20,-20,-30,-40,-50], [-30,-20,-10,0,0,-10,-20,-30], [-30,-10,20,30,30,20,-10,-30], [-30,-10,30,40,40,30,-10,-30], [-30,-10,30,40,40,30,-10,-30], [-30,-10,20,30,30,20,-10,-30], [-30,-30,0,0,0,0,-30,-30], [-50,-30,-30,-30,-30,-30,-30,-50] ]
+/* ---------------- UI & THEMES ---------------- */
+const themes = {
+  classic: { light: '#eeeed2', dark: '#769656' },
+  wood: { light: '#f0d9b5', dark: '#b58863' },
+  ocean: { light: '#eae9d2', dark: '#4b7399' },
+  slate: { light: '#98a6b5', dark: '#5c7080' }
 };
 
-let CURRENT_MAX_Q = 4;
-let searchStartTime = 0;
-let timeoutReached = false;
-const MAX_THINK_TIME = 2500; // Force stop at 2.5 seconds to prevent slow endgames
+function togglePanel(id) { document.getElementById(id).classList.toggle('open'); }
+function closePanels() { document.querySelectorAll('.side-panel').forEach(p => p.classList.remove('open')); }
 
-function evaluateBoard(g) {
-  let totalEval = 0;
-  let boardArr = g.board();
-  let agg = parseInt(document.getElementById('agg').value);
-  let style = parseInt(document.getElementById('style').value);
+function updateUI() {
+  document.getElementById('elo-val').innerText = document.getElementById('elo').value;
+  document.getElementById('style-val').innerText = document.getElementById('style').value < -2 ? "Closed" : document.getElementById('style').value > 2 ? "Tactical" : "Balanced";
+  document.getElementById('time-val').innerText = document.getElementById('think-time').value + "s";
+  let g = document.getElementById('greed').value;
+  document.getElementById('greed-val').innerText = g < 0.8 ? "Positional" : g > 1.2 ? "Greedy" : "Normal";
+}
 
-  let wMatNonPawn = 0, bMatNonPawn = 0;
-  let wKing = null, bKing = null, pawnCount = 0;
-  let wKingMidScore = 0, bKingMidScore = 0, wKingEndScore = 0, bKingEndScore = 0;
+function applyThemes() {
+  let bTheme = document.getElementById('board-theme').value;
+  let pTheme = document.getElementById('piece-theme').value;
+  
+  document.documentElement.style.setProperty('--light-sq', themes[bTheme].light);
+  document.documentElement.style.setProperty('--dark-sq', themes[bTheme].dark);
+  
+  if (board) board.destroy();
+  board = Chessboard('board', {
+    position: game.fen(), draggable: true,
+    pieceTheme: `https://lichess1.org/assets/piece/${pTheme}/{piece}.svg`,
+    onDragStart: onDragStart, onDrop: onDrop, onSnapEnd: onSnapEnd
+  });
+}
 
-  for (let r = 0; r < 8; r++) {
-    for (let c = 0; c < 8; c++) {
-      let piece = boardArr[r][c];
-      if (!piece) continue;
+function updateLog() {
+  let div = document.getElementById("moves"); div.innerHTML = ""; 
+  let h = game.history();
+  for (let i=0; i<h.length; i+=2) div.innerHTML += `<div class="move-num">${(i/2)+1}.</div><div>${h[i]}</div><div>${h[i+1]||''}</div>`;
+  div.scrollTop = div.scrollHeight;
+}
 
-      let val = PIECE_VALUES[piece.type];
-      let rank = piece.color === 'w' ? r : 7 - r;
-      let score = val;
-      
-      if (piece.type === 'k') {
-        let mid = PST.k_mid[rank][c];
-        let end = PST.k_end[rank][c];
-        score += mid; 
-        if (piece.color === 'w') { wKing = {r,c}; wKingMidScore = mid; wKingEndScore = end; }
-        else { bKing = {r,c}; bKingMidScore = mid; bKingEndScore = end; }
+/* ---------------- DRAWING (ARROWS & DOTS) ---------------- */
+function drawArrowCore(from, to, color, width, containerId) {
+  const files = { a:0, b:1, c:2, d:3, e:4, f:5, g:6, h:7 }, ranks = { 1:7, 2:6, 3:5, 4:4, 5:3, 6:2, 7:1, 8:0 };
+  let fx = (files[from[0]] * 12.5) + 6.25, fy = (ranks[from[1]] * 12.5) + 6.25;
+  let tx = (files[to[0]] * 12.5) + 6.25, ty = (ranks[to[1]] * 12.5) + 6.25;
+  let mId = "head-" + color.replace(/[^a-zA-Z0-9]/g, "") + width.toString().replace(".","") + containerId + from + to;
+  document.getElementById(containerId).innerHTML += `<defs><marker id="${mId}" orient="auto" markerWidth="4" markerHeight="6" refX="3.5" refY="3"><path d="M0,0 V6 L4,3 Z" fill="${color}" /></marker></defs><line x1="${fx}%" y1="${fy}%" x2="${tx}%" y2="${ty}%" stroke="${color}" stroke-width="${width}%" marker-end="url(#${mId})" />`;
+}
+
+function drawPV(line) {
+  document.getElementById("bot-arrows").innerHTML = "";
+  if (!line || line.length === 0) return;
+  line.forEach((m, i) => drawArrowCore(m.from, m.to, i===0 ? "rgba(0, 255, 100, 0.7)" : "rgba(0, 200, 255, 0.5)", Math.max(0.6, 2.5 - (i * 0.4)), "bot-arrows"));
+}
+
+function renderUserArrows() {
+  document.getElementById("user-arrows").innerHTML = "";
+  userArrows.forEach(a => drawArrowCore(a.from, a.to, "rgba(25, 118, 210, 0.8)", 2.5, "user-arrows"));
+}
+
+function showLegalMoves(sq) {
+  clearHighlights();
+  $('.square-' + sq).addClass('highlight-selected');
+  game.moves({square: sq, verbose: true}).forEach(m => $('.square-' + m.to).addClass(m.captured ? 'highlight-capture' : 'highlight-dot'));
+}
+
+function clearHighlights() { $('.square-55d63').removeClass('highlight-dot highlight-capture highlight-selected'); }
+function clearPremove() { $('.square-55d63').removeClass('premove-square'); currentPremove = null; }
+
+/* ---------------- CLICK-TO-MOVE & RIGHT-CLICK ARROWS ---------------- */
+let rClickSq = null;
+
+document.addEventListener('contextmenu', e => { if(e.target.closest('#board-container')) e.preventDefault(); });
+
+$('#board').on('mousedown', '.square-55d63', function(e) {
+  if (e.which === 3) rClickSq = $(this).attr('data-square'); 
+}).on('mouseup', '.square-55d63', function(e) {
+  let sq = $(this).attr('data-square');
+  if (e.which === 3) {
+    if (rClickSq === sq) { userArrows = []; clearPremove(); } 
+    else if (rClickSq) {
+      let idx = userArrows.findIndex(a => a.from === rClickSq && a.to === sq);
+      if (idx >= 0) userArrows.splice(idx, 1); 
+      else userArrows.push({from: rClickSq, to: sq});
+    }
+    renderUserArrows(); rClickSq = null;
+  }
+}).on('click', '.square-55d63', function() {
+  let sq = $(this).attr('data-square');
+  
+  if (selectedSquare && selectedSquare !== sq) {
+    let isValid = game.moves({square: selectedSquare, verbose:true}).some(m => m.to === sq);
+    if (isValid) {
+      if (isBotThinking || game.turn() === 'b') {
+        currentPremove = { from: selectedSquare, to: sq, promotion: 'q' };
+        $('.square-55d63').removeClass('premove-square');
+        $('.square-' + selectedSquare).addClass('premove-square');
+        $('.square-' + sq).addClass('premove-square');
       } else {
-        score += PST[piece.type][rank][c];
-        if (piece.type === 'p') pawnCount++;
-        else if (piece.color === 'w') wMatNonPawn += val;
-        else bMatNonPawn += val;
+        game.move({ from: selectedSquare, to: sq, promotion: 'q' });
+        board.position(game.fen()); updateLog(); makeAIMove();
       }
-
-      if (agg > 5 && (piece.type === 'n' || piece.type === 'b' || piece.type === 'r')) score += (agg - 5) * 5; 
-      if (piece.color === 'w') totalEval += score; else totalEval -= score;
+      selectedSquare = null; clearHighlights(); return;
     }
   }
 
-  totalEval += g.turn() === 'w' ? (16 - pawnCount) * (style * 5) : -((16 - pawnCount) * (style * 5));
-
-  if (wMatNonPawn < 1500 && bMatNonPawn < 1500) {
-    totalEval -= wKingMidScore; totalEval += wKingEndScore;
-    totalEval -= -bKingMidScore; totalEval += -bKingEndScore; 
-    let wCol = totalEval > 300 ? 'w' : totalEval < -300 ? 'b' : null;
-    if (wCol === 'w') totalEval += getMatingEval(wKing, bKing);
-    else if (wCol === 'b') totalEval -= getMatingEval(bKing, wKing);
+  let p = game.get(sq);
+  if (p && p.color === 'w') {
+    selectedSquare = sq; showLegalMoves(sq);
+  } else {
+    selectedSquare = null; clearHighlights();
   }
+});
 
-  return g.turn() === 'w' ? totalEval : -totalEval;
-}
-
-function getMatingEval(wk, lk) {
-  let edgeScore = ((Math.max(3 - lk.r, lk.r - 4) + Math.max(3 - lk.c, lk.c - 4)) * 10);
-  let distScore = ((14 - (Math.abs(wk.r - lk.r) + Math.abs(wk.c - lk.c))) * 5);
-  return (edgeScore + distScore) * 15; 
-}
-
-/* =======================================================================
-   4. DYNAMIC SEARCH ALGORITHM (Optimized for Speed)
-======================================================================== */
-let nodesEvals = 0;
-
-function getOrderedMoves(g) {
-  return g.moves({ verbose: true }).map(m => {
-    let s = 0;
-    if (m.captured) s += 10 * PIECE_VALUES[m.captured] - PIECE_VALUES[m.piece];
-    if (m.promotion) s += 900;
-    if (m.san.includes('+')) s += 50;
-    
-    // NEW: Heavy priority to advancing pawns in endgames to speed up Alpha-Beta pruning
-    if (m.piece === 'p') {
-      if (m.to.includes('7') || m.to.includes('2')) s += 150;
-      else if (m.to.includes('6') || m.to.includes('3')) s += 75;
-    }
-
-    m.score = s;
-    return m;
-  }).sort((a, b) => b.score - a.score);
-}
-
-function quiesce(g, alpha, beta, depth = 0, pline = []) {
-  if (++nodesEvals % 2000 === 0 && Date.now() - searchStartTime > MAX_THINK_TIME) timeoutReached = true;
-  if (timeoutReached) return alpha;
-
-  let stand_pat = evaluateBoard(g);
-  if (stand_pat >= beta) return beta;
-  if (alpha < stand_pat) { alpha = stand_pat; pline.length = 0; }
+/* ---------------- WEB WORKER AI CONTROLLER ---------------- */
+function initWorker() {
+  if (engineWorker) engineWorker.terminate();
+  let blob = new Blob([document.getElementById('worker-code').textContent], {type: 'text/javascript'});
+  engineWorker = new Worker(URL.createObjectURL(blob));
   
-  if (depth >= CURRENT_MAX_Q) return alpha;
-
-  let moves = getOrderedMoves(g).filter(m => m.captured || m.promotion);
-  for (let m of moves) {
-    g.move(m);
-    let childLine = [];
-    let score = -quiesce(g, -beta, -alpha, depth + 1, childLine);
-    g.undo();
-
-    if (score >= beta) return beta;
-    if (score > alpha) { alpha = score; pline.length = 0; pline.push(m, ...childLine); }
-  }
-  return alpha;
-}
-
-function alphaBeta(g, depth, alpha, beta, pline = []) {
-  if (++nodesEvals % 2000 === 0 && Date.now() - searchStartTime > MAX_THINK_TIME) timeoutReached = true;
-  if (timeoutReached) return alpha;
-
-  if (depth === 0) return quiesce(g, alpha, beta, 0, pline);
-
-  let moves = getOrderedMoves(g);
-  if (moves.length === 0) return g.in_checkmate() ? -99999 + (100 - depth) : 0;
-
-  for (let m of moves) {
-    g.move(m);
-    let childLine = [];
-    let score = -alphaBeta(g, depth - 1, -beta, -alpha, childLine);
-    g.undo();
-
-    if (score >= beta) return beta;
-    if (score > alpha) { alpha = score; pline.length = 0; pline.push(m, ...childLine); }
-  }
-  return alpha;
-}
-
-async function findBestMoveAsync(g, depth) {
-  searchStartTime = Date.now();
-  timeoutReached = false;
-  let moves = getOrderedMoves(g);
-  let bestMove = moves[0], bestScore = -Infinity, alpha = -Infinity, beta = Infinity, bestLine = [];
-
-  for (let m of moves) {
-    if (abortSearch || timeoutReached) break;
-
-    let childLine = [];
-    g.move(m);
-    let score = -alphaBeta(g, depth - 1, -beta, -alpha, childLine);
-    g.undo();
-
-    let fullCurrentLine = [m, ...childLine]; 
-
-    if (score > bestScore) { 
-      bestScore = score; 
-      bestMove = m; 
-      bestLine = fullCurrentLine; 
+  engineWorker.onmessage = function(e) {
+    let d = e.data;
+    if (d.status === 'thinking') {
+      let ev = d.eval;
+      if (Math.abs(ev) > 80000) {
+        document.getElementById("eval-bar").innerText = `Eval: M${ev > 0 ? '+' : '-'}`; // UI fix for Checkmate string
+      } else {
+        let disp = (ev * (game.turn()==='w'?-1:1) / 100).toFixed(2);
+        document.getElementById("eval-bar").innerText = `Eval: ${disp>0?'+':''}${disp}`;
+      }
+      document.getElementById("commentary").innerText = `Depth: ${d.depth} | Nodes: ${d.nodes}\nLine: ${d.line.map(x=>x.san).join(' ')}`;
+      drawPV(d.line);
+    } 
+    else if (d.status === 'done') {
+      game.move(d.move);
+      board.position(game.fen());
+      updateLog();
       
-      // Only draw heavy UI elements when a NEW best move is found to save JS thread time
-      clearArrows();
-      drawPV(bestLine, "rgba(0, 255, 100, 0.7)", "rgba(0, 200, 255, 0.5)"); 
-      document.getElementById("commentary").innerText = `Depth ${depth} | Nodes: ${nodesEvals} \nEvaluating: ${bestLine.map(x => x.san).join(' ')}`;
-      await new Promise(r => setTimeout(r, 0)); 
+      document.getElementById("bot-arrows").innerHTML = ""; 
+      isBotThinking = false;
+      document.getElementById("status-badge").innerText = "Your Turn";
+      document.getElementById("status-badge").style.background = "#4caf50";
+      
+      if (game.game_over()) {
+        setTimeout(() => alert(game.in_checkmate() ? "Checkmate!" : "Draw!"), 100);
+      } else if (currentPremove) {
+        let pm = currentPremove; clearPremove();
+        if (game.move(pm)) { board.position(game.fen()); updateLog(); makeAIMove(); }
+      }
     }
-    
-    if (score > alpha) alpha = score;
-  }
-  clearArrows();
-  return { move: bestMove, score: bestScore, line: bestLine, aborted: timeoutReached };
+  };
 }
 
-/* =======================================================================
-   5. AI CONTROLLER 
-======================================================================== */
-async function makeAIMove() {
+function makeAIMove() {
   if (game.game_over()) return;
-
-  abortSearch = false;
   isBotThinking = true;
-  setStatus("Bot Thinking...", true);
-  nodesEvals = 0;
-  clearArrows();
+  document.getElementById("status-badge").innerText = "Bot Thinking...";
+  document.getElementById("status-badge").style.background = "#d32f2f";
+  document.getElementById("bot-arrows").innerHTML = "";
 
-  let finalMove = null, isBook = false;
   let bookMoveSan = getBookMove();
-
   if (bookMoveSan) {
-    finalMove = game.move(bookMoveSan);
-    isBook = true;
-    document.getElementById("commentary").innerText = "Book move: " + openingBook[finalMove.from];
-    await new Promise(r => setTimeout(r, 400)); 
-  } 
-  else {
-    let pieceCount = 0;
-    game.board().forEach(r => r.forEach(p => { if (p) pieceCount++; }));
-    let elo = parseInt(document.getElementById('elo').value);
-    
-    let baseDepth = elo < 1200 ? 2 : elo < 1600 ? 3 : 4;
-    CURRENT_MAX_Q = elo < 1400 ? 2 : elo < 2000 ? 4 : 8;
-
-    if (pieceCount <= 14) baseDepth += 1;
-    if (pieceCount <= 6) baseDepth += 2; 
-
-    let bestMoveObj = await findBestMoveAsync(game, baseDepth);
-    if (abortSearch) return; 
-
-    finalMove = game.move(bestMoveObj.move);
-    let displayEval = (bestMoveObj.score * (game.turn() === 'w' ? -1 : 1) / 100).toFixed(2);
-    
-    let commText = `Search Depth: ${baseDepth}\nContinuation:\n${bestMoveObj.line.map(x => x.san).join(' ')}`;
-    if (bestMoveObj.aborted) commText += `\n(Time limit 2.5s reached)`;
-    
-    document.getElementById("eval-bar").innerText = `Eval: ${displayEval > 0 ? '+' : ''}${displayEval}`;
-    document.getElementById("commentary").innerText = commText;
-  }
-
-  board.position(game.fen());
-  updateLog();
-  if (finalMove) drawArrow(finalMove.from, finalMove.to, isBook ? "rgba(50, 200, 255, 0.6)" : "rgba(255, 50, 50, 0.7)");
-
-  isBotThinking = false;
-  setStatus("Your Turn", false);
-  
-  if (game.game_over()) {
-    if (game.in_checkmate()) alert("Checkmate!");
-    else if (game.in_draw()) alert("Draw!");
+    setTimeout(() => {
+      game.move(bookMoveSan); board.position(game.fen()); updateLog();
+      document.getElementById("commentary").innerText = "Theory: " + openingBook[game.history()[0]];
+      isBotThinking = false;
+      document.getElementById("status-badge").innerText = "Your Turn";
+      document.getElementById("status-badge").style.background = "#4caf50";
+      if (currentPremove) {
+        let pm = currentPremove; clearPremove();
+        if (game.move(pm)) { board.position(game.fen()); updateLog(); makeAIMove(); }
+      }
+    }, 400); 
     return;
   }
 
-  if (currentPremove) {
-    let pm = currentPremove;
-    clearPremove(); 
-    let move = game.move(pm);
-    if (move) {
-      board.position(game.fen());
-      updateLog();
-      window.setTimeout(makeAIMove, 200); 
-    }
-  }
+  engineWorker.postMessage({
+    fen: game.fen(),
+    elo: parseInt(document.getElementById('elo').value),
+    timeLimit: parseFloat(document.getElementById('think-time').value),
+    style: parseInt(document.getElementById('style').value),
+    greed: parseFloat(document.getElementById('greed').value)
+  });
 }
 
-/* =======================================================================
-   6. CHESSBOARD.JS BINDINGS
-======================================================================== */
+/* ---------------- CHESSBOARD BINDINGS ---------------- */
 function onDragStart (source, piece) {
   if (game.game_over() || piece.search(/^b/) !== -1) return false; 
-  clearArrows();
-  clearPremove(); 
+  document.getElementById("bot-arrows").innerHTML = "";
+  clearPremove(); selectedSquare = source; showLegalMoves(source);
 }
 
 function onDrop (source, target) {
+  selectedSquare = null; clearHighlights();
   if (source === target) return 'snapback';
 
   if (isBotThinking || game.turn() === 'b') {
     currentPremove = { from: source, to: target, promotion: 'q' };
-    $('.square-55d63').removeClass('premove-square');
     $('.square-' + source).addClass('premove-square');
     $('.square-' + target).addClass('premove-square');
     return 'snapback'; 
@@ -431,27 +543,26 @@ function onDrop (source, target) {
   let move = game.move({ from: source, to: target, promotion: 'q' });
   if (move === null) return 'snapback';
 
-  clearPremove();
-  updateLog();
-  window.setTimeout(makeAIMove, 50);
+  clearPremove(); updateLog(); makeAIMove();
 }
 
 function onSnapEnd () { board.position(game.fen()); }
 
 function resetGame() {
-  abortSearch = true; 
-  isBotThinking = false;
-  game.reset();
-  board.start();
-  clearArrows();
-  clearPremove();
-  updateLog();
-  setStatus("Your Turn", false);
+  initWorker(); 
+  isBotThinking = false; selectedSquare = null; userArrows = [];
+  game.reset(); board.position('start');
+  document.getElementById("bot-arrows").innerHTML = "";
+  document.getElementById("user-arrows").innerHTML = "";
+  clearPremove(); clearHighlights(); updateLog();
+  document.getElementById("status-badge").innerText = "Your Turn";
+  document.getElementById("status-badge").style.background = "#4caf50";
   document.getElementById("eval-bar").innerText = "Eval: 0.00";
   document.getElementById("commentary").innerText = "New game started.";
 }
 
-updateUI();
+// Startup
+applyThemes(); updateUI(); initWorker();
 
 </script>
 </body>
