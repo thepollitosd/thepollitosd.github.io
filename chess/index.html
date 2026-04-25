@@ -34,18 +34,11 @@
   .white-1e1d7 { background-color: var(--light-sq) !important; color: var(--dark-sq) !important; }
   .black-3c85d { background-color: var(--dark-sq) !important; color: var(--light-sq) !important; }
   
-  /* Highlights & Move Dots */
   .premove-square { box-shadow: inset 0 0 0 50px rgba(220, 50, 50, 0.6) !important; }
   .highlight-selected { background-color: rgba(200, 200, 50, 0.5) !important; }
   
-  .highlight-dot::after {
-    content: ''; position: absolute; top: 35%; left: 35%; width: 30%; height: 30%;
-    background: rgba(0,0,0,0.3); border-radius: 50%; pointer-events: none;
-  }
-  .highlight-capture::after {
-    content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-    border: 6px solid rgba(0,0,0,0.25); box-sizing: border-box; border-radius: 50%; pointer-events: none;
-  }
+  .highlight-dot::after { content: ''; position: absolute; top: 35%; left: 35%; width: 30%; height: 30%; background: rgba(0,0,0,0.3); border-radius: 50%; pointer-events: none; }
+  .highlight-capture::after { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 6px solid rgba(0,0,0,0.25); box-sizing: border-box; border-radius: 50%; pointer-events: none; }
 
   h2, h3 { margin: 0; padding-bottom: 5px; border-bottom: 1px solid #444; font-weight: 500;}
   .box { background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; }
@@ -77,7 +70,7 @@
 
 <div id="header">
   <button class="menu-btn" onclick="togglePanel('left-panel')">☰ Log</button>
-  <h1>V2</h1>
+  <h1>V2.1</h1>
   <button class="menu-btn" onclick="togglePanel('right-panel')">⚙️ Set</button>
 </div>
 
@@ -104,7 +97,6 @@
 
   <div id="right-panel" class="side-panel">
     <h2>Settings</h2>
-    
     <div class="setting">
       <label>Board Theme</label>
       <select id="board-theme" onchange="applyThemes()">
@@ -114,7 +106,6 @@
         <option value="slate">Slate Gray</option>
       </select>
     </div>
-    
     <div class="setting">
       <label>Piece Set</label>
       <select id="piece-theme" onchange="applyThemes()">
@@ -123,39 +114,32 @@
         <option value="wikipedia">Wikipedia</option>
       </select>
     </div>
-
     <hr style="border: 0; border-top: 1px solid #444; width: 100%; margin: 10px 0;">
-
     <div class="setting">
       <label><span>Use Opening Book</span> <input type="checkbox" id="use-book" checked></label>
     </div>
-
     <div class="setting">
       <label><span>Bot Elo</span> <span id="elo-val">3000</span></label>
       <input type="range" id="elo" min="800" max="3000" step="100" value="3000" oninput="updateUI()">
     </div>
-    
     <div class="setting">
       <label><span>Think Time (s)</span> <span id="time-val">5.0s</span></label>
       <input type="range" id="think-time" min="0.5" max="30" step="0.5" value="5.0" oninput="updateUI()">
     </div>
-
     <div class="setting">
       <label><span>Greed (Materialism)</span> <span id="greed-val">Normal</span></label>
       <input type="range" id="greed" min="0.5" max="2.0" step="0.1" value="1.0" oninput="updateUI()">
     </div>
-
     <div class="setting">
       <label><span>Playstyle</span> <span id="style-val">Balanced</span></label>
       <input type="range" id="style" min="-5" max="5" value="0" oninput="updateUI()">
     </div>
-
     <button class="primary" onclick="resetGame()">New Game</button>
   </div>
 </div>
 
 <!-- =======================================================================
-     WEB WORKER (Pure AI Logic runs in background thread)
+     WEB WORKER (Highly Optimized AI Logic)
 ======================================================================== -->
 <script type="javascript/worker" id="worker-code">
   importScripts('https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.12.0/chess.min.js');
@@ -180,31 +164,34 @@
 
   function evalBoard() {
     let t = 0, wp = 0, bp = 0, wm = 0, bm = 0, wk = null, bk = null;
-    let b = game.board();
+    let b = game.board(); // Optimized Array Fetching
+    
     for(let r=0; r<8; r++) {
+      let row = b[r];
       for(let c=0; c<8; c++) {
-        let p = b[r][c]; if(!p) continue;
-        let rank = p.color==='w' ? r : 7-r;
+        let p = row[c]; if(!p) continue;
+        let isW = p.color === 'w';
+        let rank = isW ? r : 7-r;
         let val = p.type === 'k' ? V.k : V[p.type] * currentConfig.greed; 
         
-        // Passed Pawn Bonus
         if (p.type === 'p') {
-          if (p.color === 'w' && r < 4) val += (4 - r) * 30; 
-          if (p.color === 'b' && r > 3) val += (r - 3) * 30; 
+          if (isW && r < 4) val += (4 - r) * 30; 
+          if (!isW && r > 3) val += (r - 3) * 30; 
         }
 
-        if(p.type==='k') {
+        if(p.type === 'k') {
           let s = val + PST.k_mid[rank][c];
-          if(p.color==='w') { wk={r,c,m:PST.k_mid[rank][c],e:PST.k_end[rank][c]}; t+=s; }
+          if(isW) { wk={r,c,m:PST.k_mid[rank][c],e:PST.k_end[rank][c]}; t+=s; }
           else { bk={r,c,m:PST.k_mid[rank][c],e:PST.k_end[rank][c]}; t-=s; }
         } else {
           let s = val + PST[p.type][rank][c];
-          if(p.type==='p') p.color==='w'?wp++:bp++;
-          else p.color==='w'?wm+=val:bm+=val;
-          p.color==='w'?t+=s:t-=s;
+          if(p.type === 'p') isW ? wp++ : bp++;
+          else isW ? wm+=val : bm+=val;
+          isW ? t+=s : t-=s;
         }
       }
     }
+    
     t += game.turn()==='w' ? (16-(wp+bp))*currentConfig.style*5 : -((16-(wp+bp))*currentConfig.style*5);
     
     if(wm<1500 && bm<1500) { 
@@ -216,20 +203,22 @@
   }
 
   function getMoves(prevBestMove = null) {
-    return game.moves({verbose:true}).map(m=>{
-      let s = 0;
+    let mvs = game.moves({verbose:true});
+    for(let i=0; i<mvs.length; i++){
+      let m = mvs[i]; let s = 0;
       if (prevBestMove && m.san === prevBestMove) s += 200000; 
       else if (m.san.includes('#')) s += 100000;
-      else if (m.captured) s += 10 * V[m.captured] - V[m.piece];
-      else if (m.promotion) s += 900;
+      else if (m.flags.includes('c')) s += 10 * (V[m.captured]||0) - V[m.piece]; // Using fast flags
+      else if (m.flags.includes('p')) s += 900;
       else if (m.san.includes('+')) s += 50;
       m.score = s;
-      return m;
-    }).sort((a,b)=>b.score-a.score);
+    }
+    return mvs.sort((a,b)=>b.score-a.score);
   }
 
   function quiesce(alpha, beta, depth) {
-    if((nodes++ & 2047)===0 && Date.now()-startTime > searchLimitMs) timeUp = true;
+    // Fast Bitwise Check for Timeout
+    if((nodes++ & 1023)===0 && Date.now()-startTime > searchLimitMs) timeUp = true;
     if(timeUp) return alpha;
     
     let inCheck = game.in_check();
@@ -242,13 +231,23 @@
       if(depth > currentConfig.qDepth) return alpha;
     }
     
-    let mvs = getMoves();
-    if (!inCheck) mvs = mvs.filter(m=>m.captured||m.promotion);
+    let mvs = game.moves({verbose: true});
+    let qMvs = [];
     
-    if (mvs.length === 0) return inCheck ? (game.in_checkmate() ? -90000 : 0) : pat; 
+    // Fast Quiescence Sorting without String matching
+    for(let i=0; i<mvs.length; i++) {
+       let m = mvs[i];
+       if (inCheck || m.flags.includes('c') || m.flags.includes('p')) {
+           m.score = (m.flags.includes('c') ? 10 * (V[m.captured]||0) - V[m.piece] : 0) + (m.flags.includes('p') ? 900 : 0);
+           qMvs.push(m);
+       }
+    }
+    qMvs.sort((a,b)=>b.score-a.score);
     
-    for(let m of mvs) {
-      game.move(m);
+    if (qMvs.length === 0) return inCheck ? (game.in_checkmate() ? -90000 : 0) : pat; 
+    
+    for(let i=0; i<qMvs.length; i++) {
+      game.move(qMvs[i]);
       let s = -quiesce(-beta, -alpha, depth+1);
       game.undo();
       if(s >= beta) return beta;
@@ -258,14 +257,15 @@
   }
 
   function alphaBeta(depth, alpha, beta, pline, ply = 0, prevBest = null) {
-    if((nodes++ & 2047)===0 && Date.now()-startTime > searchLimitMs) timeUp = true;
+    if((nodes++ & 1023)===0 && Date.now()-startTime > searchLimitMs) timeUp = true;
     if(timeUp) return alpha;
     if(depth<=0) return quiesce(alpha, beta, 0);
 
     let mvs = getMoves(prevBest);
     if(mvs.length===0) return game.in_checkmate() ? -90000 + ply : 0; 
 
-    for(let m of mvs) {
+    for(let i=0; i<mvs.length; i++) {
+      let m = mvs[i];
       game.move(m); let cl = [];
       let s = -alphaBeta(depth-1, -beta, -alpha, cl, ply+1);
       game.undo();
@@ -279,18 +279,28 @@
     let { fen, elo, style, greed, timeLimit } = e.data;
     game.load(fen);
     searchLimitMs = timeLimit * 1000;
+    
+    // Base configs
     currentConfig = { style, greed, qDepth: elo<1500 ? 2 : elo<2200 ? 4 : 8 };
     startTime = Date.now();
     timeUp = false; nodes = 0;
 
+    // --- Strict Depth Mapping ---
     let targetDepth = 3; 
-    if (elo >= 1600) targetDepth = 4;
-    if (elo >= 2200) targetDepth = 5;
-    if (elo >= 2600) targetDepth = 6;
-    if (elo >= 2900) targetDepth = 7; 
+    
+    if (elo < 1200) {
+      targetDepth = 2; 
+      currentConfig.qDepth = 1; // Severely limit vision for beginners
+    } else {
+      if (elo >= 1600) targetDepth = 4;
+      if (elo >= 2200) targetDepth = 5;
+      if (elo >= 2600) targetDepth = 6;
+      if (elo >= 2900) targetDepth = 7; 
 
-    let pieceCount = game.board().reduce((acc, r)=>acc+r.filter(p=>p).length, 0);
-    if(pieceCount <= 12) targetDepth += 2; 
+      // Endgame Depth Extension (Only for > 1200 ELO)
+      let pieceCount = game.board().reduce((acc, r)=>acc+r.filter(p=>p).length, 0);
+      if(pieceCount <= 12) targetDepth += 2; 
+    }
 
     let bestMove = null, bestScore = 0, bestLine = [];
     let prevBestSan = null;
@@ -299,8 +309,9 @@
       let mvs = getMoves(prevBestSan);
       let alpha = -Infinity, beta = Infinity, curBest = null, curScore = -Infinity, curLine = [];
       
-      for(let m of mvs) {
+      for(let i=0; i<mvs.length; i++) {
         if(timeUp) break;
+        let m = mvs[i];
         game.move(m); let cl=[];
         let s = -alphaBeta(d-1, -beta, -alpha, cl, 1);
         game.undo();
@@ -316,6 +327,7 @@
       }
       
       if (bestScore > 80000) break; // Forced mate found
+      if (elo < 1200 && d === 2) break; // Hard cap depth for beginners
     }
     
     postMessage({ status: 'done', move: bestMove || getMoves()[0], eval: bestScore, line: bestLine, depth: targetDepth, nodes });
