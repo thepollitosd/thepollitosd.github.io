@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Chess Engine - Turbo</title>
+<title>Chess Engine</title>
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
@@ -34,6 +34,7 @@
   .white-1e1d7 { background-color: var(--light-sq) !important; color: var(--dark-sq) !important; }
   .black-3c85d { background-color: var(--dark-sq) !important; color: var(--light-sq) !important; }
   
+  /* Highlights & Move Dots */
   .premove-square { box-shadow: inset 0 0 0 50px rgba(220, 50, 50, 0.6) !important; }
   .highlight-selected { background-color: rgba(200, 200, 50, 0.5) !important; }
   .highlight-dot::after { content: ''; position: absolute; top: 35%; left: 35%; width: 30%; height: 30%; background: rgba(0,0,0,0.3); border-radius: 50%; pointer-events: none; }
@@ -42,17 +43,22 @@
   h2, h3 { margin: 0; padding-bottom: 5px; border-bottom: 1px solid #444; font-weight: 500;}
   .box { background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; }
   
+  /* Settings Accordions */
   details { background: rgba(0,0,0,0.15); border-radius: 6px; margin-bottom: 5px; }
   summary { padding: 10px; font-weight: bold; cursor: pointer; outline: none; user-select: none; }
+  summary:hover { background: rgba(255,255,255,0.05); }
   .details-content { padding: 10px; display: flex; flex-direction: column; gap: 12px; border-top: 1px solid #444; }
 
   .setting { display: flex; flex-direction: column; gap: 5px; }
   .setting label { font-size: 0.85em; color: #bbb; display: flex; justify-content: space-between; align-items: center;}
   input[type="range"] { accent-color: var(--accent); height: 15px; cursor: pointer;} 
+  input[type="checkbox"] { transform: scale(1.3); accent-color: var(--accent); cursor: pointer;}
   select { background: #333; color: white; border: 1px solid #555; padding: 6px; border-radius: 4px; cursor: pointer;}
   
   button.primary { background: var(--accent); color: white; border: none; padding: 12px; border-radius: 5px; cursor: pointer; font-weight: bold; text-transform: uppercase; margin-top: auto;}
+  button.primary:hover { filter: brightness(1.2); }
   button.secondary { background: #444; color: white; border: 1px solid #555; padding: 10px; border-radius: 5px; cursor: pointer; font-weight: bold; text-align: left; display: flex; justify-content: space-between;}
+  button.secondary:hover { background: #555; }
   
   #moves { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-family: monospace; font-size: 1.1em; max-height: 100%; overflow-y: auto;}
   .move-num { color: #888; text-align: right; padding-right: 10px;}
@@ -60,11 +66,31 @@
   #status-badge { display: inline-block; padding: 4px 10px; border-radius: 4px; background: #555; font-size: 0.9em; margin-bottom: 10px; font-weight: bold;}
   #eval-bar { font-size: 1.1em; font-weight: bold; }
 
+  /* TURBO: Hardware Info Badge */
+  #hw-info { font-size: 0.78em; color: #888; margin-top: 4px; letter-spacing: 0.03em; }
+  #hw-info span { color: #4caf50; font-weight: bold; }
+
+  /* Persona Modal Styles */
+  #persona-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 200; align-items: center; justify-content: center; backdrop-filter: blur(3px); opacity: 0; transition: opacity 0.2s;}
+  #persona-modal.visible { display: flex; opacity: 1; }
+  .modal-content { background: var(--panel); width: 90%; max-width: 500px; max-height: 85vh; border-radius: 10px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.8); }
+  .modal-header { padding: 15px 20px; background: #1a1a20; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; }
+  .modal-header h2 { margin: 0; font-size: 1.3em; border: none; padding: 0; }
+  .close-btn { background: none; border: none; color: #aaa; font-size: 1.5em; cursor: pointer; padding: 0;}
+  .close-btn:hover { color: white; }
+  .modal-body { padding: 0; overflow-y: auto; flex: 1; }
+  .persona-group { padding: 10px 20px; background: rgba(0,0,0,0.5); font-weight: bold; color: var(--accent); position: sticky; top: 0; z-index: 2; border-bottom: 1px solid #333; text-transform: uppercase; font-size: 0.85em; letter-spacing: 1px;}
+  .persona-item { padding: 12px 20px; cursor: pointer; border-bottom: 1px solid #333; transition: background 0.1s; }
+  .persona-item:hover { background: rgba(255,255,255,0.08); }
+  .persona-name { font-weight: bold; font-size: 1.05em; color: #eee; }
+  .persona-desc { font-size: 0.85em; color: #888; margin-top: 4px; }
+
   @media (max-width: 1024px) {
     #left-panel { position: absolute; left: 0; height: 100%; transform: translateX(-100%); z-index: 20;}
     #right-panel { position: absolute; right: 0; height: 100%; transform: translateX(100%); z-index: 20;}
     .side-panel.open { transform: translateX(0) !important; box-shadow: 0 0 20px rgba(0,0,0,0.8); }
   }
+  @media (min-width: 1025px) { #header { display: none; } }
 </style>
 </head>
 
@@ -72,17 +98,20 @@
 
 <div id="header">
   <button class="menu-btn" onclick="togglePanel('left-panel')">☰ Log</button>
-  <h1>Turbo V3</h1>
+  <h1>V2.3 Turbo</h1>
   <button class="menu-btn" onclick="togglePanel('right-panel')">⚙️ Set</button>
 </div>
 
-<div id="persona-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:200; align-items:center; justify-content:center; backdrop-filter:blur(3px);">
-  <div class="modal-content" style="background:var(--panel); width:90%; max-width:500px; max-height:85vh; border-radius:10px; display:flex; flex-direction:column; overflow:hidden;">
-    <div class="modal-header" style="padding:15px 20px; background:#1a1a20; display:flex; justify-content:space-between; align-items:center;">
-      <h2 style="margin:0;">Select Persona</h2>
-      <button class="menu-btn" onclick="closePersonaModal()">×</button>
+<!-- PERSONA SELECTOR MODAL -->
+<div id="persona-modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>Select Bot Persona</h2>
+      <button class="close-btn" onclick="closePersonaModal()">×</button>
     </div>
-    <div class="modal-body" id="persona-list" style="overflow-y:auto; flex:1;"></div>
+    <div class="modal-body" id="persona-list">
+      <!-- Populated by JavaScript -->
+    </div>
   </div>
 </div>
 
@@ -96,33 +125,102 @@
     <div id="status-container" class="box">
       <div id="status-badge">Your Turn</div>
       <div id="eval-bar">Eval: 0.00</div>
-      <div id="commentary">Waiting...</div>
+      <!-- TURBO: Hardware concurrency display -->
+      <div id="hw-info">Engine: initializing...</div>
+      <div id="commentary">Waiting to start...</div>
     </div>
     <div id="board-container">
       <div id="board"></div>
-      <svg id="arrow-svg"><g id="user-arrows"></g><g id="bot-arrows"></g></svg>
+      <svg id="arrow-svg">
+        <g id="user-arrows"></g>
+        <g id="bot-arrows"></g>
+      </svg>
     </div>
   </div>
 
   <div id="right-panel" class="side-panel">
-    <h2>Turbo Settings</h2>
+    <h2>Settings</h2>
     
     <details open>
-      <summary>Match Controls</summary>
+      <summary>Game & Match</summary>
       <div class="details-content">
-        <div class="setting"><label>Play As</label><select id="player-color"><option value="w">White</option><option value="b">Black</option><option value="r">Random</option></select></div>
-        <div class="setting"><label><span>Bot Elo</span> <span id="elo-val">3000</span></label><input type="range" id="elo" min="800" max="3000" step="100" value="3000" oninput="updateUI()"></div>
-        <div class="setting"><label><span>Think Time (s)</span> <span id="time-val">3.0s</span></label><input type="range" id="think-time" min="0.5" max="30" step="0.5" value="3.0" oninput="updateUI()"></div>
-        <div class="setting"><label>CPU Threads: <span id="cpu-cores">?</span></label></div>
+        <div class="setting">
+          <label>Play As</label>
+          <select id="player-color">
+            <option value="w">White</option>
+            <option value="b">Black</option>
+            <option value="r">Random</option>
+          </select>
+        </div>
+        <div class="setting">
+          <label><span>Bot Elo</span> <span id="elo-val">3000</span></label>
+          <input type="range" id="elo" min="800" max="3000" step="100" value="3000" oninput="updateUI()">
+        </div>
+        <div class="setting">
+          <label><span>Think Time (s)</span> <span id="time-val">3.0s</span></label>
+          <input type="range" id="think-time" min="0.5" max="30" step="0.5" value="3.0" oninput="updateUI()">
+        </div>
+        <div class="setting">
+          <label><span>Use Openings</span> <input type="checkbox" id="use-book" checked></label>
+        </div>
       </div>
     </details>
 
     <details open>
-      <summary>Persona</summary>
+      <summary>Bot Personality</summary>
       <div class="details-content">
-        <button class="secondary" onclick="openPersonaModal()"><span id="persona-btn-text">Stockfish Base</span><span>▼</span></button>
-        <div class="setting"><label><span>Aggression</span> <span id="agg-val">1.0</span></label><input type="range" id="aggression" min="0.1" max="3.0" step="0.1" value="1.0" oninput="updateUI(); customPersona();"></div>
-        <div class="setting"><label><span>Greed</span> <span id="greed-val">1.0</span></label><input type="range" id="greed" min="0.5" max="2.0" step="0.1" value="1.0" oninput="updateUI(); customPersona();"></div>
+        <div class="setting">
+          <label>Active Persona</label>
+          <button class="secondary" id="persona-btn" onclick="openPersonaModal()">
+            <span id="persona-btn-text">Stockfish Base</span>
+            <span>▼</span>
+          </button>
+        </div>
+        <div class="setting">
+          <label><span>Aggression (Attack)</span> <span id="agg-val">1.0</span></label>
+          <input type="range" id="aggression" min="0.1" max="3.0" step="0.1" value="1.0" oninput="updateUI(); customPersona();">
+        </div>
+        <div class="setting">
+          <label><span>Defensiveness (Safety)</span> <span id="def-val">1.0</span></label>
+          <input type="range" id="defense" min="0.1" max="3.0" step="0.1" value="1.0" oninput="updateUI(); customPersona();">
+        </div>
+        <div class="setting">
+          <label><span>Structure Focus</span> <span id="struct-val">1.0</span></label>
+          <input type="range" id="structure" min="0.0" max="3.0" step="0.1" value="1.0" oninput="updateUI(); customPersona();">
+        </div>
+        <div class="setting">
+          <label><span>Material Greed</span> <span id="greed-val">1.0</span></label>
+          <input type="range" id="greed" min="0.5" max="2.0" step="0.1" value="1.0" oninput="updateUI(); customPersona();">
+        </div>
+        <div class="setting">
+          <label><span>Playstyle (Space)</span> <span id="style-val">0</span></label>
+          <input type="range" id="style" min="-5" max="5" value="0" oninput="updateUI(); customPersona();">
+        </div>
+      </div>
+    </details>
+
+    <details>
+      <summary>Appearance</summary>
+      <div class="details-content">
+        <div class="setting">
+          <label>Board Theme</label>
+          <select id="board-theme" onchange="applyThemes()">
+            <option value="classic">Classic Green</option>
+            <option value="wood">Wooden</option>
+            <option value="ocean">Ocean Blue</option>
+            <option value="slate">Slate Gray</option>
+          </select>
+        </div>
+        <div class="setting">
+          <label>Piece Set</label>
+          <select id="piece-theme" onchange="applyThemes()">
+            <option value="cburnett">CBurnett (Lichess)</option>
+            <option value="alpha">Alpha</option>
+            <option value="merida">Merida</option>
+            <option value="horsey">Horsey</option>
+            <option value="staunty">Staunty</option>
+          </select>
+        </div>
       </div>
     </details>
 
@@ -130,57 +228,120 @@
   </div>
 </div>
 
+<!-- =======================================================================
+     WEB WORKER — V2.3 Turbo Engine
+     NEW: Transposition Table, Aspiration Windows, History Heuristic
+======================================================================== -->
 <script type="javascript/worker" id="worker-code">
   importScripts('https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.12.0/chess.min.js');
   
-  let game = new Chess(), nodes = 0, startTime = 0, searchLimitMs = 2000, timeUp = false, cfg = {};
+  let game = new Chess();
+  let searchLimitMs = 3000;
+  let startTime = 0;
+  let timeUp = false;
+  let nodes = 0;
+  let cfg = {};
   
-  // TURBO: Transposition Table & History
-  let tt = new Map();
-  let historyTable = Array(2).fill(0).map(() => Array(64).fill(0).map(() => Array(64).fill(0)));
+  // Killer Moves (existing)
   let killerMoves = [];
-  const V = { p: 100, n: 325, b: 335, r: 505, q: 900, k: 20000 };
 
+  // =========================================================
+  // TURBO #1 — Transposition Table
+  // =========================================================
+  const TT_EXACT = 0, TT_LOWER = 1, TT_UPPER = 2;
+  const TT_MAX = 400000; // Max ~400k cached positions before age-out
+  const TT = new Map();
+
+  // Fast TT key: position + turn + castling + en-passant (skip move counters)
+  function ttKey() {
+    const f = game.fen().split(' ');
+    return f[0] + ' ' + f[1] + ' ' + f[2] + ' ' + f[3];
+  }
+
+  // =========================================================
+  // TURBO #3 — History Heuristic Table
+  // =========================================================
+  // Keyed by "fromSq+toSq" (e.g. "e2e4"), value = accumulated depth^2 bonus
+  let historyTable = {};
+
+  const V = { p: 100, n: 325, b: 335, r: 505, q: 900, k: 20000 };
+  
   const PST = {
-    p: [[0,0,0,0,0,0,0,0],[50,50,50,50,50,50,50,50],[10,10,20,30,30,20,10,10],[5,5,10,25,25,10,5,5],[0,0,0,20,20,0,0,0],[5,-5,-10,0,0,-10,-5,5],[5,10,10,-20,-20,10,10,5],[0,0,0,0,0,0,0,0]],
-    n: [[-50,-40,-30,-30,-30,-30,-40,-50],[-40,-20,0,0,0,0,-20,-40],[-30,0,10,15,15,10,0,-30],[-30,5,15,20,20,15,5,-30],[-30,0,15,20,20,15,0,-30],[-30,5,10,15,15,10,5,-30],[-40,-20,0,5,5,0,-20,-40],[-50,-40,-30,-30,-30,-30,-40,-50]],
-    b: [[-20,-10,-10,-10,-10,-10,-10,-20],[-10,0,0,0,0,0,0,-10],[-10,0,5,10,10,5,0,-10],[-10,5,5,10,10,5,5,-10],[-10,0,10,10,10,10,0,-10],[-10,10,10,10,10,10,10,-10],[-10,5,0,0,0,0,5,-10],[-20,-10,-10,-10,-10,-10,-10,-20]],
-    r: [[0,0,0,0,0,0,0,0],[5,10,10,10,10,10,10,5],[-5,0,0,0,0,0,0,-5],[-5,0,0,0,0,0,0,-5],[-5,0,0,0,0,0,0,-5],[-5,0,0,0,0,0,0,-5],[-5,0,0,0,0,0,0,-5],[0,0,0,5,5,0,0,0]],
-    q: [[-20,-10,-10,-5,-5,-10,-10,-20],[-10,0,0,0,0,0,0,-10],[-10,0,5,5,5,5,0,-10],[-5,0,5,5,5,5,0,-5],[0,0,5,5,5,5,0,-5],[-10,5,5,5,5,5,0,-10],[-10,0,5,0,0,0,0,-10],[-20,-10,-10,-5,-5,-10,-10,-20]],
-    k_mid: [[-30,-40,-40,-50,-50,-40,-40,-30],[-30,-40,-40,-50,-50,-40,-40,-30],[-30,-40,-40,-50,-50,-40,-40,-30],[-30,-40,-40,-50,-50,-40,-40,-30],[-20,-30,-30,-40,-40,-30,-30,-20],[-10,-20,-20,-20,-20,-20,-20,-10],[20,20,0,0,0,0,20,20],[20,30,10,0,0,10,30,20]],
-    k_end: [[-50,-40,-30,-20,-20,-30,-40,-50],[-30,-20,-10,0,0,-10,-20,-30],[-30,-10,20,30,30,20,-10,-30],[-30,-10,30,40,40,30,-10,-30],[-30,-10,30,40,40,30,-10,-30],[-30,-10,20,30,30,20,-10,-30],[-30,-30,0,0,0,0,-30,-30],[-50,-30,-30,-30,-30,-30,-30,-50]]
+    p: [ [0,0,0,0,0,0,0,0], [50,50,50,50,50,50,50,50], [10,10,20,30,30,20,10,10], [5,5,10,25,25,10,5,5], [0,0,0,20,20,0,0,0], [5,-5,-10,0,0,-10,-5,5], [5,10,10,-20,-20,10,10,5], [0,0,0,0,0,0,0,0] ],
+    n: [ [-50,-40,-30,-30,-30,-30,-40,-50], [-40,-20,0,0,0,0,-20,-40], [-30,0,10,15,15,10,0,-30], [-30,5,15,20,20,15,5,-30], [-30,0,15,20,20,15,0,-30], [-30,5,10,15,15,10,5,-30], [-40,-20,0,5,5,0,-20,-40], [-50,-40,-30,-30,-30,-30,-40,-50] ],
+    b: [ [-20,-10,-10,-10,-10,-10,-10,-20], [-10,0,0,0,0,0,0,-10], [-10,0,5,10,10,5,0,-10], [-10,5,5,10,10,5,5,-10], [-10,0,10,10,10,10,0,-10], [-10,10,10,10,10,10,10,-10], [-10,5,0,0,0,0,5,-10], [-20,-10,-10,-10,-10,-10,-10,-20] ],
+    r: [ [0,0,0,0,0,0,0,0], [5,10,10,10,10,10,10,5], [-5,0,0,0,0,0,0,-5], [-5,0,0,0,0,0,0,-5], [-5,0,0,0,0,0,0,-5], [-5,0,0,0,0,0,0,-5], [-5,0,0,0,0,0,0,-5], [0,0,0,5,5,0,0,0] ],
+    q: [ [-20,-10,-10,-5,-5,-10,-10,-20], [-10,0,0,0,0,0,0,-10], [-10,0,5,5,5,5,0,-10], [-5,0,5,5,5,5,0,-5], [0,0,5,5,5,5,0,-5], [-10,5,5,5,5,5,0,-10], [-10,0,5,0,0,0,0,-10], [-20,-10,-10,-5,-5,-10,-10,-20] ],
+    k_mid: [ [-30,-40,-40,-50,-50,-40,-40,-30], [-30,-40,-40,-50,-50,-40,-40,-30], [-30,-40,-40,-50,-50,-40,-40,-30], [-30,-40,-40,-50,-50,-40,-40,-30], [-20,-30,-30,-40,-40,-30,-30,-20], [-10,-20,-20,-20,-20,-20,-20,-10], [20,20,0,0,0,0,20,20], [20,30,10,0,0,10,30,20] ],
+    k_end: [ [-50,-40,-30,-20,-20,-30,-40,-50], [-30,-20,-10,0,0,-10,-20,-30], [-30,-10,20,30,30,20,-10,-30], [-30,-10,30,40,40,30,-10,-30], [-30,-10,30,40,40,30,-10,-30], [-30,-10,20,30,30,20,-10,-30], [-30,-30,0,0,0,0,-30,-30], [-50,-30,-30,-30,-30,-30,-30,-50] ]
   };
 
-  const squareToIndex = s => (s.charCodeAt(0)-97) + (8-parseInt(s[1]))*8;
-
   function evalBoard() {
-    let t=0, wp=0, bp=0, wm=0, bm=0, wk=null, bk=null, b = game.board();
+    let t=0, wp=0, bp=0, wm=0, bm=0, wk=null, bk=null;
+    let wPawnFiles = [0,0,0,0,0,0,0,0], bPawnFiles = [0,0,0,0,0,0,0,0];
+    let wAgg = 0, bAgg = 0;
+    
+    let b = game.board();
     for(let r=0; r<8; r++) {
       for(let c=0; c<8; c++) {
         let p = b[r][c]; if(!p) continue;
-        let isW = p.color==='w', rank = isW ? r : 7-r, val = p.type === 'k' ? V.k : V[p.type] * cfg.greed; 
-        if (p.type==='p') { if(isW){wp++; if(r<3)val+=(5-r)*45;}else{bp++; if(r>4)val+=(r-2)*45;} }
-        else if (p.type==='k') { let s = val+PST.k_mid[rank][c]; if(isW)wk={r,c,m:PST.k_mid[rank][c],e:PST.k_end[rank][c]};else bk={r,c,m:PST.k_mid[rank][c],e:PST.k_end[rank][c]}; t+=isW?s:-s; }
-        else { let s = val+PST[p.type][rank][c]; if(isW){wm+=val;t+=s;}else{bm+=val;t-=s;} }
+        let isW = p.color==='w', rank = isW ? r : 7-r;
+        let val = p.type === 'k' ? V.k : V[p.type] * cfg.greed; 
+        
+        if (p.type === 'p') {
+          if (isW) { 
+            wPawnFiles[c]++; wp++; 
+            if(r < 3) val += (5 - r) * 45;
+          } else { 
+            bPawnFiles[c]++; bp++; 
+            if(r > 4) val += (r - 2) * 45; 
+          }
+        } else if (p.type === 'k') {
+          let s = val + PST.k_mid[rank][c];
+          if(isW) { wk={r,c,m:PST.k_mid[rank][c],e:PST.k_end[rank][c]}; t+=s; }
+          else    { bk={r,c,m:PST.k_mid[rank][c],e:PST.k_end[rank][c]}; t-=s; }
+        } else {
+          let s = val + PST[p.type][rank][c];
+          if(isW) { wm+=val; t+=s; wAgg+=(7-r); } 
+          else    { bm+=val; t-=s; bAgg+=r; }
+        }
       }
     }
+    t += game.turn()==='w' ? (16-(wp+bp))*cfg.style*5 : -((16-(wp+bp))*cfg.style*5);
+    
+    let wStruct = 0, bStruct = 0;
+    for(let i=0; i<8; i++) {
+      if(wPawnFiles[i]>1) wStruct -= 15;
+      if(bPawnFiles[i]>1) bStruct -= 15;
+    }
+    t += (wStruct - bStruct) * cfg.structure;
+    t += (wAgg - bAgg) * 2 * cfg.aggression;
+
     if(wm<1500 && bm<1500 && wk && bk) { 
-        t -= wk.m - wk.e; t += bk.m - bk.e;
-        let d = (Math.max(3-bk.r,bk.r-4)+Math.max(3-bk.c,bk.c-4))*10 + (14-(Math.abs(wk.r-bk.r)+Math.abs(wk.c-bk.c)))*5;
-        t += t>300 ? d*20 : t<-300 ? -d*20 : 0;
+      t -= wk.m; t += wk.e; t -= -bk.m; t += -bk.e;
+      if(t>300) t += ((Math.max(3-bk.r,bk.r-4)+Math.max(3-bk.c,bk.c-4))*10 + (14-(Math.abs(wk.r-bk.r)+Math.abs(wk.c-bk.c)))*5)*20;
+      else if(t<-300) t -= ((Math.max(3-wk.r,wk.r-4)+Math.max(3-wk.c,wk.c-4))*10 + (14-(Math.abs(bk.r-wk.r)+Math.abs(bk.c-wk.c)))*5)*20;
     }
     return game.turn()==='w'?t:-t;
   }
 
-  function getMoves(depth, ttMove = null) {
-    let mvs = game.moves({verbose:true}), turn = game.turn()==='w'?0:1;
-    for(let m of mvs){
-      let s = 0;
-      if (ttMove && m.san === ttMove) s = 2000000;
-      else if (m.san.includes('#')) s = 1000000;
-      else if (m.flags.includes('c')) s = 100 * V[m.captured] - V[m.piece];
-      else if (killerMoves[depth] === m.san) s = 90000;
-      else s = historyTable[turn][squareToIndex(m.from)][squareToIndex(m.to)];
+  // =========================================================
+  // getMoves — TURBO #3: History Heuristic added to ordering
+  // =========================================================
+  function getMoves(depth, ttBestSan = null) {
+    let mvs = game.moves({verbose:true});
+    for(let i=0; i<mvs.length; i++){
+      let m = mvs[i]; let s = 0;
+      // Priority order: TT best > checkmate > captures (MVV-LVA) > promotions > killers > history
+      if (ttBestSan && m.san === ttBestSan) s = 1000000;       // TT best move first
+      else if (m.san.includes('#')) s = 900000;
+      else if (m.flags.includes('c')) s = 100 * (V[m.captured]||0) - V[m.piece];
+      else if (m.flags.includes('p')) s = 800;
+      else if (killerMoves[depth] === m.san) s = 700;
+      else {
+        // TURBO #3: History Heuristic — quiet moves ordered by past success
+        s = Math.min(historyTable[m.from + m.to] || 0, 690);
+      }
       m.score = s;
     }
     return mvs.sort((a,b)=>b.score-a.score);
@@ -192,186 +353,544 @@
     let pat = evalBoard();
     if(pat >= beta) return beta;
     if(pat > alpha) alpha = pat;
-    let mvs = game.moves({verbose: true}).filter(m => m.flags.includes('c'));
+    
+    let mvs = game.moves({verbose: true}).filter(m => m.flags.includes('c') || m.flags.includes('p'));
     for(let m of mvs) {
-      game.move(m); let s = -quiesce(-beta, -alpha); game.undo();
+      game.move(m);
+      let s = -quiesce(-beta, -alpha);
+      game.undo();
       if(s >= beta) return beta;
       if(s > alpha) alpha = s;
     }
     return alpha;
   }
 
+  // =========================================================
+  // alphaBeta — TURBO #1: TT probe/store + TURBO #3: history update
+  // =========================================================
   function alphaBeta(depth, alpha, beta, pline, ply) {
     if((nodes++ & 1023)===0 && Date.now()-startTime > searchLimitMs) timeUp = true;
     if(timeUp) return alpha;
 
-    // TURBO: Transposition Table Lookup
-    let fen = game.fen(), entry = tt.get(fen);
-    if(entry && entry.depth >= depth) {
-      if(entry.type === 'exact') return entry.score;
-      if(entry.type === 'lower' && entry.score >= beta) return beta;
-      if(entry.type === 'upper' && entry.score <= alpha) return alpha;
+    // TURBO #1: Transposition Table — Probe
+    const key = ttKey();
+    const tte = TT.get(key);
+    let ttBestSan = null;
+    if (tte) {
+      ttBestSan = tte.best || null;
+      if (tte.depth >= depth) {
+        if (tte.flag === TT_EXACT) {
+          // Reconstruct pline hint from TT best if available
+          return tte.score;
+        }
+        if (tte.flag === TT_LOWER && tte.score >= beta) return tte.score;
+        if (tte.flag === TT_UPPER && tte.score <= alpha) return tte.score;
+      }
     }
 
     if(depth<=0) return quiesce(alpha, beta);
-    let mvs = getMoves(depth, entry?entry.best:null);
+
+    let mvs = getMoves(depth, ttBestSan);
     if(mvs.length===0) return game.in_check() ? -90000 + ply : 0; 
 
-    let bestMove = null, oldAlpha = alpha;
+    const origAlpha = alpha;
+    let bestSanInNode = null;
+
     for(let i=0; i<mvs.length; i++) {
-      game.move(mvs[i]); let cl = [], s;
-      if (depth >= 3 && i > 4 && !mvs[i].flags.includes('c') && !game.in_check()) s = -alphaBeta(depth-2, -beta, -alpha, cl, ply+1);
-      else s = -alphaBeta(depth-1, -beta, -alpha, cl, ply+1);
+      game.move(mvs[i]); 
+      let cl = [], s;
+      
+      // Late Move Reduction (LMR) — existing, unchanged
+      if (depth >= 3 && i > 4 && !mvs[i].flags.includes('c') && !game.in_check()) {
+          s = -alphaBeta(depth - 2, -beta, -alpha, cl, ply + 1);
+          // Re-search at full depth if LMR raises alpha
+          if (s > alpha && !timeUp) s = -alphaBeta(depth - 1, -beta, -alpha, cl, ply + 1);
+      } else {
+          s = -alphaBeta(depth - 1, -beta, -alpha, cl, ply + 1);
+      }
+      
       game.undo();
       if(s >= beta) {
-        if(!mvs[i].flags.includes('c')) {
-            killerMoves[depth] = mvs[i].san;
-            historyTable[game.turn()==='w'?0:1][squareToIndex(mvs[i].from)][squareToIndex(mvs[i].to)] += depth*depth;
+        // Beta cutoff
+        if (!mvs[i].flags.includes('c')) {
+          killerMoves[depth] = mvs[i].san;
+          // TURBO #3: Reward this quiet move in history (depth^2 weighting)
+          const hk = mvs[i].from + mvs[i].to;
+          historyTable[hk] = (historyTable[hk] || 0) + depth * depth;
         }
-        tt.set(fen, {depth, score: beta, type: 'lower', best: mvs[i].san});
+        // TURBO #1: TT store — Lower bound
+        if (TT.size >= TT_MAX) TT.clear(); // Age out when full (crude but fast)
+        TT.set(key, { depth, score: beta, flag: TT_LOWER, best: mvs[i].san });
         return beta;
       }
-      if(s > alpha) { alpha=s; bestMove=mvs[i]; pline.length=0; pline.push(mvs[i], ...cl); }
+      if(s > alpha) {
+        alpha = s;
+        bestSanInNode = mvs[i].san;
+        pline.length = 0;
+        pline.push(mvs[i], ...cl);
+      }
     }
-    tt.set(fen, {depth, score: alpha, type: alpha <= oldAlpha ? 'upper' : 'exact', best: bestMove?bestMove.san:null});
+
+    // TURBO #1: TT store — Exact or Upper bound
+    const flag = alpha <= origAlpha ? TT_UPPER : TT_EXACT;
+    if (TT.size >= TT_MAX) TT.clear();
+    TT.set(key, { depth, score: alpha, flag, best: bestSanInNode });
+
     return alpha;
   }
 
+  // =========================================================
+  // onmessage — TURBO #2: Aspiration Windows in iterative deepening
+  // =========================================================
   self.onmessage = function(e) {
-    let { fen, elo, style, greed, aggression, timeLimit } = e.data;
-    game.load(fen); searchLimitMs = timeLimit * 1000; startTime = Date.now();
-    cfg = { style, greed, aggression, qDepth: elo<2000?4:8 };
+    let { fen, elo, style, greed, aggression, defense, structure, timeLimit } = e.data;
+    game.load(fen);
+    searchLimitMs = timeLimit * 1000;
+    cfg = { style, greed, aggression, defense, structure };
+    startTime = Date.now();
     timeUp = false; nodes = 0; killerMoves = [];
-    if(nodes === 0) tt.clear(); // Clear TT every new move to keep memory safe
+    // NOTE: TT is intentionally NOT cleared here — it persists across moves for a big speed gain.
+    // historyTable persists too; it's only cleared on new game (worker restart).
 
-    let targetDepth = elo<1500?4:elo<2500?8:16, bestMove=null, lastScore=0, bestLine=[];
+    let targetDepth = elo < 1500 ? 3 : elo < 2500 ? 6 : 12;
+    let bestMove = null, bestScore = 0, bestLine = [], prevBestSan = null;
     
-    for(let d=1; d<=targetDepth; d++) {
-      // TURBO: Aspiration Windows
-      let alpha = d<3 ? -Infinity : lastScore - 50, beta = d<3 ? Infinity : lastScore + 50;
-      let cl = [];
-      let s = alphaBeta(d, alpha, beta, cl, 0);
-      
-      if (s <= alpha || s >= beta) s = alphaBeta(d, -Infinity, Infinity, cl, 0); // Research full if failed
-      
-      if(timeUp) break;
-      bestMove = cl[0]; lastScore = s; bestLine = cl;
-      postMessage({ status: 'thinking', move: bestMove.san, eval: s, line: bestLine, depth: d, nodes });
-      if (s > 80000 || s < -80000) break; 
+    // Iterative Deepening with TURBO #2: Aspiration Windows
+    for(let d = 1; d <= targetDepth; d++) {
+      if (timeUp) break;
+
+      // TURBO #2: Aspiration Windows
+      // At shallow depths, search full window. From depth 3 onward, start narrow.
+      let delta = 50;
+      let aspirAlpha = (d > 2 && bestMove) ? bestScore - delta : -Infinity;
+      let aspirBeta  = (d > 2 && bestMove) ? bestScore + delta : Infinity;
+
+      let curBest = null, curScore = -Infinity, curLine = [];
+
+      // Aspiration re-search loop — widens window on fail-low/fail-high
+      while (true) {
+        let mvs = getMoves(d, prevBestSan);
+        let alpha = aspirAlpha;
+        let iterBest = null, iterScore = -Infinity, iterLine = [];
+
+        for(let m of mvs) {
+          if(timeUp) break;
+          game.move(m);
+          let cl = [];
+          let s = -alphaBeta(d - 1, -aspirBeta, -alpha, cl, 1);
+          game.undo();
+          if(s > iterScore) { iterScore = s; iterBest = m; iterLine = [m, ...cl]; }
+          if(s > alpha) alpha = s;
+        }
+
+        if (timeUp) {
+          // Accept whatever we found before timeout
+          if (iterBest) { curBest = iterBest; curScore = iterScore; curLine = iterLine; }
+          break;
+        }
+
+        // TURBO #2: Check aspiration window result
+        if (iterScore <= aspirAlpha) {
+          // Fail-low: widen lower bound and re-search
+          delta = Math.min(delta * 3, 600);
+          aspirAlpha = Math.max(aspirAlpha - delta, -Infinity);
+          if (aspirAlpha < -50000) aspirAlpha = -Infinity;
+        } else if (iterScore >= aspirBeta) {
+          // Fail-high: widen upper bound and re-search
+          delta = Math.min(delta * 3, 600);
+          aspirBeta = Math.min(aspirBeta + delta, Infinity);
+          if (aspirBeta > 50000) aspirBeta = Infinity;
+        } else {
+          // Within window — accept result
+          curBest = iterBest; curScore = iterScore; curLine = iterLine;
+          break;
+        }
+        // Safety: if window has blown fully open just break
+        if (aspirAlpha === -Infinity && aspirBeta === Infinity) {
+          curBest = iterBest; curScore = iterScore; curLine = iterLine;
+          break;
+        }
+      }
+
+      if (!timeUp && curBest) {
+        bestMove = curBest; bestScore = curScore; bestLine = curLine;
+        prevBestSan = curBest.san; 
+        postMessage({ status: 'thinking', move: bestMove.san, eval: bestScore, line: bestLine, depth: d, nodes });
+      }
+      if (bestScore > 80000 || timeUp) break; 
     }
-    postMessage({ status: 'done', move: bestMove || getMoves(1)[0], eval: lastScore, line: bestLine, nodes });
+
+    postMessage({ status: 'done', move: bestMove || getMoves(1)[0], eval: bestScore, line: bestLine, depth: targetDepth, nodes });
   };
 </script>
 
+<!-- =======================================================================
+     MAIN THREAD UI SCRIPT
+======================================================================== -->
 <script>
-let game = new Chess(), board = null, currentPremove = null, isBotThinking = false, engineWorker = null, userArrows = [], selectedSquare = null, playerColor = 'w';
+let game = new Chess();
+let board = null;
+let currentPremove = null; 
+let isBotThinking = false;
+let engineWorker = null;
+let userArrows = [];
+let selectedSquare = null;
+let playerColor = 'w';
 
-const themes = { classic: { light: '#eeeed2', dark: '#769656' }, wood: { light: '#f0d9b5', dark: '#b58863' }, ocean: { light: '#eae9d2', dark: '#4b7399' }, slate: { light: '#98a6b5', dark: '#5c7080' } };
-const personaGroups = [{ groupName: "World Champions", personas: [{ name: "Stockfish Base", stats: { agg: 1.0, greed: 1.0, style: 0 } }, { name: "Mikhail Tal", stats: { agg: 2.8, greed: 0.7, style: 4 } }, { name: "Magnus Carlsen", stats: { agg: 1.2, greed: 1.1, style: 1 } }] }];
+// =========================================================
+// TURBO #4 — Hardware Concurrency Detection
+// =========================================================
+const CPU_CORES = navigator.hardwareConcurrency || 4;
+
+function updateHwInfo(extraInfo) {
+  const base = `⚡ V2.3 Turbo · <span>${CPU_CORES} CPU core${CPU_CORES !== 1 ? 's' : ''}</span> · TT + Aspiration + History`;
+  document.getElementById('hw-info').innerHTML = extraInfo ? base + ' · ' + extraInfo : base;
+}
+
+/* ---------------- OPENING BOOK ---------------- */
+const openingBook = {
+  "e4": { "e5": { "Nf3": { "Nc6": { "Bb5": "Ruy Lopez", "Bc4": "Italian Game" }}}, "c5": { "Nf3": { "d6": { "d4": "Sicilian Defense" }}}, "e6": { "d4": { "d5": "French Defense" }}, "c6": { "d4": { "d5": "Caro-Kann" }}},
+  "d4": { "d5": { "c4": { "e6": "QGD", "c6": "Slav Defense" }}, "Nf6": { "c4": { "g6": "King's Indian", "e6": "Nimzo-Indian" }}}
+};
+
+function getBookMove() {
+  if (!document.getElementById('use-book').checked) return null;
+  let node = openingBook;
+  for (let m of game.history()) { if (!node || !node[m]) return null; node = node[m]; }
+  if (typeof node === "string") return null;
+  let keys = Object.keys(node);
+  return keys[Math.floor(Math.random() * keys.length)];
+}
+
+/* ---------------- PERSONA SYSTEM ---------------- */
+const personaGroups = [
+  {
+    groupName: "World Champions",
+    personas: [
+      { id: "stockfish", name: "Stockfish Base", desc: "Objective & Balanced", stats: { agg: 1.0, def: 1.0, greed: 1.0, style: 0, struct: 1.0 } },
+      { id: "tal", name: "Mikhail Tal", desc: "The Magician (Attacker)", stats: { agg: 2.8, def: 0.4, greed: 0.7, style: 4, struct: 0.2 } },
+      { id: "petrosian", name: "Tigran Petrosian", desc: "Iron Tigran (Defender)", stats: { agg: 0.3, def: 2.8, greed: 0.9, style: -4, struct: 1.8 } },
+      { id: "karpov", name: "Anatoly Karpov", desc: "Positional Boa Constrictor", stats: { agg: 0.7, def: 1.5, greed: 1.0, style: -3, struct: 2.8 } },
+      { id: "capablanca", name: "José Capablanca", desc: "Simple & Deadly", stats: { agg: 0.9, def: 1.2, greed: 1.1, style: 0, struct: 2.0 } },
+      { id: "fischer", name: "Bobby Fischer", desc: "Aggressive Precision", stats: { agg: 2.0, def: 1.2, greed: 1.3, style: 2, struct: 1.5 } },
+      { id: "kasparov", name: "Garry Kasparov", desc: "Dynamic Fury", stats: { agg: 2.2, def: 1.1, greed: 1.1, style: 2, struct: 1.2 } },
+      { id: "botvinnik", name: "Mikhail Botvinnik", desc: "Scientific / Methodical", stats: { agg: 1.5, def: 1.5, greed: 1.2, style: 1, struct: 2.0 } }
+    ]
+  },
+  {
+    groupName: "Aggressive & Gambiteers",
+    personas: [
+      { id: "m_morphy", name: "Paul Morphy", desc: "Romantic Gambit Style", stats: { agg: 2.5, def: 0.2, greed: 0.5, style: 5, struct: 0.1 } },
+      { id: "shirov", name: "Alexei Shirov", desc: "Tactical Fire on Board", stats: { agg: 2.6, def: 0.5, greed: 0.8, style: 4, struct: 0.5 } },
+      { id: "chigorin", name: "Mikhail Chigorin", desc: "Aggressive & Unorthodox", stats: { agg: 2.0, def: 0.6, greed: 0.7, style: 3, struct: 0.3 } }
+    ]
+  },
+  {
+    groupName: "Positional Masters",
+    personas: [
+      { id: "rubinstein", name: "Akiba Rubinstein", desc: "King of Endgames", stats: { agg: 0.6, def: 1.8, greed: 1.0, style: -2, struct: 2.5 } },
+      { id: "nimzowitsch", name: "Aron Nimzowitsch", desc: "Hypermodern Logic", stats: { agg: 0.8, def: 1.4, greed: 0.9, style: -3, struct: 2.2 } },
+      { id: "smyslov", name: "Vasily Smyslov", desc: "Harmonious Play", stats: { agg: 1.0, def: 1.4, greed: 1.1, style: 0, struct: 1.8 } }
+    ]
+  },
+  {
+    groupName: "Modern Grandmasters",
+    personas: [
+      { id: "hikaru", name: "Hikaru Nakamura", desc: "Tactical Blitz Legend", stats: { agg: 2.0, def: 0.8, greed: 1.4, style: 3, struct: 0.8 } },
+      { id: "carlsen", name: "Magnus Carlsen", desc: "The Universal Machine", stats: { agg: 1.2, def: 1.3, greed: 1.1, style: 1, struct: 2.5 } },
+      { id: "anand", name: "Viswanathan Anand", desc: "Rapid Intuition", stats: { agg: 1.8, def: 1.0, greed: 1.2, style: 2, struct: 1.5 } }
+    ]
+  },
+  {
+    groupName: "The 'Human' Archetypes",
+    personas: [
+      { id: "impatient", name: "The Impatient Attacker", desc: "Always attacks, no patience", stats: { agg: 2.5, def: 0.3, greed: 0.9, style: 4, struct: 0.5 } },
+      { id: "scared", name: "The Scared Defender", desc: "Avoids conflict at all costs", stats: { agg: 0.2, def: 2.5, greed: 0.5, style: -4, struct: 0.5 } },
+      { id: "greedy", name: "The Materialist", desc: "Will take any poison pawn", stats: { agg: 1.0, def: 0.5, greed: 2.0, style: 1, struct: 0.5 } },
+      { id: "careless", name: "The Careless Tactician", desc: "Fun but blunders structure", stats: { agg: 1.5, def: 0.5, greed: 1.5, style: 2, struct: 0.1 } }
+    ]
+  },
+  {
+    groupName: "Extreme / Quirky",
+    personas: [
+      { id: "berserker", name: "Berserker", desc: "Pure Chaos & Sacrifices", stats: { agg: 3.0, def: 0.1, greed: 0.5, style: 5, struct: 0.1 } },
+      { id: "fortress", name: "The Fortress", desc: "Extreme Defense & Shuffling", stats: { agg: 0.1, def: 3.0, greed: 0.5, style: -5, struct: 3.0 } },
+      { id: "robot", name: "The Robot", desc: "Structure Obsessed", stats: { agg: 1.0, def: 1.0, greed: 1.0, style: 0, struct: 3.0 } },
+      { id: "gambit_all", name: "Gambit Everything", desc: "Will sacrifice all pawns", stats: { agg: 2.8, def: 0.1, greed: 0.2, style: 5, struct: 0.1 } },
+      { id: "grinder", name: "The Grinder", desc: "Slowly squeezes the life out", stats: { agg: 0.8, def: 1.2, greed: 1.2, style: -1, struct: 2.5 } }
+    ]
+  }
+];
 
 function buildPersonaModal() {
-  let list = document.getElementById("persona-list"); list.innerHTML = "";
-  personaGroups.forEach(g => {
-    list.innerHTML += `<div style="padding:10px; background:#222; color:var(--accent); font-weight:bold;">${g.groupName}</div>`;
-    g.personas.forEach(p => {
-      list.innerHTML += `<div class="persona-item" style="padding:15px; cursor:pointer; border-bottom:1px solid #333;" onclick='applyPreset("${p.name}", ${JSON.stringify(p.stats)})'>${p.name}</div>`;
+  let list = document.getElementById("persona-list");
+  list.innerHTML = "";
+  personaGroups.forEach(group => {
+    list.innerHTML += `<div class="persona-group">${group.groupName}</div>`;
+    group.personas.forEach(p => {
+      let statStr = JSON.stringify(p.stats);
+      list.innerHTML += `
+        <div class="persona-item" onclick='applyPreset("${p.name}", ${statStr})'>
+          <div class="persona-name">${p.name}</div>
+          <div class="persona-desc">${p.desc}</div>
+        </div>`;
     });
   });
 }
 
-function openPersonaModal() { $("#persona-modal").css("display", "flex"); }
-function closePersonaModal() { $("#persona-modal").hide(); }
+function openPersonaModal() { document.getElementById("persona-modal").classList.add("visible"); }
+function closePersonaModal() { document.getElementById("persona-modal").classList.remove("visible"); }
 
-function applyPreset(name, stats) {
-  $("#persona-btn-text").text(name);
-  $("#aggression").val(stats.agg); $("#greed").val(stats.greed); $("#style").val(stats.style);
-  updateUI(); closePersonaModal();
+window.onclick = function(event) {
+  let modal = document.getElementById('persona-modal');
+  if (event.target == modal) closePersonaModal();
 }
 
+function applyPreset(name, stats) {
+  document.getElementById("persona-btn-text").innerText = name;
+  document.getElementById('aggression').value = stats.agg;
+  document.getElementById('defense').value = stats.def;
+  document.getElementById('greed').value = stats.greed;
+  document.getElementById('style').value = stats.style;
+  document.getElementById('structure').value = stats.struct;
+  updateUI();
+  closePersonaModal();
+}
+
+function customPersona() { document.getElementById("persona-btn-text").innerText = "Custom..."; }
+
+/* ---------------- UI & THEMES ---------------- */
+const themes = {
+  classic: { light: '#eeeed2', dark: '#769656' },
+  wood: { light: '#f0d9b5', dark: '#b58863' },
+  ocean: { light: '#eae9d2', dark: '#4b7399' },
+  slate: { light: '#98a6b5', dark: '#5c7080' }
+};
+
+function togglePanel(id) { document.getElementById(id).classList.toggle('open'); }
+function closePanels() { if(window.innerWidth <= 1024) document.querySelectorAll('.side-panel').forEach(p => p.classList.remove('open')); }
+
 function updateUI() {
-  $("#elo-val").text($("#elo").val());
-  $("#time-val").text($("#think-time").val() + "s");
-  $("#cpu-cores").text(navigator.hardwareConcurrency || "1");
-  $("#agg-val").text($("#aggression").val()); $("#greed-val").text($("#greed").val());
+  document.getElementById('elo-val').innerText = document.getElementById('elo').value;
+  document.getElementById('style-val').innerText = document.getElementById('style').value < -2 ? "Closed" : document.getElementById('style').value > 2 ? "Open" : "Balanced";
+  document.getElementById('time-val').innerText = document.getElementById('think-time').value + "s";
+  let g = document.getElementById('greed').value;
+  document.getElementById('greed-val').innerText = g < 0.8 ? "Positional" : g > 1.2 ? "Greedy" : "Normal";
+  document.getElementById('agg-val').innerText = document.getElementById('aggression').value;
+  document.getElementById('def-val').innerText = document.getElementById('defense').value;
+  document.getElementById('struct-val').innerText = document.getElementById('structure').value;
 }
 
 function applyThemes() {
-  let b = themes[$("#board-theme").val()];
-  document.documentElement.style.setProperty('--light-sq', b.light);
-  document.documentElement.style.setProperty('--dark-sq', b.dark);
+  let bTheme = document.getElementById('board-theme').value;
+  let pTheme = document.getElementById('piece-theme').value;
+  document.documentElement.style.setProperty('--light-sq', themes[bTheme].light);
+  document.documentElement.style.setProperty('--dark-sq', themes[bTheme].dark);
+  
   if (board) board.destroy();
-  board = Chessboard('board', { position: game.fen(), draggable: true, orientation: playerColor === 'w' ? 'white' : 'black', pieceTheme: `https://lichess1.org/assets/piece/${$("#piece-theme").val()}/{piece}.svg`, onDragStart: onDragStart, onDrop: onDrop, onSnapEnd: onSnapEnd });
+  board = Chessboard('board', {
+    position: game.fen(), draggable: true, orientation: playerColor === 'w' ? 'white' : 'black',
+    pieceTheme: `https://lichess1.org/assets/piece/${pTheme}/{piece}.svg`,
+    onDragStart: onDragStart, onDrop: onDrop, onSnapEnd: onSnapEnd
+  });
 }
 
 function updateLog() {
-  let div = $("#moves"); div.empty(); let h = game.history();
-  for (let i=0; i<h.length; i+=2) div.append(`<div class="move-num">${(i/2)+1}.</div><div>${h[i]}</div><div>${h[i+1]||''}</div>`);
-  div.scrollTop(div[0].scrollHeight);
+  let div = document.getElementById("moves"); div.innerHTML = ""; 
+  let h = game.history();
+  for (let i=0; i<h.length; i+=2) div.innerHTML += `<div class="move-num">${(i/2)+1}.</div><div>${h[i]}</div><div>${h[i+1]||''}</div>`;
+  div.scrollTop = div.scrollHeight;
+}
+
+/* ---------------- DRAWING (ARROWS & DOTS) ---------------- */
+function drawArrowCore(from, to, color, width, containerId) {
+  const files = { a:0, b:1, c:2, d:3, e:4, f:5, g:6, h:7 }, ranks = { 1:7, 2:6, 3:5, 4:4, 5:3, 6:2, 7:1, 8:0 };
+  let fx = (files[from[0]] * 12.5) + 6.25, fy = (ranks[from[1]] * 12.5) + 6.25;
+  let tx = (files[to[0]] * 12.5) + 6.25, ty = (ranks[to[1]] * 12.5) + 6.25;
+  if (playerColor === 'b') { fx = 100 - fx; fy = 100 - fy; tx = 100 - tx; ty = 100 - ty; }
+  
+  let mId = "head-" + color.replace(/[^a-zA-Z0-9]/g, "") + width.toString().replace(".","") + containerId + from + to;
+  document.getElementById(containerId).innerHTML += `<defs><marker id="${mId}" orient="auto" markerWidth="4" markerHeight="6" refX="3.5" refY="3"><path d="M0,0 V6 L4,3 Z" fill="${color}" /></marker></defs><line x1="${fx}%" y1="${fy}%" x2="${tx}%" y2="${ty}%" stroke="${color}" stroke-width="${width}%" marker-end="url(#${mId})" />`;
 }
 
 function drawPV(line) {
-  $("#bot-arrows").empty(); if (!line || line.length === 0) return;
-  line.slice(0, 3).forEach((m, i) => drawArrowCore(m.from, m.to, i===0 ? "rgba(0, 255, 100, 0.7)" : "rgba(0, 200, 255, 0.5)", 2.5, "bot-arrows"));
+  document.getElementById("bot-arrows").innerHTML = "";
+  if (!line || line.length === 0) return;
+  line.forEach((m, i) => drawArrowCore(m.from, m.to, i===0 ? "rgba(0, 255, 100, 0.7)" : "rgba(0, 200, 255, 0.5)", Math.max(0.6, 2.5 - (i * 0.4)), "bot-arrows"));
 }
 
-function drawArrowCore(from, to, color, width, containerId) {
-  const f = {a:0,b:1,c:2,d:3,e:4,f:5,g:6,h:7}, r = {1:7,2:6,3:5,4:4,5:3,6:2,7:1,8:0};
-  let fx=(f[from[0]]*12.5)+6.25, fy=(r[from[1]]*12.5)+6.25, tx=(f[to[0]]*12.5)+6.25, ty=(r[to[1]]*12.5)+6.25;
-  if (playerColor === 'b') { fx=100-fx; fy=100-fy; tx=100-tx; ty=100-ty; }
-  let mid = "h"+Math.random();
-  document.getElementById(containerId).innerHTML += `<defs><marker id="${mid}" orient="auto" markerWidth="4" markerHeight="6" refX="3.5" refY="3"><path d="M0,0 V6 L4,3 Z" fill="${color}" /></marker></defs><line x1="${fx}%" y1="${fy}%" x2="${tx}%" y2="${ty}%" stroke="${color}" stroke-width="${width}%" marker-end="url(#${mid})" />`;
+function renderUserArrows() {
+  document.getElementById("user-arrows").innerHTML = "";
+  userArrows.forEach(a => drawArrowCore(a.from, a.to, "rgba(25, 118, 210, 0.8)", 2.5, "user-arrows"));
 }
 
 function showLegalMoves(sq) {
-  $('.square-55d63').removeClass('highlight-dot highlight-capture highlight-selected');
+  clearHighlights();
   $('.square-' + sq).addClass('highlight-selected');
   game.moves({square: sq, verbose: true}).forEach(m => $('.square-' + m.to).addClass(m.captured ? 'highlight-capture' : 'highlight-dot'));
 }
 
-function makeAIMove() {
-  if (game.game_over()) return;
-  isBotThinking = true; $("#status-badge").text("Turbo Calculating...").css("background", "#d32f2f");
-  engineWorker.postMessage({ fen: game.fen(), elo: parseInt($("#elo").val()), timeLimit: parseFloat($("#think-time").val()), style: parseInt($("#style").val()), greed: parseFloat($("#greed").val()), aggression: parseFloat($("#aggression").val()) });
-}
+function clearHighlights() { $('.square-55d63').removeClass('highlight-dot highlight-capture highlight-selected'); }
+function clearPremove() { $('.square-55d63').removeClass('premove-square'); currentPremove = null; }
 
-function onDragStart(s, p) { if (game.game_over() || p[0] !== playerColor) return false; showLegalMoves(s); }
-function onDrop(s, t) {
-  if (s === t) return 'snapback';
-  if (isBotThinking || game.turn() !== playerColor) {
-    currentPremove = { from: s, to: t, promotion: 'q' };
-    $('.square-55d63').removeClass('premove-square'); $('.square-'+s).addClass('premove-square'); $('.square-'+t).addClass('premove-square');
-    return 'snapback';
+/* ---------------- CLICK-TO-MOVE & RIGHT-CLICK ---------------- */
+let rClickSq = null;
+document.addEventListener('contextmenu', e => { if(e.target.closest('#board-container')) e.preventDefault(); });
+
+$('#board').on('mousedown', '.square-55d63', function(e) {
+  if (e.which === 3) rClickSq = $(this).attr('data-square'); 
+}).on('mouseup', '.square-55d63', function(e) {
+  let sq = $(this).attr('data-square');
+  if (e.which === 3) {
+    if (rClickSq === sq) { userArrows = []; clearPremove(); } 
+    else if (rClickSq) {
+      let idx = userArrows.findIndex(a => a.from === rClickSq && a.to === sq);
+      if (idx >= 0) userArrows.splice(idx, 1); 
+      else userArrows.push({from: rClickSq, to: sq});
+    }
+    renderUserArrows(); rClickSq = null;
   }
-  let m = game.move({ from: s, to: t, promotion: 'q' });
-  if (!m) return 'snapback';
-  $('.square-55d63').removeClass('highlight-dot highlight-capture highlight-selected premove-square');
-  updateLog(); setTimeout(makeAIMove, 100);
-}
-function onSnapEnd() { board.position(game.fen()); }
+}).on('click', '.square-55d63', function() {
+  let sq = $(this).attr('data-square');
+  if (selectedSquare && selectedSquare !== sq) {
+    let isValid = game.moves({square: selectedSquare, verbose:true}).some(m => m.to === sq);
+    if (isValid) {
+      if (isBotThinking || game.turn() !== playerColor) {
+        currentPremove = { from: selectedSquare, to: sq, promotion: 'q' };
+        $('.square-55d63').removeClass('premove-square');
+        $('.square-' + selectedSquare).addClass('premove-square');
+        $('.square-' + sq).addClass('premove-square');
+      } else {
+        game.move({ from: selectedSquare, to: sq, promotion: 'q' });
+        board.position(game.fen()); updateLog(); makeAIMove();
+      }
+      selectedSquare = null; clearHighlights(); return;
+    }
+  }
+  let p = game.get(sq);
+  if (p && p.color === playerColor) { selectedSquare = sq; showLegalMoves(sq); } 
+  else { selectedSquare = null; clearHighlights(); }
+});
 
-function resetGame() {
-  if(engineWorker) engineWorker.terminate();
-  let b = new Blob([document.getElementById('worker-code').textContent], {type: 'text/javascript'});
-  engineWorker = new Worker(URL.createObjectURL(b));
-  engineWorker.onmessage = e => {
-    if(e.data.status==='thinking') {
-      let ev = e.data.eval; $("#eval-bar").text("Eval: " + (Math.abs(ev)>80000 ? "M"+(ev>0?'+':'-') : (ev*(game.turn()==='w'?-1:1)/100).toFixed(2)));
-      drawPV(e.data.line);
-    } else {
-      game.move(e.data.move); board.position(game.fen()); updateLog(); $("#bot-arrows").empty(); isBotThinking = false;
-      $("#status-badge").text("Your Turn").css("background", "#4caf50");
-      if(currentPremove) { let pm = currentPremove; currentPremove=null; $('.square-55d63').removeClass('premove-square'); if(game.move(pm)){ board.position(game.fen()); updateLog(); makeAIMove(); } }
+/* ---------------- AI CONTROLLER ---------------- */
+function initWorker() {
+  if (engineWorker) engineWorker.terminate();
+  let blob = new Blob([document.getElementById('worker-code').textContent], {type: 'text/javascript'});
+  engineWorker = new Worker(URL.createObjectURL(blob));
+  
+  engineWorker.onmessage = function(e) {
+    let d = e.data;
+    if (d.status === 'thinking') {
+      let ev = d.eval;
+      if (Math.abs(ev) > 80000) document.getElementById("eval-bar").innerText = `Eval: M${ev > 0 ? '+' : '-'}`; 
+      else {
+        let disp = (ev * (game.turn()==='w'?-1:1) / 100).toFixed(2);
+        document.getElementById("eval-bar").innerText = `Eval: ${disp>0?'+':''}${disp}`;
+      }
+      document.getElementById("commentary").innerText = `Depth: ${d.depth} | Nodes: ${d.nodes.toLocaleString()}\nLine: ${d.line.map(x=>x.san).join(' ')}`;
+      drawPV(d.line);
+    } 
+    else if (d.status === 'done') {
+      game.move(d.move);
+      board.position(game.fen());
+      updateLog();
+      document.getElementById("bot-arrows").innerHTML = ""; 
+      isBotThinking = false;
+      document.getElementById("status-badge").innerText = "Your Turn";
+      document.getElementById("status-badge").style.background = "#4caf50";
+      
+      if (game.game_over()) setTimeout(() => alert(game.in_checkmate() ? "Checkmate!" : "Draw!"), 100);
+      else if (currentPremove) {
+        let pm = currentPremove; clearPremove();
+        if (game.move(pm)) { board.position(game.fen()); updateLog(); makeAIMove(); }
+      }
     }
   };
-  let col = $("#player-color").val(); playerColor = col==='r' ? (Math.random()<0.5?'w':'b') : col;
-  game.reset(); applyThemes(); updateLog(); updateUI();
-  if(playerColor==='b') makeAIMove();
 }
 
-function togglePanel(id) { $("#"+id).toggleClass("open"); }
-function closePanels() { if(window.innerWidth <= 1024) $(".side-panel").removeClass("open"); }
+function makeAIMove() {
+  if (game.game_over()) return;
+  isBotThinking = true;
+  document.getElementById("status-badge").innerText = "Bot Thinking...";
+  document.getElementById("status-badge").style.background = "#d32f2f";
+  document.getElementById("bot-arrows").innerHTML = "";
 
-buildPersonaModal(); resetGame();
+  let bookMoveSan = getBookMove();
+  if (bookMoveSan) {
+    setTimeout(() => {
+      game.move(bookMoveSan); board.position(game.fen()); updateLog();
+      document.getElementById("commentary").innerText = "Theory: " + openingBook[game.history()[0]];
+      isBotThinking = false;
+      document.getElementById("status-badge").innerText = "Your Turn";
+      document.getElementById("status-badge").style.background = "#4caf50";
+      if (currentPremove) {
+        let pm = currentPremove; clearPremove();
+        if (game.move(pm)) { board.position(game.fen()); updateLog(); makeAIMove(); }
+      }
+    }, 400); 
+    return;
+  }
+
+  engineWorker.postMessage({
+    fen: game.fen(),
+    elo: parseInt(document.getElementById('elo').value),
+    timeLimit: parseFloat(document.getElementById('think-time').value),
+    style: parseInt(document.getElementById('style').value),
+    greed: parseFloat(document.getElementById('greed').value),
+    aggression: parseFloat(document.getElementById('aggression').value),
+    defense: parseFloat(document.getElementById('defense').value),
+    structure: parseFloat(document.getElementById('structure').value)
+  });
+}
+
+/* ---------------- CHESSBOARD BINDINGS ---------------- */
+function onDragStart (source, piece) {
+  if (game.game_over() || piece.charAt(0) !== playerColor) return false; 
+  document.getElementById("bot-arrows").innerHTML = "";
+  clearPremove(); selectedSquare = source; showLegalMoves(source);
+}
+
+function onDrop (source, target) {
+  selectedSquare = null; clearHighlights();
+  if (source === target) return 'snapback';
+
+  if (isBotThinking || game.turn() !== playerColor) {
+    currentPremove = { from: source, to: target, promotion: 'q' };
+    $('.square-' + source).addClass('premove-square');
+    $('.square-' + target).addClass('premove-square');
+    return 'snapback'; 
+  }
+
+  let move = game.move({ from: source, to: target, promotion: 'q' });
+  if (move === null) return 'snapback';
+
+  clearPremove(); updateLog(); makeAIMove();
+}
+
+function onSnapEnd () { board.position(game.fen()); }
+
+function resetGame() {
+  initWorker(); 
+  let colSel = document.getElementById('player-color').value;
+  playerColor = colSel === 'r' ? (Math.random() < 0.5 ? 'w' : 'b') : colSel;
+  
+  isBotThinking = false; selectedSquare = null; userArrows = [];
+  game.reset(); applyThemes(); 
+  
+  document.getElementById("bot-arrows").innerHTML = "";
+  document.getElementById("user-arrows").innerHTML = "";
+  clearPremove(); clearHighlights(); updateLog();
+  document.getElementById("status-badge").innerText = playerColor === 'w' ? "Your Turn" : "Bot Thinking...";
+  document.getElementById("status-badge").style.background = playerColor === 'w' ? "#4caf50" : "#d32f2f";
+  document.getElementById("eval-bar").innerText = "Eval: 0.00";
+  document.getElementById("commentary").innerText = "New game started.";
+  updateHwInfo(); // TURBO: Show hardware info on reset
+  
+  if (playerColor === 'b') setTimeout(makeAIMove, 250);
+}
+
+// Startup
+buildPersonaModal(); updateUI(); resetGame();
 </script>
 </body>
 </html>
