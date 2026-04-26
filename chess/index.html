@@ -608,7 +608,7 @@
         function isAttacked(sq, byBlack) {
             let occ = wOcc() | bOcc();
             let o = byBlack ? 6 : 0;
-            if (PAWN_ATTACKS[byBlack?0:1][sq] & bb[o]) return true;
+            if (PAWN_ATTACKS[byBlack][sq] & bb[o]) return true;
             if (KNIGHT_ATTACKS[sq] & bb[o+1]) return true;
             if (KING_ATTACKS[sq] & bb[o+5]) return true;
             if (getSliding(sq, occ, 2) & (bb[o+2]|bb[o+4])) return true;
@@ -1031,6 +1031,7 @@
             moves.forEach(m => {
                 m.s = 0;
                 if(tte && tte.move && m.f===tte.move.f && m.t===tte.move.t) m.s = 200000;
+                else if(m.flag === 2) m.s = 120000; // Prioritize castling
                 else if(m.prom === 4 || m.prom === 10) m.s = 150000;
                 else if(m.c !== -1) m.s = 10000 + V[m.c%6]*10 - V[m.pce%6];
                 else {
