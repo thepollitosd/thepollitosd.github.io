@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Chess Engine</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.css">
-    <script src="/chess/coi-serviceworker.min.js"></script>
+    <script src="https://thepollitosd.github.io/chess/coi-serviceworker.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.12.0/chess.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.js"></script>
@@ -1569,8 +1569,8 @@
 
             // Calculate index for the Shared BigUint64Array
             // We use 2 slots per entry: [0] for Key, [1] for Packed Data
-            let ttIndex = Number(hash & BigInt(TT_MASK)) * 2;
-            let tteKey = TT[ttIndex];
+            ttIndex = Number(hash & BigInt(TT_MASK)) * 2;
+            tteKey = TT[ttIndex];
             let tteData = TT[ttIndex + 1];
             
             if (tteKey === hash) {
@@ -1710,7 +1710,7 @@
             let flag = (alpha <= origAlpha) ? 1 : (alpha >= beta ? 2 : 0);
             
             // Save to Shared TT
-            let ttIndex = Number(hash & BigInt(TT_MASK)) * 2;
+            ttIndex = Number(hash & BigInt(TT_MASK)) * 2;
             TT[ttIndex] = hash;
             TT[ttIndex + 1] = packTT(alpha, depth, flag, bestMove);
             
