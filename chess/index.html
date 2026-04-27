@@ -1807,7 +1807,7 @@
 
             if (board) board.destroy();
             board = Chessboard('board', {
-                position: game.fen(), draggable: true, pieceTheme: `https://lichess1.org/assets/piece/${document.getElementById('piece-theme').value}/{piece}.svg`,
+                position: game.fen(), draggable: true, pieceTheme:`https://thepollitosd.github.io/chess/pieces/${document.getElementById('piece-theme').value}/{piece}.svg`,
                 onDragStart: (a, p) => {
                     if (game.game_over()) return false;
                     let mode = document.getElementById('play-mode').value;
