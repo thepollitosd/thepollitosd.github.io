@@ -1758,8 +1758,6 @@
 
         initPrecomputes();
         
-        let TT_buffer, TT;
-        
         self.onmessage = function(e) {
             if (e.data.cmd === 'init_tt') {
                 TT_buffer = e.data.buffer;
