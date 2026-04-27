@@ -1024,10 +1024,9 @@
                 while(mask) {
                     let [sq, nM] = popLSB(mask); mask = nM;
                     whiteCount++;
-                    let mapped = sq ^ 56;
-                    op += V[p] + (p===5 ? PST_O[5][mapped] : PST_O[p][mapped]);
-                    mg += V[p] + (p===5 ? PST_MG[5][mapped] : PST_MG[p][mapped]);
-                    eg += V[p] + (p===5 ? PST_EG[5][mapped] : PST_EG[p][mapped]);
+                    op += V[p] + (p===5 ? PST_O[5][63-sq] : PST_O[p][63-sq]);
+                    mg += V[p] + (p===5 ? PST_MG[5][63-sq] : PST_MG[p][63-sq]);
+                    eg += V[p] + (p===5 ? PST_EG[5][63-sq] : PST_EG[p][63-sq]);
                     if(p===1 || p===2) gamePhase += 1;
                     else if(p===3) gamePhase += 2;
                     else if(p===4) gamePhase += 4;
@@ -1036,9 +1035,10 @@
                 while(mask) {
                     let [sq, nM] = popLSB(mask); mask = nM;
                     blackCount++;
-                    op -= V[p] + (p===5 ? PST_O[5][sq] : PST_O[p][sq]);
-                    mg -= V[p] + (p===5 ? PST_MG[5][sq] : PST_MG[p][sq]);
-                    eg -= V[p] + (p===5 ? PST_EG[5][sq] : PST_EG[p][sq]);
+                    let mirrored = 63 - sq;
+                    op -= V[p] + (p===5 ? PST_O[5][mirrored] : PST_O[p][mirrored]);
+                    mg -= V[p] + (p===5 ? PST_MG[5][mirrored] : PST_MG[p][mirrored]);
+                    eg -= V[p] + (p===5 ? PST_EG[5][mirrored] : PST_EG[p][mirrored]);
                     if(p===1 || p===2) gamePhase += 1;
                     else if(p===3) gamePhase += 2;
                     else if(p===4) gamePhase += 4;
@@ -1047,9 +1047,8 @@
             }
             
             let phase = gamePhase > 24 ? 24 : gamePhase;
-            let opWeight = Math.max(0, (phase - 20) / 4);
             let midEndScores = (mg * phase + eg * (24 - phase)) / 24;
-            let score = (op * opWeight) + midEndScores * (1.0 - opWeight);
+            let score = midEndScores;
 
             // Threat evaluation: reward attacked enemy pieces and penalize undefended own pieces
             let threatScore = 0;
