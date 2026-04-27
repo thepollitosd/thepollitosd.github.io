@@ -1024,9 +1024,9 @@
                 while(mask) {
                     let [sq, nM] = popLSB(mask); mask = nM;
                     whiteCount++;
-                    op += V[p] + (p===5 ? PST_O[5][63-sq] : PST_O[p][63-sq]);
-                    mg += V[p] + (p===5 ? PST_MG[5][63-sq] : PST_MG[p][63-sq]);
-                    eg += V[p] + (p===5 ? PST_EG[5][63-sq] : PST_EG[p][63-sq]);
+                    op += V[p] + (p===5 ? PST_O[5][sq ^ 56] : PST_O[p][sq]);
+                    mg += V[p] + (p===5 ? PST_MG[5][sq ^ 56] : PST_MG[p][sq]);
+                    eg += V[p] + (p===5 ? PST_EG[5][sq ^ 56] : PST_EG[p][sq]);
                     if(p===1 || p===2) gamePhase += 1;
                     else if(p===3) gamePhase += 2;
                     else if(p===4) gamePhase += 4;
@@ -1035,7 +1035,7 @@
                 while(mask) {
                     let [sq, nM] = popLSB(mask); mask = nM;
                     blackCount++;
-                    let mirrored = 63 - sq;
+                    let mirrored = sq ^ 56;
                     op -= V[p] + (p===5 ? PST_O[5][mirrored] : PST_O[p][mirrored]);
                     mg -= V[p] + (p===5 ? PST_MG[5][mirrored] : PST_MG[p][mirrored]);
                     eg -= V[p] + (p===5 ? PST_EG[5][mirrored] : PST_EG[p][mirrored]);
