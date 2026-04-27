@@ -463,7 +463,7 @@
                     </div>
                     <div class="setting">
                         <label><span>Think Time (s)</span> <span id="time-val">3.0s</span></label>
-                        <input type="range" id="think-time" min="0.5" max="15" step="0.5" value="3.0"
+                        <input type="range" id="think-time" min="0.5" max="30" step="0.5" value="3.0"
                             oninput="updateUI()">
                     </div>
                     <div class="setting">
@@ -562,6 +562,10 @@
         const RAY_DIRS = [[1,0],[1,1],[0,1],[-1,1],[-1,0],[-1,-1],[0,-1],[1,-1]];
         const FILES = new BigUint64Array(8);
         const RANKS = new BigUint64Array(8);
+        const ROOK_MASKS = new BigUint64Array(64);
+        const BISHOP_MASKS = new BigUint64Array(64);
+        const ROOK_ATTACKS = new Map();
+        const BISHOP_ATTACKS = new Map();
         
         // Zobrist keys
         const ZOBRIST = new BigUint64Array(12 * 64);
@@ -599,19 +603,46 @@
 
         // TODO: Replace with Magic Bitboards for faster lookups
         function getSliding(sq, occ, type) {
-            let at = 0n;
-            let dirs = type===2 ? [1,3,5,7] : type===3 ? [0,2,4,6] : [0,1,2,3,4,5,6,7];
-            for (let d of dirs) {
-                let r=sq>>3, c=sq&7;
-                while(true) {
-                    r+=RAY_DIRS[d][0]; c+=RAY_DIRS[d][1];
-                    if(r<0||r>7||c<0||c>7) break;
-                    let b = bit(r*8+c);
-                    at |= b;
-                    if(occ & b) break;
+            let attacks = 0n;
+            if (type === 2 || type === 4) { // Bishop or Queen
+                let blockers = occ & BISHOP_MASKS[sq];
+                let key = (BigInt(sq) << 56n) | blockers;
+                if (BISHOP_ATTACKS.has(key)) attacks |= BISHOP_ATTACKS.get(key);
+                else {
+                    let att = generateSlidingAttacks(sq, blockers, false);
+                    BISHOP_ATTACKS.set(key, att);
+                    attacks |= att;
                 }
             }
-            return at;
+            if (type === 3 || type === 4) { // Rook or Queen
+                let blockers = occ & ROOK_MASKS[sq];
+                let key = (BigInt(sq) << 56n) | blockers;
+                if (ROOK_ATTACKS.has(key)) attacks |= ROOK_ATTACKS.get(key);
+                else {
+                    let att = generateSlidingAttacks(sq, blockers, true);
+                    ROOK_ATTACKS.set(key, att);
+                    attacks |= att;
+                }
+            }
+            return attacks;
+        }
+        
+        // Support function for the lazy-initialization above
+        function generateSlidingAttacks(sq, blockers, isRook) {
+            let attacks = 0n;
+            let r = sq >> 3, c = sq & 7;
+            let dirs = isRook ? [[1,0], [-1,0], [0,1], [0,-1]] : [[1,1], [1,-1], [-1,1], [-1,-1]];
+            for (let d of dirs) {
+                let tr = r, tc = c;
+                while (true) {
+                    tr += d[0]; tc += d[1];
+                    if (tr < 0 || tr > 7 || tc < 0 || tc > 7) break;
+                    let b = 1n << BigInt(tr * 8 + tc);
+                    attacks |= b;
+                    if (blockers & b) break;
+                }
+            }
+            return attacks;
         }
 
         let bb = new BigUint64Array(12);
@@ -1363,17 +1394,41 @@
             return shield;
         }
 
-        // TIER 1, 2: ASPIRATION, NMP, PVS, TT
-        const TT_SIZE = 1 << 20; // 1,048,576 entries
+        // ========================================================
+        // TIER 1, 2: ASPIRATION, NMP, PVS, TT (SHARED ARRAY BUFFER)
+        // ========================================================
+        const TT_SIZE = 1 << 20; 
         const TT_MASK = TT_SIZE - 1;
-        // TODO: Use SharedArrayBuffer for SMP shared TT
-        const TT = new Array(TT_SIZE);
-        let nodes = 0;
-        let timeUp = false;
-        let limitMs = 0; // hard limit
-        let softLimitMs = 0;
-        let startTime = 0;
-        let lastBrainstorm = 0;
+        
+        // 2 uint64s per entry: [Zobrist Key, Packed Data]
+        let TT_buffer; 
+        let TT; 
+        
+        // Bit-packing helpers for the 64-bit data integer
+        // Data layout: score(16) | depth(8) | flag(8) | move_from(8) | move_to(8) | move_prom(8)
+        function packTT(score, depth, flag, move) {
+            let s = BigInt(score < 0 ? score + 65536 : score) & 0xFFFFn;
+            let d = BigInt(depth) & 0xFFn;
+            let f = BigInt(flag) & 0xFFn;
+            let mf = move ? BigInt(move.f) & 0xFFn : 0n;
+            let mt = move ? BigInt(move.t) & 0xFFn : 0n;
+            let mp = move && move.prom !== -1 ? BigInt(move.prom) & 0xFFn : 255n;
+        
+            return s | (d << 16n) | (f << 24n) | (mf << 32n) | (mt << 40n) | (mp << 48n);
+        }
+        
+        function unpackTT(data) {
+            let s = Number(data & 0xFFFFn);
+            let score = s >= 32768 ? s - 65536 : s;
+            let depth = Number((data >> 16n) & 0xFFn);
+            let flag = Number((data >> 24n) & 0xFFn);
+            let mf = Number((data >> 32n) & 0xFFn);
+            let mt = Number((data >> 40n) & 0xFFn);
+            let mp = Number((data >> 48n) & 0xFFn);
+            
+            let move = (mf === 0 && mt === 0) ? null : { f: mf, t: mt, prom: mp === 255 ? -1 : mp };
+            return { score, depth, flag, move };
+        }
         
         function exportFEN() {
             let pStr = ['P','N','B','R','Q','K','p','n','b','r','q','k'];
@@ -1477,6 +1532,17 @@
         }
 
         function alphaBeta(depth, ply, rootMoves, alpha, beta, lastMove = null) {
+            let ttIndex = Number(hash & BigInt(TT_MASK)) * 2;
+            let tteKey = TT[ttIndex]; // First 64-bit slot is the Zobrist Key
+            
+            if (tteKey === hash) {
+                let tte = unpackTT(TT[ttIndex + 1]); // Second slot is the packed data
+                if (tte.depth >= depth) {
+                    if (tte.flag === 0) return tte.score;
+                    if (tte.flag === 1 && tte.score <= alpha) return alpha;
+                    if (tte.flag === 2 && tte.score >= beta) return beta;
+                }
+            }
             // TIER 5: Mate Distance Pruning
             let mateVal = 40000 - ply;
             if (alpha < -mateVal) alpha = -mateVal;
@@ -1501,14 +1567,19 @@
             // Check Extension: Search deeper when in check to avoid blunders
             if (inCheck) depth += 1;
 
-            // Zobrist TT
-            let ttIndex = Number(hash & BigInt(TT_MASK));
-            let tte = TT[ttIndex];
-            if (tte && tte.key !== hash) tte = null;
-            if(tte && tte.depth >= depth) {
-                if(tte.flag === 0) return {score: tte.score, move: tte.move};
-                if(tte.flag === 1 && tte.score <= alpha) return {score: tte.score, move: tte.move};
-                if(tte.flag === 2 && tte.score >= beta) return {score: tte.score, move: tte.move};
+            // Calculate index for the Shared BigUint64Array
+            // We use 2 slots per entry: [0] for Key, [1] for Packed Data
+            let ttIndex = Number(hash & BigInt(TT_MASK)) * 2;
+            let tteKey = TT[ttIndex];
+            let tteData = TT[ttIndex + 1];
+            
+            if (tteKey === hash) {
+                let tte = unpackTT(tteData); // Helper to extract score/depth/flag
+                if (tte.depth >= depth) {
+                    if (tte.flag === 0) return tte.score; // EXACT
+                    if (tte.flag === 1 && tte.score <= alpha) return alpha; // UPPERBOUND
+                    if (tte.flag === 2 && tte.score >= beta) return beta; // LOWERBOUND
+                }
             }
 
             // Internal Iterative Deepening
@@ -1635,9 +1706,15 @@
 
             if(movesMade===0) return {score: inCheck ? -40000+ply : 0, move: null};
 
-            TT[ttIndex] = { key: hash, depth, score: alpha, flag: alpha<=origAlpha ? 1 : (alpha>=beta ? 2 : 0), move: bestMove };
-
-            return {score: alpha, move: bestMove};
+            // Determine the flag: 0=Exact, 1=Alpha(Upper), 2=Beta(Lower)
+            let flag = (alpha <= origAlpha) ? 1 : (alpha >= beta ? 2 : 0);
+            
+            // Save to Shared TT
+            let ttIndex = Number(hash & BigInt(TT_MASK)) * 2;
+            TT[ttIndex] = hash;
+            TT[ttIndex + 1] = packTT(alpha, depth, flag, bestMove);
+            
+            return alpha;
         }
 
         // TIER 2: Quiescence
@@ -1680,8 +1757,15 @@
         }
 
         initPrecomputes();
-
+        
+        let TT_buffer, TT;
+        
         self.onmessage = function(e) {
+            if (e.data.cmd === 'init_tt') {
+                TT_buffer = e.data.buffer;
+                TT = new BigUint64Array(TT_buffer); // Direct view of shared memory
+                return;
+            }
             let msg = e.data;
             if (msg.cmd === 'search') {
                 setFen(msg.fen);
@@ -2083,9 +2167,13 @@
                 let weightSource = document.getElementById('nn-weights').textContent.trim();
                 let workerSource = `const NN_WEIGHTS = ${weightSource};\n` + document.getElementById('worker-code').textContent;
                 let blob = new Blob([workerSource], { type: 'text/javascript' });
-                let w = new Worker(URL.createObjectURL(blob));
-                w.onmessage = handleWorkerMsg;
-                workers.push(w);
+                const ttBuffer = new SharedArrayBuffer(1024 * 1024 * 16); 
+                
+                // Inside your worker creation loop:
+                let workerInstance = new Worker(URL.createObjectURL(blob));
+                workerInstance.postMessage({ cmd: 'init_tt', buffer: ttBuffer }); // ADD THIS
+                workerInstance.onmessage = handleWorkerMsg;
+                workers.push(workerInstance);
             }
 
             bestGlobalScore = -Infinity;
