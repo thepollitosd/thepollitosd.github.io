@@ -653,6 +653,7 @@
         let hash = 0n;
         let pastStates = [];
         let repetitionStack = [];
+        let lastBrainstorm = 0;
         let useNN = true;
 
         function setFen(fen) {
@@ -1654,7 +1655,7 @@
                 let moves = moveStages[stage];
                 for (let m of moves) {
                     makeMove(m);
-                    if(isAttacked(ctz(bb[turn?5:11]), turn)) { unmakeMove(m); continue; } // illegal
+                    if(isAttacked(ctz(bb[turn === 1 ? 5 : 11]), turn)) { unmakeMove(m); continue; } // illegal
                     movesMade++;
                     let score;
                     let isQuiet = (m.c === -1 && m.prom === -1);
