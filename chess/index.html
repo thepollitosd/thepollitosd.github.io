@@ -943,47 +943,47 @@
         
         // OPENING TABLE: Forces extremely strong development and rapid castling
         const OP_PST = [
-            // Pawns
-            [0,0,0,0,0,0,0,0, 50,50,50,50,50,50,50,50, 10,10,20,30,30,20,10,10, 5,5,10,40,40,10,5,5, 0,0,0,30,30,0,0,0, 5,-5,-20,0,0,-20,-5,5, 5,10,10,-30,-30,10,10,5, 0,0,0,0,0,0,0,0],
+            // Pawns — penalize center pawns at start to push them, reward advancement
+            [0,0,0,0,0,0,0,0, 50,50,50,50,50,50,50,50, 10,10,20,30,30,20,10,10, 5,5,10,35,35,10,5,5, 0,0,0,25,25,0,0,0, 5,-5,-10,0,0,-10,-5,5, 5,10,10,-20,-20,10,10,5, 0,0,0,0,0,0,0,0],
             // Knights
             [-50,-40,-30,-30,-30,-30,-40,-50,-40,-20,0,0,0,0,-20,-40,-30,0,10,15,15,10,0,-30,-30,5,15,20,20,15,5,-30,-30,0,15,20,20,15,0,-30,-30,5,10,15,15,10,5,-30,-40,-20,0,5,5,0,-20,-40,-50,-50,-30,-30,-30,-30,-50,-50],
             // Bishops
             [-20,-10,-10,-10,-10,-10,-10,-20,-10,0,0,0,0,0,0,-10,-10,0,5,10,10,5,0,-10,-10,5,5,10,10,5,5,-10,-10,0,10,10,10,10,0,-10,-10,10,10,10,10,10,10,-10,-10,5,0,0,0,0,5,-10,-20,-10,-40,-10,-10,-40,-10,-20],
             // Rooks
             [0,0,0,0,0,0,0,0, 5,10,10,10,10,10,10,5, -5,0,0,0,0,0,0,-5, -5,0,0,0,0,0,0,-5, -5,0,0,0,0,0,0,-5, -5,0,0,0,0,0,0,-5, -5,0,0,0,0,0,0,-5, 0,0,10,15,15,10,0,0],
-            // Queens
-            [-20,-10,-10,-5,-5,-10,-10,-20, -10,0,0,0,0,0,0,-10, -10,0,5,5,5,5,0,-10, -5,0,5,5,5,5,0,-5, 0,0,5,5,5,5,0,-5, -10,5,5,5,5,5,0,-10, -20,-20,-20,-20,-20,-20,-20,-20, -20,-20,-20, 20,-20,-20,-20,-20],
-            // King
-            [-30,-40,-40,-50,-50,-40,-40,-30, -30,-40,-40,-50,-50,-40,-40,-30, -30,-40,-40,-50,-50,-40,-40,-30, -30,-40,-40,-50,-50,-40,-40,-30, -20,-30,-30,-40,-40,-30,-30,-20, -10,-20,-20,-20,-20,-20,-20,-10, 20,20,-20,-20,-20,-20,20,20, 20,20,50,-30,-40,-30,50,20]
+            // Queens — strongly discourage early queen development (ranks 1-2 at -20), rank-1 bug fixed
+            [-20,-10,-10,-5,-5,-10,-10,-20, -10,0,0,0,0,0,0,-10, -10,0,5,5,5,5,0,-10, -5,0,5,5,5,5,0,-5, 0,0,5,5,5,5,0,-5, -10,5,5,5,5,5,0,-10, -20,-20,-20,-20,-20,-20,-20,-20, -20,-20,-20,-5,-5,-20,-20,-20],
+            // King — strongly incentivize castling (g1/c1), punish center
+            [-30,-40,-40,-50,-50,-40,-40,-30, -30,-40,-40,-50,-50,-40,-40,-30, -30,-40,-40,-50,-50,-40,-40,-30, -30,-40,-40,-50,-50,-40,-40,-30, -20,-30,-30,-40,-40,-30,-30,-20, -10,-20,-20,-20,-20,-20,-20,-10, 20,20,0,0,0,0,20,20, 20,30,10,0,0,10,30,20]
         ];
 
         const MG_PST = [
-            // Pawns
-            [0,0,0,0,0,0,0,0, 50,50,50,50,50,50,50,50, 10,10,20,30,30,20,10,10, 5,5,10,25,25,10,5,5, 0,0,0,20,20,0,0,0, 5,-5,-10,0,0,-10,-5,5, 5,10,10,-20,-20,10,10,5, 0,0,0,0,0,0,0,0],
-            // Knights
-            [-50,-40,-30,-30,-30,-30,-40,-50,-40,-20,0,0,0,0,-20,-40,-30,0,10,15,15,10,0,-30,-30,5,15,20,20,15,5,-30,-30,0,15,20,20,15,0,-30,-30,5,10,15,15,10,5,-30,-40,-20,0,5,5,0,-20,-40,-50,-40,-30,-30,-30,-30,-40,-50],
-            // Bishops
-            [-20,-10,-10,-10,-10,-10,-10,-20,-10,0,0,0,0,0,0,-10,-10,0,5,10,10,5,0,-10,-10,5,5,10,10,5,5,-10,-10,0,10,10,10,10,0,-10,-10,10,10,10,10,10,10,-10,-10,5,0,0,0,0,5,-10,-20,-10,-10,-10,-10,-10,-10,-20],
-            // Rooks
-            [0,0,0,0,0,0,0,0, 5,10,10,10,10,10,10,5, -5,0,0,0,0,0,0,-5, -5,0,0,0,0,0,0,-5, -5,0,0,0,0,0,0,-5, -5,0,0,0,0,0,0,-5, -5,0,0,0,0,0,0,-5, 0,0,0,5,5,0,0,0],
-            // Queens
-            [-20,-10,-10,-5,-5,-10,-10,-20, -10,0,0,0,0,0,0,-10, -10,0,5,5,5,5,0,-10, -5,0,5,5,5,5,0,-5, 0,0,5,5,5,5,0,-5, -10,5,5,5,5,5,0,-10, -10,0,5,0,0,0,0,-10, -20,-10,-10,-5,-5,-10,-10,-20],
-            // King
+            // Pawns — standard Stockfish-style: push center, reward advancement
+            [0,0,0,0,0,0,0,0, 50,50,50,50,50,50,50,50, 20,20,25,30,30,25,20,20, 10,10,15,25,25,15,10,10, 0,0,5,20,20,5,0,0, 5,0,-5,0,0,-5,0,5, 5,10,10,-15,-15,10,10,5, 0,0,0,0,0,0,0,0],
+            // Knights — reward centrality, punish rim
+            [-50,-40,-30,-30,-30,-30,-40,-50,-40,-20,0,5,5,0,-20,-40,-30,5,15,20,20,15,5,-30,-30,5,20,25,25,20,5,-30,-30,5,20,25,25,20,5,-30,-30,5,15,20,20,15,5,-30,-40,-20,0,5,5,0,-20,-40,-50,-40,-30,-30,-30,-30,-40,-50],
+            // Bishops — reward diagonals and long-range activity
+            [-20,-10,-10,-10,-10,-10,-10,-20,-10,5,0,0,0,0,5,-10,-10,10,10,10,10,10,10,-10,-10,5,15,15,15,15,5,-10,-10,0,15,15,15,15,0,-10,-10,10,10,10,10,10,10,-10,-10,5,0,0,0,0,5,-10,-20,-10,-10,-10,-10,-10,-10,-20],
+            // Rooks — 7th rank is huge; reward open files from starting rank
+            [0,0,0,0,0,0,0,0, 5,10,10,10,10,10,10,5, -5,0,0,0,0,0,0,-5, -5,0,0,0,0,0,0,-5, -5,0,0,0,0,0,0,-5, -5,0,0,0,0,0,0,-5, -5,0,0,0,0,0,0,-5, 0,0,5,10,10,5,0,0],
+            // Queens — active in mid-game, penalize early sallies
+            [-20,-10,-10,-5,-5,-10,-10,-20, -10,0,5,0,0,5,0,-10, -10,5,5,5,5,5,5,-10, -5,0,5,5,5,5,0,-5, -5,0,5,5,5,5,0,-5, -10,0,5,5,5,5,0,-10, -10,0,0,0,0,0,0,-10, -20,-10,-10,-5,-5,-10,-10,-20],
+            // King — castling strongly rewarded; center punished
             [-30,-40,-40,-50,-50,-40,-40,-30, -30,-40,-40,-50,-50,-40,-40,-30, -30,-40,-40,-50,-50,-40,-40,-30, -30,-40,-40,-50,-50,-40,-40,-30, -20,-30,-30,-40,-40,-30,-30,-20, -10,-20,-20,-20,-20,-20,-20,-10, 20,20,0,0,0,0,20,20, 20,30,10,0,0,10,30,20]
         ];
 
         const EG_PST = [
-            // Pawns (Same as MG for now)
-            [0,0,0,0,0,0,0,0, 50,50,50,50,50,50,50,50, 10,10,20,30,30,20,10,10, 5,5,10,25,25,10,5,5, 0,0,0,20,20,0,0,0, 5,-5,-10,0,0,-10,-5,5, 5,10,10,-20,-20,10,10,5, 0,0,0,0,0,0,0,0],
-            // Knights
-            [-50,-40,-30,-30,-30,-30,-40,-50,-40,-20,0,0,0,0,-20,-40,-30,0,10,15,15,10,0,-30,-30,5,15,20,20,15,5,-30,-30,0,15,20,20,15,0,-30,-30,5,10,15,15,10,5,-30,-40,-20,0,5,5,0,-20,-40,-50,-40,-30,-30,-30,-30,-40,-50],
-            // Bishops
-            [-20,-10,-10,-10,-10,-10,-10,-20,-10,0,0,0,0,0,0,-10,-10,0,5,10,10,5,0,-10,-10,5,5,10,10,5,5,-10,-10,0,10,10,10,10,0,-10,-10,10,10,10,10,10,10,-10,-10,5,0,0,0,0,5,-10,-20,-10,-10,-10,-10,-10,-10,-20],
-            // Rooks
-            [0,0,0,0,0,0,0,0, 5,10,10,10,10,10,10,5, -5,0,0,0,0,0,0,-5, -5,0,0,0,0,0,0,-5, -5,0,0,0,0,0,0,-5, -5,0,0,0,0,0,0,-5, -5,0,0,0,0,0,0,-5, 0,0,0,5,5,0,0,0],
-            // Queens
-            [-20,-10,-10,-5,-5,-10,-10,-20, -10,0,0,0,0,0,0,-10, -10,0,5,5,5,5,0,-10, -5,0,5,5,5,5,0,-5, 0,0,5,5,5,5,0,-5, -10,5,5,5,5,5,0,-10, -10,0,5,0,0,0,0,-10, -20,-10,-10,-5,-5,-10,-10,-20],
-            // King (Endgame)
+            // Pawns — endgame: advancement is everything; strong passed-pawn push bonuses
+            [0,0,0,0,0,0,0,0, 80,80,80,80,80,80,80,80, 50,50,55,60,60,55,50,50, 30,30,35,40,40,35,30,30, 15,15,20,25,25,20,15,15, 5,5,10,15,15,10,5,5, 0,0,5,5,5,5,0,0, 0,0,0,0,0,0,0,0],
+            // Knights — endgame: centrality matters more; rim is very bad
+            [-60,-50,-40,-35,-35,-40,-50,-60,-50,-30,-10,-5,-5,-10,-30,-50,-40,-10,15,20,20,15,-10,-40,-35,-5,20,30,30,20,-5,-35,-35,-5,20,30,30,20,-5,-35,-40,-10,15,20,20,15,-10,-40,-50,-30,-10,-5,-5,-10,-30,-50,-60,-50,-40,-35,-35,-40,-50,-60],
+            // Bishops — endgame: long diagonals, avoid edges
+            [-20,-10,-10,-10,-10,-10,-10,-20,-10,5,0,0,0,0,5,-10,-10,5,10,10,10,10,5,-10,-10,5,10,15,15,10,5,-10,-10,5,10,15,15,10,5,-10,-10,5,10,10,10,10,5,-10,-10,5,0,0,0,0,5,-10,-20,-10,-10,-10,-10,-10,-10,-20],
+            // Rooks — endgame: 7th rank and open files critical
+            [0,0,0,0,0,0,0,0, 10,15,15,15,15,15,15,10, 0,5,5,5,5,5,5,0, -5,0,0,0,0,0,0,-5, -5,0,0,0,0,0,0,-5, -5,0,0,0,0,0,0,-5, -5,0,0,0,0,0,0,-5, 0,0,0,5,5,0,0,0],
+            // Queens — endgame: centrality and activity
+            [-20,-10,-10,-5,-5,-10,-10,-20, -10,0,5,5,5,5,0,-10, -10,5,10,10,10,10,5,-10, -5,5,10,15,15,10,5,-5, -5,5,10,15,15,10,5,-5, -10,5,10,10,10,10,5,-10, -10,0,5,5,5,5,0,-10, -20,-10,-10,-5,-5,-10,-10,-20],
+            // King (Endgame) — go to center, support passed pawns
             [-50,-40,-30,-20,-20,-30,-40,-50, -30,-20,-10,0,0,-10,-20,-30, -30,-10,20,30,30,20,-10,-30, -30,-10,30,40,40,30,-10,-30, -30,-10,30,40,40,30,-10,-30, -30,-10,20,30,30,20,-10,-30, -30,-30,0,0,0,0,-30,-30, -50,-30,-30,-30,-30,-30,-30,-50]
         ];
         
@@ -1116,14 +1116,15 @@
             let bSafePawnZone = whitePawnAttacks;
 
             let mobPieces = [
-                {mask: bb[1], att: KNIGHT_ATTACKS, weight: 4, own: wOcc, enemyPawn: wSafePawnZone, side: 0},
-                {mask: bb[2], att: null, weight: 4, own: wOcc, enemyPawn: wSafePawnZone, type: 2, side: 0},
-                {mask: bb[3], att: null, weight: 2, own: wOcc, enemyPawn: wSafePawnZone, type: 3, side: 0},
-                {mask: bb[4], att: null, weight: 1, own: wOcc, enemyPawn: wSafePawnZone, type: 0, side: 0},
-                {mask: bb[7], att: KNIGHT_ATTACKS, weight: 4, own: bOcc, enemyPawn: bSafePawnZone, side: 1},
-                {mask: bb[8], att: null, weight: 4, own: bOcc, enemyPawn: bSafePawnZone, type: 2, side: 1},
-                {mask: bb[9], att: null, weight: 2, own: bOcc, enemyPawn: bSafePawnZone, type: 3, side: 1},
-                {mask: bb[10], att: null, weight: 1, own: bOcc, enemyPawn: bSafePawnZone, type: 0, side: 1}
+                // Mobility weights: rooks > minors > queen (queen mobility is already "baked in" to raw eval)
+                {mask: bb[1], att: KNIGHT_ATTACKS, weight: 3, own: wOcc, enemyPawn: wSafePawnZone, side: 0},
+                {mask: bb[2], att: null,           weight: 3, own: wOcc, enemyPawn: wSafePawnZone, type: 2, side: 0},
+                {mask: bb[3], att: null,           weight: 4, own: wOcc, enemyPawn: wSafePawnZone, type: 3, side: 0},
+                {mask: bb[4], att: null,           weight: 2, own: wOcc, enemyPawn: wSafePawnZone, type: 0, side: 0},
+                {mask: bb[7], att: KNIGHT_ATTACKS, weight: 3, own: bOcc, enemyPawn: bSafePawnZone, side: 1},
+                {mask: bb[8], att: null,           weight: 3, own: bOcc, enemyPawn: bSafePawnZone, type: 2, side: 1},
+                {mask: bb[9], att: null,           weight: 4, own: bOcc, enemyPawn: bSafePawnZone, type: 3, side: 1},
+                {mask: bb[10],att: null,           weight: 2, own: bOcc, enemyPawn: bSafePawnZone, type: 0, side: 1}
             ];
             for (let piece of mobPieces) {
                 let p = piece.mask;
@@ -1171,12 +1172,15 @@
             while (wPawns) {
                 let [sq, nP] = popLSB(wPawns); wPawns = nP;
                 let file = sq & 7;
-                let adj = FILES[file];
-                if (file > 0) adj |= FILES[file-1];
-                if (file < 7) adj |= FILES[file+1];
-                if (!(bb[6] & adj)) {
+                let files = FILES[file];
+                if (file > 0) files |= FILES[file-1];
+                if (file < 7) files |= FILES[file+1];
+                let rank = sq >> 3;
+                let forwardRanks = 0n;
+                for (let r = rank + 1; r < 8; r++) forwardRanks |= RANKS[r];
+                let inFront = files & forwardRanks;
+                if (!(bb[6] & inFront)) {
                     passedWhite++;
-                    let rank = sq >> 3;
                     let bonus = 25 + rank * 10;
                     let passScale = 1 + (24 - phase) / 24;
                     score += Math.floor(bonus * passScale);
@@ -1186,10 +1190,14 @@
             while (bPawns) {
                 let [sq, nP] = popLSB(bPawns); bPawns = nP;
                 let file = sq & 7;
-                let adj = FILES[file];
-                if (file > 0) adj |= FILES[file-1];
-                if (file < 7) adj |= FILES[file+1];
-                if (!(bb[0] & adj)) {
+                let files = FILES[file];
+                if (file > 0) files |= FILES[file-1];
+                if (file < 7) files |= FILES[file+1];
+                let rankIdx = sq >> 3;
+                let forwardRanks = 0n;
+                for (let r = rankIdx - 1; r >= 0; r--) forwardRanks |= RANKS[r];
+                let inFront = files & forwardRanks;
+                if (!(bb[0] & inFront)) {
                     passedBlack++;
                     let rank = 7 - (sq >> 3);
                     let bonus = 25 + rank * 10;
@@ -1274,12 +1282,12 @@
             let mask = wKingZone;
             while(mask) {
                 let [sq, nM] = popLSB(mask); mask = nM;
-                if(isAttacked(sq, 1)) wDanger++;
+                if(isAttacked(sq, 1, occ)) wDanger++;
             }
             mask = bKingZone;
             while(mask) {
                 let [sq, nM] = popLSB(mask); mask = nM;
-                if(isAttacked(sq, 0)) bDanger++;
+                if(isAttacked(sq, 0, occ)) bDanger++;
             }
             let q = bb[10];
             while(q) {
@@ -1311,14 +1319,14 @@
                 let [sq, nb] = popLSB(b); b = nb;
                 if (getSliding(sq, occ, 2) & bKingZone) bMinorThreat = true;
             }
-            score -= wDanger * 14;
-            if (wQueenThreat) score -= 18;
-            if (wMinorThreat) score -= 10;
-            if (wQueenThreat && wMinorThreat) score -= 15;
-            score += bDanger * 14;
-            if (bQueenThreat) score += 18;
-            if (bMinorThreat) score += 10;
-            if (bQueenThreat && bMinorThreat) score += 15;
+            score -= wDanger * 20;
+            if (wQueenThreat) score -= 22;
+            if (wMinorThreat) score -= 12;
+            if (wQueenThreat && wMinorThreat) score -= 18;
+            score += bDanger * 20;
+            if (bQueenThreat) score += 22;
+            if (bMinorThreat) score += 12;
+            if (bQueenThreat && bMinorThreat) score += 18;
             let centerSquares = [27, 28, 35, 36];
             let whiteCenter = 0, blackCenter = 0;
             for (let sq of centerSquares) {
