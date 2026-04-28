@@ -125,7 +125,7 @@
             position: relative;
         }
 
-        #eval-fill {
+        #-fill {
             width: 100%;
             background: #fff;
             height: 50%;
@@ -1602,10 +1602,10 @@
         
         function evaluate() {
             if (usePesto) {
-                return pestoEval();
+                pestoEval();
             }
         
-            return origEvaluate();
+            origEvaluate();
         };
 
         
