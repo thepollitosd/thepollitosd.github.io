@@ -1398,6 +1398,41 @@
             return turn ? -Math.floor(blended) : Math.floor(blended);
         }
 
+        // Fast eval for pruning/quiesce: material + PST + tempo only (no mobility/king safety/threats/NN).
+        function evaluateFast() {
+            let op = 0, mg = 0, eg = 0;
+            let gamePhase = 0;
+            for (let p = 0; p < 6; p++) {
+                let mask = bb[p];
+                while (mask) {
+                    let [sq, nM] = popLSB(mask); mask = nM;
+                    op += V[p] + OP_PST[p][63 - sq];
+                    mg += V[p] + MG_PST[p][63 - sq];
+                    eg += V[p] + (p === 5 ? EG_PST[5][63 - sq] : EG_PST[p][63 - sq]);
+                    if (p === 1 || p === 2) gamePhase += 1;
+                    else if (p === 3) gamePhase += 2;
+                    else if (p === 4) gamePhase += 4;
+                }
+                mask = bb[p + 6];
+                while (mask) {
+                    let [sq, nM] = popLSB(mask); mask = nM;
+                    op -= V[p] + OP_PST[p][sq];
+                    mg -= V[p] + MG_PST[p][sq];
+                    eg -= V[p] + (p === 5 ? EG_PST[5][sq] : EG_PST[p][sq]);
+                    if (p === 1 || p === 2) gamePhase += 1;
+                    else if (p === 3) gamePhase += 2;
+                    else if (p === 4) gamePhase += 4;
+                }
+            }
+
+            let phase = gamePhase > 24 ? 24 : gamePhase;
+            let opWeight = Math.max(0, (phase - 20) / 4);
+            let midEndScores = (mg * phase + eg * (24 - phase)) / 24;
+            let score = (op * opWeight) + midEndScores * (1.0 - opWeight);
+            score += 10; // tempo (white)
+            return turn ? -Math.floor(score) : Math.floor(score);
+        }
+
         function computeGamePhase() {
             let phase = 0;
             for (let p = 1; p < 5; p++) phase += countBits(bb[p]) * (p === 4 ? 4 : (p === 3 ? 2 : 1));
@@ -1698,7 +1733,8 @@
             if(timeUp) return {score: alpha, move: null};
             if (ply > 0 && isRepetition()) return {score: 0, move: null};
 
-            let inCheck = isAttacked(ctz(bb[turn?11:5]), turn^1);
+            let occ = wOcc() | bOcc();
+            let inCheck = isAttacked(ctz(bb[turn?11:5]), turn^1, occ);
             currentMaterialBalance = 0;
             for (let p = 0; p < 6; p++) currentMaterialBalance += (countBits(bb[p]) - countBits(bb[p+6])) * V[p];
 
@@ -1723,13 +1759,13 @@
 
             // TIER 3: Reverse Futility Pruning (Static NMP)
             if (depth <= 3 && !inCheck && Math.abs(alpha) < 40000) {
-                let staticEval = evaluate();
+                let staticEval = evaluateFast();
                 if (staticEval - depth * 150 >= beta) return {score: staticEval, move: null};
             }
 
             // Razoring
             if (!inCheck && depth <= 2) {
-                let staticEval = evaluate();
+                let staticEval = evaluateFast();
                 if (staticEval + 300 < alpha) {
                     return {score: quiesce(alpha, beta), move: null};
                 }
@@ -1748,7 +1784,7 @@
 
             // TIER 4: Futility Pruning
             let isFutility = false;
-            if (depth === 1 && !inCheck && Math.abs(alpha) < 40000 && evaluate() + 300 < alpha) {
+            if (depth === 1 && !inCheck && Math.abs(alpha) < 40000 && evaluateFast() + 300 < alpha) {
                 isFutility = true;
             }
 
@@ -1779,7 +1815,7 @@
                 let moves = moveStages[stage];
                 for (let m of moves) {
                     makeMove(m);
-                    if(isAttacked(ctz(bb[turn?5:11]), turn)) { unmakeMove(m); continue; } // illegal
+                    if(isAttacked(ctz(bb[turn?5:11]), turn, (wOcc() | bOcc()))) { unmakeMove(m); continue; } // illegal
                     movesMade++;
                     let score;
                     let isQuiet = (m.c === -1 && m.prom === -1);
@@ -1846,11 +1882,13 @@
             if((nodes++ & 1023)===0 && Date.now() - startTime > limitMs) timeUp = true;
             if(timeUp) return alpha;
             
-            let stand_pat = evaluate();
+            // Fast stand-pat unless close to the window.
+            let stand_pat = evaluateFast();
+            if (stand_pat > alpha - 150 && stand_pat < beta + 150) stand_pat = evaluate();
             if(stand_pat >= beta) return beta;
             if(stand_pat > alpha) alpha = stand_pat;
 
-            let inCheck = isAttacked(ctz(bb[turn?5:11]), turn);
+            let inCheck = isAttacked(ctz(bb[turn?5:11]), turn, (wOcc() | bOcc()));
             let moves;
             if (inCheck) {
                 moves = genMoves(false); // All moves if in check
@@ -1870,7 +1908,7 @@
                 }
 
                 makeMove(m);
-                if(isAttacked(ctz(bb[turn?5:11]), turn)) { unmakeMove(m); continue; }
+                if(isAttacked(ctz(bb[turn?5:11]), turn, (wOcc() | bOcc()))) { unmakeMove(m); continue; }
                 let s = -quiesce(-beta, -alpha);
                 unmakeMove(m);
                 if(timeUp) return alpha;
@@ -1903,12 +1941,13 @@
                 useNN = msg.useNN !== false;
                 self.workerId = msg.id; 
                 let rootMoves = genMoves(false, false);
-                rootMoves.forEach(m => { m.s = scoreMove(m, null, 0, null); });
-                rootMoves.sort((a, b) => b.s - a.s);
+                // Shard BEFORE scoring/sorting to avoid N-times root sorting across workers.
                 if (msg.totalWorkers > 1 && rootMoves.length > 1) {
                     let shard = rootMoves.filter((_, idx) => idx % msg.totalWorkers === msg.id);
                     if (shard.length > 0) rootMoves = shard;
                 }
+                rootMoves.forEach(m => { m.s = scoreMove(m, null, 0, null); });
+                rootMoves.sort((a, b) => b.s - a.s);
                 let res = search(64, rootMoves, -50000, 50000);
                 postMessage({status: 'done', move: fmt(res.move), score: res.score, nodes: res.nodes, id: msg.id, token: self.searchToken});
             }
