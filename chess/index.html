@@ -1620,7 +1620,7 @@
                     else {
                         bScore = score;
                         if(move) bMove = move;
-                        postMessage({status:'info', depth:d, score: bScore, move: fmt(bMove), nodes, id: self.workerId});
+                        postMessage({status:'info', depth:d, score: bScore, move: fmt(bMove), nodes, id: self.workerId, token: self.searchToken});
                         break;
                     }
                 }
@@ -1630,7 +1630,7 @@
             
             // TIER 5: Blunder Check & Focus
             if (bMove && bScore < -300) {
-                postMessage({status:'threat', msg: 'Tactical threat detected!', id: self.workerId});
+                postMessage({status:'threat', msg: 'Tactical threat detected!', id: self.workerId, token: self.searchToken});
             }
 
             return {move: bMove, score: bScore, nodes};
@@ -1680,7 +1680,7 @@
                 if(now - startTime > limitMs) timeUp = true;
                 else if(now - lastBrainstorm >= 100) {
                     lastBrainstorm = now;
-                    postMessage({status: 'brainstorm', fen: exportFEN(), id: self.workerId});
+                    postMessage({status: 'brainstorm', fen: exportFEN(), id: self.workerId, token: self.searchToken});
                 }
             }
             if(timeUp) return {score: alpha, move: null};
@@ -1877,7 +1877,10 @@
                 TT_VIEW = new Int32Array(TT_BUFFER);
             } else if (msg.cmd === 'search') {
                 setFen(msg.fen);
-                softLimitMs = msg.time * 1000;
+                self.searchToken = msg.token;
+                let t = Number(msg.time);
+                if (!Number.isFinite(t) || t <= 0) t = 1.5;
+                softLimitMs = t * 1000;
                 limitMs = Math.max(softLimitMs * 1.5, softLimitMs + 1000);
                 useNN = msg.useNN !== false;
                 self.workerId = msg.id; 
@@ -1889,7 +1892,7 @@
                     if (shard.length > 0) rootMoves = shard;
                 }
                 let res = search(64, rootMoves, -50000, 50000);
-                postMessage({status: 'done', move: fmt(res.move), score: res.score, nodes: res.nodes, id: msg.id});
+                postMessage({status: 'done', move: fmt(res.move), score: res.score, nodes: res.nodes, id: msg.id, token: self.searchToken});
             }
         };
     </script>
@@ -1904,6 +1907,8 @@
         let numThreads = 4;
         let isThinking = false;
         let staticHumanSide = 'w';
+        let smoothedEval = 0;
+        let hasSmoothedEval = false;
 
         function updateUI() {
             document.getElementById('time-val').innerText = document.getElementById('think-time').value + "s";
@@ -1960,6 +1965,11 @@
             svg.innerHTML = '';
             if (!move || !document.getElementById('show-arrows').checked) return;
 
+            // Ensure the SVG coordinate system matches the current board pixel size.
+            let boardPx = document.getElementById('board').clientWidth;
+            let svgRoot = document.getElementById('arrow-svg');
+            svgRoot.setAttribute('viewBox', `0 0 ${boardPx} ${boardPx}`);
+
             let boardOri = board.orientation() === 'white' ? 1 : -1;
             let fFile = move.charCodeAt(0) - 97, fRank = parseInt(move[1]) - 1;
             let tFile = move.charCodeAt(2) - 97, tRank = parseInt(move[3]) - 1;
@@ -1969,7 +1979,7 @@
                 tFile = 7 - tFile; tRank = 7 - tRank;
             }
 
-            let sqSize = document.getElementById('board').clientWidth / 8;
+            let sqSize = boardPx / 8;
             let fx = fFile * sqSize + sqSize / 2;
             let fy = (7 - fRank) * sqSize + sqSize / 2;
             let tx = tFile * sqSize + sqSize / 2;
@@ -2195,6 +2205,7 @@
         let bestGlobalScore = -Infinity;
         let bestGlobalMove = null;
         let finishedWorkers = 0;
+        let activeSearchToken = 0;
 
         function triggerNextTurn() {
             if (game.game_over()) {
@@ -2254,6 +2265,8 @@
             document.getElementById('status-badge').style.background = '#d32f2f';
             document.getElementById('hw-info').innerHTML = `⚡ Speed: <span id="nps-val" style="color:#00e5ff;">0</span> kN/s | Threads: <span>${numThreads}</span>`;
             window.searchStartGlobal = Date.now();
+            hasSmoothedEval = false;
+            activeSearchToken++;
 
             let bookMove = await checkOpeningBook();
             if (bookMove) {
@@ -2292,26 +2305,32 @@
             finishedWorkers = 0;
 
             // Start multiple worker searches (Divergent Engine Personalities based on IDs)
+            let timeSec = parseFloat(document.getElementById('think-time').value);
+            if (!Number.isFinite(timeSec) || timeSec <= 0) timeSec = 1.5;
             for (let i = 0; i < numThreads; i++) {
                 workers[i].postMessage({
                     cmd: 'search',
                     id: i,
                     totalWorkers: numThreads,
+                    token: activeSearchToken,
                     fen: game.fen(),
-                    time: parseFloat(document.getElementById('think-time').value),
+                    time: timeSec,
                     useNN: document.getElementById('use-nn').checked
                 });
             }
         }
 
         function handleWorkerMsg(e) {
+            if (e.data && e.data.token !== undefined && e.data.token !== activeSearchToken) return;
             if (e.data.status === 'info') {
                 if (e.data.id === 0) {
                     let evalNorm = (e.data.score * (game.turn() === 'w' ? 1 : -1) / 100);
-                    document.getElementById('eval-bar').innerText = `Eval: ${evalNorm.toFixed(2)}`;
-                    document.getElementById('eval-text').innerText = evalNorm.toFixed(1);
+                    if (!hasSmoothedEval) { smoothedEval = evalNorm; hasSmoothedEval = true; }
+                    smoothedEval = smoothedEval * 0.85 + evalNorm * 0.15;
+                    document.getElementById('eval-bar').innerText = `Eval: ${smoothedEval.toFixed(2)}`;
+                    document.getElementById('eval-text').innerText = smoothedEval.toFixed(1);
 
-                    let fillPerc = 50 + (evalNorm / 10) * 50;
+                    let fillPerc = 50 + (smoothedEval / 10) * 50;
                     fillPerc = Math.max(0, Math.min(100, fillPerc));
                     document.getElementById('eval-fill').style.height = fillPerc + '%';
 
@@ -2330,7 +2349,6 @@
                 document.getElementById('threat-area').innerText = e.data.msg;
             } else if (e.data.status === 'done') {
                 finishedWorkers++;
-                let rawScore = e.data.score * (game.turn() === 'w' ? 1 : -1); // normalize to white
                 if (e.data.move && e.data.score > bestGlobalScore) {
                     bestGlobalScore = e.data.score;
                     bestGlobalMove = e.data.move;
