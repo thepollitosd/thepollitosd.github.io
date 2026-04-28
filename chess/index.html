@@ -1244,7 +1244,7 @@
             return out * 1000;
         }
 
-        function evaluate() {
+        function origEvaluate() {
             let op = 0, mg = 0, eg = 0;
             let gamePhase = 0;
             let wOcc = bb[0]|bb[1]|bb[2]|bb[3]|bb[4]|bb[5];
@@ -1600,14 +1600,12 @@
         }
         // ===================== PATCH EXISTING EVAL =====================
         
-        const oldEvaluate = evaluate;
-        
-        evaluate = function() {
+        function evaluate() {
             if (usePesto) {
                 return pestoEval();
             }
         
-            return oldEvaluate();
+            return origEvaluate();
         };
 
         
