@@ -1582,15 +1582,17 @@
 
             return turn ? -Math.floor(blended) : Math.floor(blended);
         }
-
-        const originalEvaluate = evaluate;
+        // ===================== PATCH EXISTING EVAL =====================
         
-        function evaluate() {
+        const oldEvaluate = evaluate;
+        
+        evaluate = function() {
             if (usePesto) {
                 return pestoEval();
             }
-            return originalEvaluate();
-        }
+        
+            return oldEvaluate();
+        };
 
         
         // Fast eval for pruning/quiesce: material + PST + tempo only (no mobility/king safety/threats/NN).
