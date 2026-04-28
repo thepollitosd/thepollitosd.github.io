@@ -477,6 +477,9 @@
                         <label><span>Opening Book</span> <input type="checkbox" id="use-book" checked></label>
                     </div>
                     <div class="setting">
+                        <label><span>Show Arrows</span> <input type="checkbox" id="show-arrows" checked></label>
+                    </div>
+                    <div class="setting">
                         <label><span>Syzygy Tablebases</span> <input type="checkbox" id="use-tb" checked></label>
                     </div>
                     <div class="setting">
@@ -1990,13 +1993,15 @@
 
         function drawArrow(move) {
             let svg = document.getElementById('bot-arrows');
+            if (!svg) return;
             svg.innerHTML = '';
-            if (!move || !document.getElementById('show-arrows').checked) return;
+            let show = document.getElementById('show-arrows');
+            if (!move || (show && !show.checked)) return;
 
             // Ensure the SVG coordinate system matches the current board pixel size.
             let boardPx = document.getElementById('board').clientWidth;
             let svgRoot = document.getElementById('arrow-svg');
-            svgRoot.setAttribute('viewBox', `0 0 ${boardPx} ${boardPx}`);
+            if (svgRoot) svgRoot.setAttribute('viewBox', `0 0 ${boardPx} ${boardPx}`);
 
             let boardOri = board.orientation() === 'white' ? 1 : -1;
             let fFile = move.charCodeAt(0) - 97, fRank = parseInt(move[1]) - 1;
