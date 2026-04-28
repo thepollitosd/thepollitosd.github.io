@@ -561,6 +561,22 @@
         // Uses BigInt for 64-bit bitboards.
         let usePesto = false;
 
+        const PESTO_MAP = [
+            0, // white pawn
+            2, // white knight
+            4, // white bishop
+            6, // white rook
+            8, // white queen
+            10,// white king
+        
+            1, // black pawn
+            3,
+            5,
+            7,
+            9,
+            11
+        ];
+        
         // Listen for UI toggle
         onmessage = function(e) {
             if (e.data.type === 'setMasterMode') {
@@ -902,13 +918,13 @@
             }
         }
 
-        function getSliding(sq, occ, type) {
+        function getSliding(sq, occ, ty) {
             if (type === 2) { // Bishop
                 let mask = BISHOP_MASKS[sq];
                 let magic = BISHOP_MAGICS[sq];
                 let index = Number(BigInt.asUintN(64, (occ & mask) * magic.m) >> BigInt(magic.s)) + magic.o;
                 return BISHOP_ATTACKS[index];
-            } else if (type === 3) { // Rook
+            } else if (ty === 3) { // Rook
                 let mask = ROOK_MASKS[sq];
                 let magic = ROOK_MAGICS[sq];
                 let index = Number(BigInt.asUintN(64, (occ & mask) * magic.m) >> BigInt(magic.s)) + magic.o;
@@ -923,7 +939,7 @@
         let turn = 0, ep = -1, castle = 0; // w=0, b=1. castle bits: 1=wK, 2=wQ, 4=bK, 8=bQ
         let hash = 0n;
         let pastStates = [];
-        let repetitionStack = [];
+        let retitionStack = [];
         let useNN = true;
 
         function setFen(fen) {
@@ -2121,6 +2137,13 @@
         function pestoEval() {
             let mg = [0,0];
             let eg = [0,0];
+        
+            let pestoPc = PESTO_MAP[pc];
+            
+            mg[side] += mg_table[pestoPc][sq];
+            eg[side] += eg_table[pestoPc][sq];
+            gamePhase += gamephaseInc[pestoPc];
+
             let gamePhase = 0;
         
             for (let sq = 0; sq < 64; sq++) {
