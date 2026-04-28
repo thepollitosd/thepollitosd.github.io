@@ -1599,13 +1599,21 @@
         let history = new Array(2).fill(0).map(()=>new Array(64).fill(0).map(()=>new Array(64).fill(0)));
         let counterMoves = new Array(12).fill(0).map(() => new Array(64).fill(null));
         let currentMaterialBalance = 0;
+        
+        function resetHeuristics() {
+            for (let i = 0; i < 100; i++) { killerMoves[i][0] = null; killerMoves[i][1] = null; }
+            for (let s = 0; s < 2; s++) {
+                for (let f = 0; f < 64; f++) {
+                    for (let t = 0; t < 64; t++) history[s][f][t] = 0;
+                }
+            }
+            for (let p = 0; p < 12; p++) for (let sq = 0; sq < 64; sq++) counterMoves[p][sq] = null;
+        }
 
         function search(depth, rootMoves, alpha, beta) {
             nodes=0; timeUp=false; startTime = Date.now();
             let bMove = null, bScore = -Infinity;
-            killerMoves = new Array(100).fill(0).map(()=>[null, null]);
-            history = new Array(2).fill(0).map(()=>new Array(64).fill(0).map(()=>new Array(64).fill(0)));
-            counterMoves = new Array(12).fill(0).map(() => new Array(64).fill(null));
+            resetHeuristics();
             // IID and Aspiration Windows
             for(let d=1; d<=depth; d++) {
                 if(timeUp) break;
@@ -1679,7 +1687,7 @@
             if (beta > mateVal - 1) beta = mateVal - 1;
             if (alpha >= beta) return {score: alpha, move: null};
 
-            if((nodes++ & 4095)===0) {
+            if((nodes++ & 1023)===0) {
                 let now = Date.now();
                 if(now - startTime > limitMs) timeUp = true;
                 else if(now - lastBrainstorm >= 100) {
@@ -1835,7 +1843,7 @@
 
         // TIER 2: Quiescence
         function quiesce(alpha, beta) {
-            if((nodes++ & 4095)===0 && Date.now() - startTime > limitMs) timeUp = true;
+            if((nodes++ & 1023)===0 && Date.now() - startTime > limitMs) timeUp = true;
             if(timeUp) return alpha;
             
             let stand_pat = evaluate();
@@ -1879,6 +1887,12 @@
             if (msg.cmd === 'init') {
                 TT_BUFFER = msg.ttBuffer;
                 TT_VIEW = new Int32Array(TT_BUFFER);
+            } else if (msg.cmd === 'stop') {
+                if (msg.token === undefined || msg.token === self.searchToken) {
+                    timeUp = true;
+                    limitMs = 0;
+                    softLimitMs = 0;
+                }
             } else if (msg.cmd === 'search') {
                 setFen(msg.fen);
                 self.searchToken = msg.token;
@@ -2342,6 +2356,19 @@
             // Start multiple worker searches (Divergent Engine Personalities based on IDs)
             let timeSec = parseFloat(document.getElementById('think-time').value);
             if (!Number.isFinite(timeSec) || timeSec <= 0) timeSec = 1.5;
+            // Watchdog: never allow "3s" to turn into "20s" due to a stuck worker.
+            let token = activeSearchToken;
+            setTimeout(() => {
+                if (!isThinking || token !== activeSearchToken) return;
+                for (let w of workers) w.postMessage({ cmd: 'stop', token });
+                // Give a short grace period to deliver 'done' messages, then play best-so-far.
+                setTimeout(() => {
+                    if (!isThinking || token !== activeSearchToken) return;
+                    let m = bestGlobalMove;
+                    if (m) game.move({ from: m.substring(0, 2), to: m.substring(2, 4), promotion: m[4] || 'q' });
+                    finishAiMove();
+                }, 250);
+            }, Math.max(500, timeSec * 1000 + 600));
             for (let i = 0; i < numThreads; i++) {
                 workers[i].postMessage({
                     cmd: 'search',
