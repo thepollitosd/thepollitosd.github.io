@@ -469,8 +469,9 @@
                             oninput="updateUI()">
                     </div>
                     <div class="setting">
-                        <label><span>Workers (Threads)</span> <span id="threads-val">4</span></label>
+                        <label><span>Workers (Threads)</span> <span id="threads-val">Auto</span></label>
                         <input type="range" id="threads" min="1" max="16" step="1" value="4" oninput="updateUI()">
+                        <div class="warning-text">Tip: set the slider to the Auto value to enable Auto mode.</div>
                     </div>
                     <div class="setting">
                         <label><span>Opening Book</span> <input type="checkbox" id="use-book" checked></label>
@@ -1910,10 +1911,37 @@
         let smoothedEval = 0;
         let hasSmoothedEval = false;
 
+        function isIpadLike() {
+            try {
+                // iPadOS 13+ reports as MacIntel but has touch points.
+                return /iPad/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+            } catch (e) { return false; }
+        }
+
+        function autoThreadCount() {
+            let hc = 4;
+            try { hc = Number(navigator.hardwareConcurrency) || 4; } catch (e) { hc = 4; }
+
+            // Conservative caps to avoid thermal throttling + UI jank on mobile/iPad.
+            let cap = isIpadLike() ? 4 : 12;
+            let base = Math.max(1, Math.min(cap, hc));
+
+            // Leave one core for UI on desktop-ish devices when possible.
+            if (!isIpadLike() && base >= 6) base = Math.max(1, base - 1);
+            return Math.max(1, Math.min(16, base));
+        }
+
         function updateUI() {
             document.getElementById('time-val').innerText = document.getElementById('think-time').value + "s";
-            document.getElementById('threads-val').innerText = document.getElementById('threads').value;
-            numThreads = parseInt(document.getElementById('threads').value);
+            let threadsEl = document.getElementById('threads');
+            let raw = Number(threadsEl.value);
+            let auto = autoThreadCount();
+
+            // Treat slider == auto as "Auto" mode (no extra toggle needed).
+            let useAuto = !Number.isFinite(raw) || raw === auto;
+            numThreads = useAuto ? auto : Math.max(1, Math.min(16, Math.floor(raw)));
+
+            document.getElementById('threads-val').innerText = useAuto ? 'Auto' : String(numThreads);
         }
 
         function togglePanel(id) { document.getElementById(id).classList.toggle('open'); }
@@ -2206,6 +2234,7 @@
         let bestGlobalMove = null;
         let finishedWorkers = 0;
         let activeSearchToken = 0;
+        let multiPV = [];
 
         function triggerNextTurn() {
             if (game.game_over()) {
@@ -2267,6 +2296,7 @@
             window.searchStartGlobal = Date.now();
             hasSmoothedEval = false;
             activeSearchToken++;
+            multiPV = [];
 
             let bookMove = await checkOpeningBook();
             if (bookMove) {
@@ -2334,7 +2364,9 @@
                     fillPerc = Math.max(0, Math.min(100, fillPerc));
                     document.getElementById('eval-fill').style.height = fillPerc + '%';
 
-                    document.getElementById('commentary').innerText = `Depth: ${e.data.depth} | Nodes: ${e.data.nodes}`;
+                    let pv = multiPV.slice(0, 3).map(x => x.move).join('  ');
+                    document.getElementById('commentary').innerText =
+                        `Depth: ${e.data.depth} | Nodes: ${e.data.nodes}` + (pv ? ` | PV: ${pv}` : '');
 
                     let timeTaken = Math.max(1, (Date.now() - window.searchStartGlobal)) / 1000;
                     document.getElementById('nps-val').innerText = (e.data.nodes / timeTaken / 1000).toFixed(1);
@@ -2352,6 +2384,11 @@
                 if (e.data.move && e.data.score > bestGlobalScore) {
                     bestGlobalScore = e.data.score;
                     bestGlobalMove = e.data.move;
+                }
+                if (e.data.move) {
+                    multiPV.push({ move: e.data.move, score: e.data.score });
+                    multiPV.sort((a, b) => b.score - a.score);
+                    if (multiPV.length > 4) multiPV.length = 4;
                 }
 
                 if (finishedWorkers >= numThreads) {
@@ -2402,6 +2439,14 @@
 
             setTimeout(triggerNextTurn, 300);
         }
+
+        // Set slider to a sensible per-device default (iPad-safe) on first load.
+        (function initThreads() {
+            let el = document.getElementById('threads');
+            if (!el) return;
+            let auto = autoThreadCount();
+            el.value = String(auto);
+        })();
 
         updateUI(); resetGame();
     </script>
