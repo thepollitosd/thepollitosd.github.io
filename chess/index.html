@@ -1199,71 +1199,64 @@
             }
             return gamePhase;
         }
-        function see(move, occ = null) {
-            let from = move.f, to = move.t, piece = move.pce, captured = move.c;
-            if (occ === null) occ = wOcc() | bOcc();
-            let attackers = [];
-            // Get all pieces attacking the to-square
-            for (let p = 0; p < 12; p++) {
-                let mask = bb[p];
-                while (mask) {
-                    let [sq, nM] = popLSB(mask); mask = nM;
-                    if (sq === from) continue;
-                    let attacks = 0n;
-                    if (p < 6) { // White
-                        if (p === 0) attacks = PAWN_ATTACKS[0][sq];
-                        else if (p === 1) attacks = KNIGHT_ATTACKS[sq];
-                        else if (p === 2) attacks = getSliding(sq, occ, 2);
-                        else if (p === 3) attacks = getSliding(sq, occ, 3);
-                        else if (p === 4) attacks = getSliding(sq, occ, 0);
-                        else if (p === 5) attacks = KING_ATTACKS[sq];
-                    } else { // Black
-                        if (p === 6) attacks = PAWN_ATTACKS[1][sq];
-                        else if (p === 7) attacks = KNIGHT_ATTACKS[sq];
-                        else if (p === 8) attacks = getSliding(sq, occ, 2);
-                        else if (p === 9) attacks = getSliding(sq, occ, 3);
-                        else if (p === 10) attacks = getSliding(sq, occ, 0);
-                        else if (p === 11) attacks = KING_ATTACKS[sq];
+        // Static Exchange Evaluation: returns the material gain/loss after all captures on a square.
+        // Uses the standard gain[] minimax approach so each side can stop capturing if losing.
+        function see(move) {
+            const PIECE_VAL = [100, 320, 330, 500, 900, 20000, 100, 320, 330, 500, 900, 20000];
+            let to = move.t;
+            let from = move.f;
+            let capturedVal = move.c !== -1 ? PIECE_VAL[move.c] : 0;
+            let movingPieceVal = PIECE_VAL[move.pce];
+
+            // gain[0] = value captured by moving piece
+            let gain = [capturedVal];
+            let d = 0;
+            let occ = wOcc() | bOcc();
+            occ ^= bit(from); // remove moving piece
+
+            // Which side to move next (opponent of moving piece)
+            let nextSide = move.pce < 6 ? 1 : 0; // 0=white, 1=black
+            let lastPieceVal = movingPieceVal;
+
+            while (true) {
+                // Find least valuable attacker for nextSide on 'to'
+                let found = false;
+                let bestVal = Infinity, bestSq = -1, bestP = -1;
+                let start = nextSide === 0 ? 0 : 6;
+                let end = nextSide === 0 ? 6 : 12;
+                for (let p = start; p < end; p++) {
+                    let mask = bb[p] & occ;
+                    while (mask) {
+                        let [sq, nM] = popLSB(mask); mask = nM;
+                        let attacks = 0n;
+                        let pi = p % 6;
+                        if (pi === 0) attacks = PAWN_ATTACKS[p < 6 ? 0 : 1][sq];
+                        else if (pi === 1) attacks = KNIGHT_ATTACKS[sq];
+                        else if (pi === 2) attacks = getSliding(sq, occ, 2);
+                        else if (pi === 3) attacks = getSliding(sq, occ, 3);
+                        else if (pi === 4) attacks = getSliding(sq, occ, 0);
+                        else if (pi === 5) attacks = KING_ATTACKS[sq];
+                        if (attacks & bit(to)) {
+                            if (PIECE_VAL[p] < bestVal) {
+                                bestVal = PIECE_VAL[p]; bestSq = sq; bestP = p; found = true;
+                            }
+                        }
                     }
-                    if (attacks & bit(to)) attackers.push({sq, p, val: V[p % 6]});
                 }
+                if (!found) break;
+
+                d++;
+                gain.push(lastPieceVal - gain[d - 1]);
+                lastPieceVal = bestVal;
+                occ ^= bit(bestSq); // remove this attacker
+                nextSide ^= 1;
             }
-            // Sort attackers by value
-            attackers.sort((a, b) => a.val - b.val);
-            let gain = captured !== -1 ? V[captured % 6] : 0;
-            let side = 0; // White starts
-            let occ2 = occ ^ bit(from);
-            if (captured !== -1) occ2 ^= bit(to);
-            let idx = 0;
-            while (idx < attackers.length) {
-                let attacker = attackers[idx];
-                if (attacker.sq === from) { idx++; continue; }
-                // Check if the attacker is still attacking
-                let attacks = 0n;
-                if (attacker.p < 6) {
-                    if (attacker.p === 0) attacks = PAWN_ATTACKS[0][attacker.sq];
-                    else if (attacker.p === 1) attacks = KNIGHT_ATTACKS[attacker.sq];
-                    else if (attacker.p === 2) attacks = getSliding(attacker.sq, occ2, 2);
-                    else if (attacker.p === 3) attacks = getSliding(attacker.sq, occ2, 3);
-                    else if (attacker.p === 4) attacks = getSliding(attacker.sq, occ2, 0);
-                    else if (attacker.p === 5) attacks = KING_ATTACKS[attacker.sq];
-                } else {
-                    if (attacker.p === 6) attacks = PAWN_ATTACKS[1][attacker.sq];
-                    else if (attacker.p === 7) attacks = KNIGHT_ATTACKS[attacker.sq];
-                    else if (attacker.p === 8) attacks = getSliding(attacker.sq, occ2, 2);
-                    else if (attacker.p === 9) attacks = getSliding(attacker.sq, occ2, 3);
-                    else if (attacker.p === 10) attacks = getSliding(attacker.sq, occ2, 0);
-                    else if (attacker.p === 11) attacks = KING_ATTACKS[attacker.sq];
-                }
-                if (!(attacks & bit(to))) { idx++; continue; }
-                // Capture
-                gain = V[piece % 6] - gain;
-                piece = attacker.p;
-                occ2 ^= bit(attacker.sq);
-                idx++;
-                side ^= 1;
+
+            // Minimax backward: each side picks the better of capturing or not
+            for (let i = gain.length - 1; i > 0; i--) {
+                gain[i - 1] = Math.max(-gain[i], gain[i - 1]);
             }
-            return gain;
+            return gain[0];
         }
 
         function isRepetition() {
@@ -1623,34 +1616,37 @@
             return {score: alpha, move: bestMove};
         }
 
-        // TIER 2: Quiescence
+        // TIER 2: Quiescence — searches all captures and check evasions until position is quiet
         function quiesce(alpha, beta) {
             if((nodes++ & 1023)===0 && Date.now() - startTime > limitMs) timeUp = true;
             if(timeUp) return alpha;
-            
-            // Fast stand-pat unless close to the window.
-            let stand_pat = evaluateFast();
-            if (stand_pat > alpha - 150 && stand_pat < beta + 150) stand_pat = evaluate();
+
+            let stand_pat = evaluate();
             if(stand_pat >= beta) return beta;
             if(stand_pat > alpha) alpha = stand_pat;
 
             let inCheck = isAttacked(ctz(bb[turn?5:11]), turn, (wOcc() | bOcc()));
             let moves;
             if (inCheck) {
-                moves = genMoves(false); // All moves if in check
+                // In check: must consider all moves to find evasions
+                moves = genMoves(false);
                 moves.forEach(m => { m.s = scoreMove(m, null, 0, null); });
-                moves.sort((a,b) => b.s - a.s);
+                moves.sort((a, b) => b.s - a.s);
             } else {
-                moves = genMoves(true); // Captures only
-                moves.sort((a,b) => ((V[b.c%6]||0)*10 - (V[b.pce%6]||0)) - ((V[a.c%6]||0)*10 - (V[a.pce%6]||0)));
+                // Not in check: only captures (and promotions)
+                moves = genMoves(true);
+                // Sort by MVV-LVA: most valuable victim, least valuable attacker
+                moves.sort((a, b) =>
+                    ((V[b.c % 6] || 0) * 10 - (V[b.pce % 6] || 0)) -
+                    ((V[a.c % 6] || 0) * 10 - (V[a.pce % 6] || 0))
+                );
             }
-            
-            let gamePhase = computeGamePhase();
-            for(let m of moves) {
-                if (!inCheck && m.c !== -1 && see(m) < 0) continue; // Only prune bad captures if not in check
-                // TIER 4: Delta Pruning
-                if (!inCheck && m.prom === -1 && stand_pat + (V[m.c%6] || 0) + 200 < alpha && gamePhase > 10) {
-                    continue; 
+
+            for (let m of moves) {
+                // Delta pruning: skip captures that can't raise alpha even if recaptured optimally
+                // Only apply when NOT in check and margin is generous
+                if (!inCheck && m.c !== -1 && m.prom === -1) {
+                    if (stand_pat + (V[m.c % 6] || 0) + 350 < alpha) continue;
                 }
 
                 makeMove(m);
