@@ -2401,7 +2401,7 @@
                     document.getElementById('nps-val').innerText = (e.data.nodes / timeTaken / 1000).toFixed(1);
 
                     drawArrow(e.data.move);
-                }
+
             } else if (e.data.status === 'brainstorm') {
                 if (e.data.id === 0 && miniBoard) {
                     try { miniBoard.position(e.data.fen, false); } catch (err) { }
@@ -2480,6 +2480,14 @@
             let auto = autoThreadCount();
             el.value = String(auto);
         })();
+
+        // Expose key functions globally for inline onclick handlers
+        window.viewHistory = viewHistory;
+        window.resetGame = resetGame;
+        window.snapToPresent = snapToPresent;
+        window.togglePanel = togglePanel;
+        window.closePanels = closePanels;
+        window.updateUI = updateUI;
 
         updateUI(); resetGame();
     </script>
