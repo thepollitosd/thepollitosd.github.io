@@ -884,6 +884,19 @@
             return moves;
         }
 
+
+        // Legal move filter: wraps genMoves and removes moves that leave king in check
+        function genLegalMoves(capturesOnly = false, quietOnly = false) {
+            let pseudo = genMoves(capturesOnly, quietOnly);
+            let legal = [];
+            for (let m of pseudo) {
+                makeMove(m);
+                if (!isAttacked(ctz(bb[turn?5:11]), turn, wOcc() | bOcc())) legal.push(m);
+                unmakeMove(m);
+            }
+            return legal;
+        }
+
         // TIER 5 / TIER 1 Move Making + Zobrist hashing incrementally
         function makeMove(m) {
             pastStates.push({ep, castle, hash});
@@ -1397,8 +1410,8 @@
                     else {
                         bScore = score;
                         if(move) bMove = move;
-                        // Always report PV info, including id to differentiate lines
-                        postMessage({status:'info', depth:d, score: bScore, move: fmt(bMove), nodes, id: self.workerId, token: self.searchToken});
+                        // Always report PV info, including id and current depth to differentiate lines
+                        postMessage({status:'info', depth:d, maxDepth:depth, score: bScore, move: fmt(bMove), nodes, id: self.workerId, token: self.searchToken});
                         break;
                     }
                 }
@@ -1679,7 +1692,7 @@
                 minSearchDepth = Number(msg.minDepth) || 1;
                 useNN = msg.useNN !== false;
                 self.workerId = msg.id; 
-                let rootMoves = genMoves(false, false);
+                let rootMoves = genLegalMoves(false, false);
                 // Shard BEFORE scoring/sorting to avoid N-times root sorting across workers.
                 if (msg.totalWorkers > 1 && rootMoves.length > 1) {
                     let shard = rootMoves.filter((_, idx) => idx % msg.totalWorkers === msg.id);
@@ -2388,14 +2401,15 @@
                         document.getElementById('eval-fill').style.height = fillPerc + '%';
                     }
 
-                    // Display top 4 lines in commentary
+                    // Display depth header + top 4 lines in commentary
+                    let depthHeader = `<div style="font-size:0.8em; color:#aaa; margin-bottom:4px; font-family:monospace;">🔍 Depth: <b style="color:#00e5ff">${e.data.depth}</b> | Nodes: ${(e.data.nodes/1000).toFixed(0)}k</div>`;
                     let lines = multiPV.slice(0, 4).map((x, i) => {
                         let scoreSign = x.score > 0 ? "+" : "";
                         let scoreText = Math.abs(x.score) > 30000 ? "Mate" : (x.score / 100).toFixed(2);
-                        return `<div style="margin-bottom:2px; font-family: monospace;">Line ${i+1}: <b>${x.move}</b> (${scoreSign}${scoreText}) d${x.depth}</div>`;
+                        let label = i === 0 ? `<span style="color:#00e5ff">▶ Line ${i+1}</span>` : `Line ${i+1}`;
+                        return `<div style="margin-bottom:2px; font-family:monospace;">${label}: <b>${x.move}</b> <span style="color:#aaa">(${scoreSign}${scoreText}) d${x.depth}</span></div>`;
                     }).join('');
-                    
-                    document.getElementById('commentary').innerHTML = lines || "Analyzing...";
+                    document.getElementById('commentary').innerHTML = depthHeader + (lines || "<i>Analyzing...</i>");
 
                     let timeTaken = Math.max(1, (Date.now() - window.searchStartGlobal)) / 1000;
                     document.getElementById('nps-val').innerText = (e.data.nodes / timeTaken / 1000).toFixed(1);
