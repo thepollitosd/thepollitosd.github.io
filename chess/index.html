@@ -1822,6 +1822,10 @@
             board = Chessboard('board', {
                 position: game.fen(), draggable: true, pieceTheme: `https://thepollitosd.github.io/chess/pieces/${document.getElementById('piece-theme').value}/{piece}.svg`,
                 onDragStart: (a, p) => {
+                    if (viewingHistory) {
+                        snapToPresent();
+                        return false;
+                    }
                     if (game.game_over()) return false;
                     let mode = document.getElementById('play-mode').value;
                     if (mode === 'ai-self') return false;
@@ -1845,13 +1849,187 @@
                         triggerNextTurn();
                     }
                 },
-                onSnapEnd: () => board.position(game.fen())
+                onSnapEnd: () => {
+                    if (!viewingHistory) board.position(game.fen());
+                }
             });
 
             if (miniBoard) miniBoard.destroy();
             miniBoard = Chessboard('mini-board', {
                 position: game.fen(), showNotation: false, pieceTheme: `https://lichess1.org/assets/piece/${document.getElementById('piece-theme').value}/{piece}.svg`
             });
+            
+            attachBoardEvents();
+        }
+
+        let selectedSquare = null;
+        let rightClickStartSq = null;
+        let userArrows = [];
+        let userHighlights = [];
+        let viewingHistory = false;
+
+        function snapToPresent() {
+            viewingHistory = false;
+            board.position(game.fen(), false);
+            let hv = game.history({verbose: true});
+            if (hv.length > 0) highlightMove(hv[hv.length-1].from, hv[hv.length-1].to);
+            else removeHighlights();
+        }
+
+        function handleSquareClick(sq) {
+            if (viewingHistory) {
+                snapToPresent();
+                return;
+            }
+            if (game.game_over()) return;
+            let mode = document.getElementById('play-mode').value;
+            if (mode === 'ai-self') return;
+            if (mode !== 'human' && mode !== 'stockfish') return;
+
+            let isMyTurn = (game.turn() === staticHumanSide);
+            if (!isMyTurn) {
+                if (selectedSquare) {
+                    if (selectedSquare !== sq) {
+                        premoves.push({ from: selectedSquare, to: sq, promotion: 'q' });
+                        renderPremoves();
+                    }
+                    selectedSquare = null;
+                    clearDots();
+                } else {
+                    let p = game.get(sq);
+                    if (p && p.color === staticHumanSide) {
+                        selectedSquare = sq;
+                        showLegalMoves(sq, true);
+                    }
+                }
+                return;
+            }
+
+            if (selectedSquare) {
+                if (selectedSquare === sq) {
+                    selectedSquare = null;
+                    clearDots();
+                } else {
+                    let m = game.move({ from: selectedSquare, to: sq, promotion: 'q' });
+                    if (m) {
+                        selectedSquare = null;
+                        clearDots();
+                        premoves = [];
+                        updateLog(); 
+                        document.getElementById('bot-arrows').innerHTML = '';
+                        triggerNextTurn();
+                    } else {
+                        let p = game.get(sq);
+                        if (p && p.color === staticHumanSide) {
+                            selectedSquare = sq;
+                            showLegalMoves(sq, false);
+                        } else {
+                            selectedSquare = null;
+                            clearDots();
+                        }
+                    }
+                }
+            } else {
+                let p = game.get(sq);
+                if (p && p.color === staticHumanSide) {
+                    selectedSquare = sq;
+                    showLegalMoves(sq, false);
+                }
+            }
+        }
+
+        function attachBoardEvents() {
+            $('#board').off('contextmenu').on('contextmenu', function(e) {
+                e.preventDefault();
+            });
+
+            $('#board').off('mousedown').on('mousedown', '.square-55d63', function(e) {
+                if (e.button === 2) {
+                    rightClickStartSq = $(this).attr('data-square');
+                } else if (e.button === 0) {
+                    let sq = $(this).attr('data-square');
+                    handleSquareClick(sq);
+                }
+            });
+
+            $('#board').off('mouseup').on('mouseup', '.square-55d63', function(e) {
+                if (e.button === 2 && rightClickStartSq) {
+                    let rightClickEndSq = $(this).attr('data-square');
+                    if (rightClickStartSq === rightClickEndSq) {
+                        let idx = userHighlights.indexOf(rightClickStartSq);
+                        if (idx >= 0) userHighlights.splice(idx, 1);
+                        else userHighlights.push(rightClickStartSq);
+                    } else {
+                        let existing = userArrows.findIndex(a => a.f === rightClickStartSq && a.t === rightClickEndSq);
+                        if (existing >= 0) userArrows.splice(existing, 1);
+                        else userArrows.push({f: rightClickStartSq, t: rightClickEndSq});
+                    }
+                    renderUserDrawings();
+                    rightClickStartSq = null;
+                }
+            });
+
+            $('#board').on('mousedown', function(e) {
+                if (e.button === 0) {
+                    if (userArrows.length > 0 || userHighlights.length > 0) {
+                        userArrows = [];
+                        userHighlights = [];
+                        renderUserDrawings();
+                    }
+                }
+            });
+        }
+
+        function renderUserDrawings() {
+            let svg = document.getElementById('user-arrows');
+            if (!svg) return;
+            svg.innerHTML = '';
+            
+            let boardPx = document.getElementById('board').clientWidth;
+            let sqSize = boardPx / 8;
+            let boardOri = board.orientation() === 'white' ? 1 : -1;
+
+            function getCenter(sq) {
+                let file = sq.charCodeAt(0) - 97;
+                let rank = parseInt(sq[1]) - 1;
+                if (boardOri === -1) { file = 7 - file; rank = 7 - rank; }
+                return { x: file * sqSize + sqSize / 2, y: (7 - rank) * sqSize + sqSize / 2 };
+            }
+
+            let html = '';
+            for (let sq of userHighlights) {
+                let c = getCenter(sq);
+                html += `<rect x="${c.x - sqSize/2}" y="${c.y - sqSize/2}" width="${sqSize}" height="${sqSize}" fill="rgba(235, 97, 80, 0.5)" />`;
+            }
+
+            html += `<defs>
+                       <marker id="user-arrowhead" markerWidth="6" markerHeight="6" refX="4" refY="3" orient="auto">
+                         <polygon points="0 0, 6 3, 0 6" fill="rgba(235, 97, 80, 0.8)"/>
+                       </marker>
+                     </defs>`;
+
+            for (let a of userArrows) {
+                let fc = getCenter(a.f);
+                let tc = getCenter(a.t);
+                let dx = tc.x - fc.x, dy = tc.y - fc.y;
+                let angle = Math.atan2(dy, dx);
+                let len = Math.sqrt(dx * dx + dy * dy) - (sqSize * 0.35);
+                html += `<line x1="${fc.x}" y1="${fc.y}" x2="${fc.x + Math.cos(angle)*len}" y2="${fc.y + Math.sin(angle)*len}" stroke="rgba(235, 97, 80, 0.8)" stroke-width="${sqSize * 0.12}" marker-end="url(#user-arrowhead)" />`;
+            }
+            svg.innerHTML = html;
+        }
+
+        function viewHistory(idx) {
+            let temp = new Chess();
+            let h = game.history();
+            for(let i=0; i<=idx; i++) temp.move(h[i]);
+            board.position(temp.fen(), false);
+            viewingHistory = true;
+            removeHighlights();
+            if (idx >= 0) {
+                let m = temp.history({verbose: true}).pop();
+                if(m) highlightMove(m.from, m.to);
+            }
         }
 
         function updateMaterial() {
@@ -1881,11 +2059,17 @@
             let d = document.getElementById('moves'); d.innerHTML = "";
             let h = game.history();
             let hv = game.history({ verbose: true });
-            for (let i = 0; i < h.length; i += 2) d.innerHTML += `<div class="move-num">${i / 2 + 1}.</div><div>${h[i]}</div><div>${h[i + 1] || ''}</div>`;
+            for (let i = 0; i < h.length; i += 2) {
+                let m1 = `<div style="cursor:pointer;" onclick="viewHistory(${i})">${h[i]}</div>`;
+                let m2 = h[i+1] ? `<div style="cursor:pointer;" onclick="viewHistory(${i+1})">${h[i+1]}</div>` : `<div></div>`;
+                d.innerHTML += `<div class="move-num">${i / 2 + 1}.</div>${m1}${m2}`;
+            }
             d.scrollTop = d.scrollHeight;
             updateMaterial();
             if (miniBoard && !isThinking) miniBoard.position(game.fen(), false);
-            if (hv.length > 0) setTimeout(() => highlightMove(hv[hv.length - 1].from, hv[hv.length - 1].to), 50);
+            if (!viewingHistory) {
+                if (hv.length > 0) setTimeout(() => highlightMove(hv[hv.length - 1].from, hv[hv.length - 1].to), 50);
+            }
         }
 
         // TIER 4: Multi-threading logic + Syzygy + Opening Book integration
@@ -2128,6 +2312,10 @@
                 setTimeout(() => {
                     if (!isThinking || token !== activeSearchToken) return;
                     let m = bestGlobalMove;
+                    if (!m) {
+                        let moves = game.moves({verbose: true});
+                        if (moves.length > 0) m = moves[0].from + moves[0].to + (moves[0].promotion || '');
+                    }
                     if (m) game.move({ from: m.substring(0, 2), to: m.substring(2, 4), promotion: m[4] || 'q' });
                     finishAiMove();
                 }, 250);
@@ -2186,8 +2374,12 @@
                     if (multiPV.length > 4) multiPV.length = 4;
                 }
 
-                if (finishedWorkers >= numThreads) {
+                if (finishedWorkers >= numThreads && isThinking) {
                     let m = bestGlobalMove;
+                    if (!m) {
+                        let moves = game.moves({verbose: true});
+                        if (moves.length > 0) m = moves[0].from + moves[0].to + (moves[0].promotion || '');
+                    }
                     if (m) game.move({ from: m.substring(0, 2), to: m.substring(2, 4), promotion: m[4] || 'q' });
                     finishAiMove();
                 }
