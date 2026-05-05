@@ -2341,6 +2341,7 @@
             // Start multiple worker searches (Divergent Engine Personalities based on IDs)
             let timeSec = parseFloat(document.getElementById('think-time').value);
             if (!Number.isFinite(timeSec) || timeSec <= 0) timeSec = 1.5;
+            
             // Watchdog: never allow "3s" to turn into "20s" due to a stuck worker.
             let token = activeSearchToken;
             setTimeout(() => {
@@ -2349,7 +2350,15 @@
                 // Give a short grace period to deliver 'done' messages, then play best-so-far.
                 setTimeout(() => {
                     if (!isThinking || token !== activeSearchToken) return;
-                    let m = bestGlobalMove;
+                    
+                    // Fetch the absolute best move currently evaluated from the active lines
+                    let m = null;
+                    if (multiPV.length > 0) {
+                        m = multiPV[0].move;
+                    } else {
+                        m = bestGlobalMove;
+                    }
+
                     if (!m) {
                         let moves = game.moves({ verbose: true });
                         if (moves.length > 0) m = moves[0].from + moves[0].to + (moves[0].promotion || '');
@@ -2358,6 +2367,7 @@
                     finishAiMove();
                 }, 250);
             }, Math.max(500, timeSec * 1000 + 600));
+
             for (let i = 0; i < numThreads; i++) {
                 workers[i].postMessage({
                     cmd: 'search',
@@ -2427,7 +2437,15 @@
                 }
                 // Play as soon as ANY worker completes (they all searched the same moves)
                 if (isThinking && finishedWorkers === 1) {
-                    let m = bestGlobalMove;
+                    
+                    // Fetch the absolute best move currently evaluated from the active lines
+                    let m = null;
+                    if (multiPV.length > 0) {
+                        m = multiPV[0].move;
+                    } else {
+                        m = bestGlobalMove;
+                    }
+
                     if (!m) {
                         let moves = game.moves({ verbose: true });
                         if (moves.length > 0) m = moves[0].from + moves[0].to + (moves[0].promotion || '');
