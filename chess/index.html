@@ -1548,10 +1548,10 @@
                 captureMoves.sort((a,b) => b.s - a.s);
                 quietMoves.sort((a,b) => b.s - a.s);
             } else {
-                captureMoves = genLegalMoves(true, false);
+                captureMoves = genMoves(true, false);
                 captureMoves.forEach(m => { m.s = scoreMove(m, ttMove, ply, lastMove); });
                 captureMoves.sort((a,b) => b.s - a.s);
-                quietMoves = genLegalMoves(false, true);
+                quietMoves = genMoves(false, true);
                 quietMoves.forEach(m => { m.s = scoreMove(m, ttMove, ply, lastMove); });
                 quietMoves.sort((a,b) => b.s - a.s);
             }
@@ -1568,6 +1568,8 @@
                 let moves = moveStages[stage];
                 for (let m of moves) {
                     makeMove(m);
+                    if(isAttacked(ctz(bb[turn?5:11]), turn, (wOcc() | bOcc()))) { unmakeMove(m); continue; } // illegal
+                    movesMade++;
                     let score;
                     let isQuiet = (m.c === -1 && m.prom === -1);
                     let isTt = ttMove && moveEquals(m, ttMove);
@@ -1646,12 +1648,12 @@
             let moves;
             if (inCheck) {
                 // In check: must consider all moves to find evasions
-                moves = genLegalMoves(false);
+                moves = genMoves(false);
                 moves.forEach(m => { m.s = scoreMove(m, null, 0, null); });
                 moves.sort((a, b) => b.s - a.s);
             } else {
                 // Not in check: only captures (and promotions)
-                moves = genLegalMoves(true);
+                moves = genMoves(true);
                 // Sort by MVV-LVA: most valuable victim, least valuable attacker
                 moves.sort((a, b) =>
                     ((V[b.c % 6] || 0) * 10 - (V[b.pce % 6] || 0)) -
@@ -1667,6 +1669,7 @@
                 }
 
                 makeMove(m);
+                if(isAttacked(ctz(bb[turn?5:11]), turn, (wOcc() | bOcc()))) { unmakeMove(m); continue; }
                 let s = -quiesce(-beta, -alpha);
                 unmakeMove(m);
                 if(timeUp) return alpha;
