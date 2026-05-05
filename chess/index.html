@@ -1435,26 +1435,33 @@
             return a && b && a.f === b.f && a.t === b.t && a.prom === b.prom;
         }
 
-        function scoreMove(m, ttMove, ply, lastMove) {
-            if (ttMove && moveEquals(m, ttMove)) return 200000;
-            if (m.flag === 2) return 180000; // Increased castling priority
-            if (m.prom === 4 || m.prom === 10) return 150000;
-
-            let sideMaterial = turn ? -currentMaterialBalance : currentMaterialBalance;
-            if (m.c !== -1) {
-                let gain = see(m);
-                let captureScore = 10000 + gain;
-                if (gain < 0) captureScore -= 6000;
-                if (sideMaterial < 0 && gain < 50) captureScore -= 8000;
-                return captureScore;
+        // Fast MVV-LVA capture ordering (most valuable victim / least valuable attacker)
+        // Much faster than SEE for ordering — SEE is only called for pruning decisions
+        const MVV_LVA = (() => {
+            const vals = [100, 320, 330, 500, 900, 20000];
+            const table = [];
+            for (let v = 0; v < 6; v++) {
+                table[v] = [];
+                for (let a = 0; a < 6; a++) {
+                    table[v][a] = vals[v] * 10 - vals[a];
+                }
             }
+            return table;
+        })();
 
-            // Strongly penalize non-castling king moves to discourage early king walks
-            if (m.pce === 5 && m.flag !== 2) return -10000;
-
-            if (killerMoves[ply] && killerMoves[ply][0] && moveEquals(killerMoves[ply][0], m)) return 9000;
-            if (killerMoves[ply] && killerMoves[ply][1] && moveEquals(killerMoves[ply][1], m)) return 8000;
-            if (lastMove && counterMoves[lastMove.pce][lastMove.t] && moveEquals(counterMoves[lastMove.pce][lastMove.t], m)) return 7000;
+        function scoreMove(m, ttMove, ply, lastMove) {
+            if (ttMove && moveEquals(m, ttMove)) return 2000000; // TT move always first
+            if (m.prom === 4 || m.prom === 10) return 900000;   // Queen promotion
+            if (m.c !== -1) {
+                // Captures: MVV-LVA. Always score above quiet moves.
+                return 100000 + MVV_LVA[m.c % 6][m.pce % 6];
+            }
+            // Quiet moves
+            if (m.flag === 2) return 90000; // Castling
+            if (m.pce === 5 && m.flag !== 2) return -10000; // King walk penalty
+            if (killerMoves[ply] && killerMoves[ply][0] && moveEquals(killerMoves[ply][0], m)) return 80000;
+            if (killerMoves[ply] && killerMoves[ply][1] && moveEquals(killerMoves[ply][1], m)) return 70000;
+            if (lastMove && counterMoves[lastMove.pce] && counterMoves[lastMove.pce][lastMove.t] && moveEquals(counterMoves[lastMove.pce][lastMove.t], m)) return 60000;
             return history[turn][m.f][m.t] || 0;
         }
 
@@ -1492,11 +1499,7 @@
                 if(tte.flag === 2 && tte.score >= beta) return {score: tte.score, move: tte.move};
             }
 
-            // Internal Iterative Deepening
-            if (depth >= 4 && (!tte || !tte.move) && !inCheck) {
-                alphaBeta(depth - 2, ply + 1, null, alpha, beta, lastMove);
-                tte = getTT(hash);
-            }
+            // IID removed: wasted more time than it saved
 
             if(depth <= 0) return {score: quiesce(alpha, beta), move: null};
 
@@ -1524,12 +1527,17 @@
             }
 
             let ttMove = tte && tte.move ? tte.move : null;
-            let captureMoves = [];
-            let quietMoves = [];
+            // Always generate captures and quiet moves separately so captures are always searched first
+            let captureMoves, quietMoves;
             if (rootMoves) {
-                captureMoves = rootMoves;
+                // Root: moves already fully generated and sorted externally
+                captureMoves = rootMoves.filter(m => m.c !== -1 || m.prom !== -1);
+                quietMoves   = rootMoves.filter(m => m.c === -1 && m.prom === -1);
+                // Re-score with TT move priority
+                [...captureMoves, ...quietMoves].forEach(m => { m.s = scoreMove(m, ttMove, ply, lastMove); });
+                captureMoves.sort((a,b) => b.s - a.s);
+                quietMoves.sort((a,b) => b.s - a.s);
             } else {
-                // Always generate all moves — no futility skip
                 captureMoves = genMoves(true, false);
                 captureMoves.forEach(m => { m.s = scoreMove(m, ttMove, ply, lastMove); });
                 captureMoves.sort((a,b) => b.s - a.s);
@@ -1543,7 +1551,8 @@
             let bestMove = null;
             let origAlpha = alpha;
             let movesMade = 0;
-            let moveStages = rootMoves ? [captureMoves] : [captureMoves, quietMoves];
+            // Always do captures first, then quiet — two stages regardless of root or not
+            let moveStages = [captureMoves, quietMoves];
 
             for (let stage = 0; stage < moveStages.length; stage++) {
                 let moves = moveStages[stage];
@@ -1560,30 +1569,30 @@
                     if (movesMade === 1) {
                         score = -alphaBeta(depth-1, ply+1, null, -beta, -alpha, m).score;
                     } else {
-                        // LMP: only prune at very low depths with a higher threshold
-                        let lmpThreshold = 5 + 3 * depth * depth;
-                        if(depth <= 3 && movesMade > lmpThreshold && !inCheck && isQuiet) {
-                            unmakeMove(m); continue;
-                        }
+                        let isCapture = (m.c !== -1 || m.prom !== -1);
 
-                        // SEE Pruning: only prune clearly losing captures at shallow depths
-                        if (depth <= 2 && !isQuiet && !inCheck && see(m) < -300 * depth) {
-                            unmakeMove(m); continue;
-                        }
+                        // Never LMP or LMR captures — always search them fully
+                        if (!isCapture) {
+                            // LMP: skip late quiet moves at low depth
+                            let lmpThreshold = 5 + 3 * depth * depth;
+                            if(depth <= 3 && movesMade > lmpThreshold && !inCheck) {
+                                unmakeMove(m); continue;
+                            }
 
-                        // LMR: only reduce after many moves, with a smaller reduction
-                        let doLMR = (depth >= 3 && movesMade >= 6 && !inCheck && isQuiet && !isTt && !isKiller);
-                        if (doLMR) {
-                            let reduction = Math.max(1, Math.floor(Math.log(depth) * Math.log(movesMade) / 2.5));
-                            score = -alphaBeta(depth - 1 - reduction, ply+1, null, -alpha-1, -alpha, m).score;
-                            if (score > alpha) {
-                                score = -alphaBeta(depth-1, ply+1, null, -beta, -alpha, m).score;
+                            // LMR: reduce late quiet moves
+                            let doLMR = (depth >= 3 && movesMade >= 6 && !inCheck && !isTt && !isKiller);
+                            if (doLMR) {
+                                let reduction = Math.max(1, Math.floor(Math.log(depth) * Math.log(movesMade) / 2.5));
+                                score = -alphaBeta(depth - 1 - reduction, ply+1, null, -alpha-1, -alpha, m).score;
+                                if (score > alpha) score = -alphaBeta(depth-1, ply+1, null, -beta, -alpha, m).score;
+                            } else {
+                                score = -alphaBeta(depth-1, ply+1, null, -alpha-1, -alpha, m).score;
+                                if(score > alpha && score < beta) score = -alphaBeta(depth-1, ply+1, null, -beta, -alpha, m).score;
                             }
                         } else {
+                            // Captures: PVS but no reduction
                             score = -alphaBeta(depth-1, ply+1, null, -alpha-1, -alpha, m).score;
-                            if(score > alpha && score < beta) {
-                                score = -alphaBeta(depth-1, ply+1, null, -beta, -alpha, m).score;
-                            }
+                            if(score > alpha && score < beta) score = -alphaBeta(depth-1, ply+1, null, -beta, -alpha, m).score;
                         }
                     }
                     unmakeMove(m);
