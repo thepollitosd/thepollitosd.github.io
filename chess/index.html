@@ -1404,8 +1404,9 @@
                     rootMoves.sort((a, b) => (moveEquals(a, bMove) ? 1 : 0) - (moveEquals(b, bMove) ? 1 : 0));
                     rootMoves.reverse();
                 }
-                let a = d>2 ? bScore - 60 : -50000;
-                let b = d>2 ? bScore + 60 : 50000;
+                // Wider aspiration windows reduce costly re-searches while still catching big swings
+                let a = d>3 ? bScore - 150 : -50000;
+                let b = d>3 ? bScore + 150 : 50000;
                 
                 while(true) {
                     let {score, move} = alphaBeta(d, 0, rootMoves||null, a, b);
@@ -1506,35 +1507,27 @@
 
             if(depth <= 0) return {score: quiesce(alpha, beta), move: null};
 
-            // TIER 3: Reverse Futility Pruning (Static NMP)
-            if (depth <= 3 && !inCheck && Math.abs(alpha) < 40000) {
+            // Reverse Futility Pruning: only at depth 1-2, with a generous margin to avoid blunders
+            if (depth <= 2 && !inCheck && Math.abs(alpha) < 40000) {
                 let staticEval = evaluateFast();
-                if (staticEval - depth * 150 >= beta) return {score: staticEval, move: null};
+                if (staticEval - depth * 250 >= beta) return {score: staticEval, move: null};
             }
 
-            // Razoring
-            if (!inCheck && depth <= 2) {
-                let staticEval = evaluateFast();
-                if (staticEval + 300 < alpha) {
-                    return {score: quiesce(alpha, beta), move: null};
-                }
-            }
+            // Razoring: removed — was causing blunders by skipping quiet moves too early
 
-            // NMP (Null Move Pruning)
-            // Disabling NMP on Worker 2 makes it find deep sacrifices others miss
+            // NMP: require depth>=4, skip in PV nodes and when few pieces remain (zugzwang risk)
             let isPV = (beta - alpha > 1);
-            if (depth >= 3 && !inCheck && ply > 0 && self.workerId !== 2 && !isPV) {
-                let oldTurn = turn, oldEp = ep, oldHash = hash;
-                turn ^= 1; ep = -1; calcHash();
-                let s = -alphaBeta(depth - 3 - (depth>6 ? 1 : 0), ply+1, null, -beta, -beta+1, null).score;
-                turn = oldTurn; ep = oldEp; hash = oldHash;
-                if (s >= beta) return {score: beta, move: null};
-            }
-
-            // TIER 4: Futility Pruning
-            let isFutility = false;
-            if (depth === 1 && !inCheck && Math.abs(alpha) < 40000 && evaluateFast() + 300 < alpha) {
-                isFutility = true;
+            if (depth >= 4 && !inCheck && ply > 0 && !isPV) {
+                // Rough zugzwang guard: don't null-move if side has only king+pawns
+                let sideOcc = turn ? bOcc() : wOcc();
+                let sideHasPieces = (sideOcc & ~(bb[turn?12:6] | bb[turn?6:0])) !== 0n;
+                if (sideHasPieces) {
+                    let oldTurn = turn, oldEp = ep, oldHash = hash;
+                    turn ^= 1; ep = -1; calcHash();
+                    let s = -alphaBeta(depth - 3 - (depth>6 ? 1 : 0), ply+1, null, -beta, -beta+1, null).score;
+                    turn = oldTurn; ep = oldEp; hash = oldHash;
+                    if (s >= beta) return {score: beta, move: null};
+                }
             }
 
             let ttMove = tte && tte.move ? tte.move : null;
@@ -1543,14 +1536,13 @@
             if (rootMoves) {
                 captureMoves = rootMoves;
             } else {
+                // Always generate all moves — no futility skip
                 captureMoves = genMoves(true, false);
                 captureMoves.forEach(m => { m.s = scoreMove(m, ttMove, ply, lastMove); });
                 captureMoves.sort((a,b) => b.s - a.s);
-                if (!isFutility) {
-                    quietMoves = genMoves(false, true);
-                    quietMoves.forEach(m => { m.s = scoreMove(m, ttMove, ply, lastMove); });
-                    quietMoves.sort((a,b) => b.s - a.s);
-                }
+                quietMoves = genMoves(false, true);
+                quietMoves.forEach(m => { m.s = scoreMove(m, ttMove, ply, lastMove); });
+                quietMoves.sort((a,b) => b.s - a.s);
             }
 
             if (captureMoves.length + quietMoves.length === 0) return {score: inCheck ? -40000+ply : 0, move: null};
@@ -1575,26 +1567,24 @@
                     if (movesMade === 1) {
                         score = -alphaBeta(depth-1, ply+1, null, -beta, -alpha, m).score;
                     } else {
-                        // Late Move Pruning (LMP)
-                        let lmpThreshold = 3 + 2 * depth * depth;
-                        if(depth <= 4 && movesMade > lmpThreshold && !inCheck && isQuiet) {
+                        // LMP: only prune at very low depths with a higher threshold
+                        let lmpThreshold = 5 + 3 * depth * depth;
+                        if(depth <= 3 && movesMade > lmpThreshold && !inCheck && isQuiet) {
                             unmakeMove(m); continue;
                         }
 
-                        // SEE Pruning for bad captures
-                        if (depth <= 3 && !isQuiet && !inCheck && see(m) < -200 * depth) {
+                        // SEE Pruning: only prune clearly losing captures at shallow depths
+                        if (depth <= 2 && !isQuiet && !inCheck && see(m) < -300 * depth) {
                             unmakeMove(m); continue;
                         }
 
-                        let doLMR = (depth >= 3 && movesMade >= 4 && !inCheck && isQuiet && self.workerId !== 3 && !isTt && !isKiller);
+                        // LMR: only reduce after many moves, with a smaller reduction
+                        let doLMR = (depth >= 3 && movesMade >= 6 && !inCheck && isQuiet && !isTt && !isKiller);
                         if (doLMR) {
-                            let reduction = Math.max(1, Math.floor(Math.log(depth) * Math.log(movesMade) / 1.5));
+                            let reduction = Math.max(1, Math.floor(Math.log(depth) * Math.log(movesMade) / 2.5));
                             score = -alphaBeta(depth - 1 - reduction, ply+1, null, -alpha-1, -alpha, m).score;
                             if (score > alpha) {
-                                score = -alphaBeta(depth-1, ply+1, null, -alpha-1, -alpha, m).score;
-                                if(score > alpha && score < beta) {
-                                    score = -alphaBeta(depth-1, ply+1, null, -beta, -alpha, m).score;
-                                }
+                                score = -alphaBeta(depth-1, ply+1, null, -beta, -alpha, m).score;
                             }
                         } else {
                             score = -alphaBeta(depth-1, ply+1, null, -alpha-1, -alpha, m).score;
