@@ -408,6 +408,11 @@
         <div id="left-panel" class="side-panel">
             <h2>Game Log</h2>
             <div id="moves"></div>
+            <div class="control-group" style="margin-top: 10px; display: flex; gap: 5px;">
+                <button class="primary" onclick="viewHistory(Math.max(-1, viewingIdx - 1))" style="flex: 1;">&lt;</button>
+                <button class="primary" onclick="viewHistory(game.history().length - 1)" style="flex: 1;">Present</button>
+                <button class="primary" onclick="viewHistory(Math.min(game.history().length - 1, viewingIdx + 1))" style="flex: 1;">&gt;</button>
+            </div>
         </div>
         <div id="center-area" onclick="closePanels()">
             <div id="status-container" class="box">
@@ -468,7 +473,7 @@
                     <div class="setting">
                         <div class="control-group">
                             <label>Think Time: <span id="think-time-val">1.5</span>s</label>
-                            <input type="range" id="think-time" min="0.1" max="15" step="0.1" value="1.5" oninput="document.getElementById('think-time-val').innerText=this.value">
+                            <input type="range" id="think-time" min="0.1" max="15" step="0.1" value="1.5" oninput="updateUI()">
                         </div>
                         <div class="control-group">
                             <label>Min Search Depth: <span id="min-depth-val">3</span></label>
@@ -1392,6 +1397,7 @@
                     else {
                         bScore = score;
                         if(move) bMove = move;
+                        // Always report PV info, including id to differentiate lines
                         postMessage({status:'info', depth:d, score: bScore, move: fmt(bMove), nodes, id: self.workerId, token: self.searchToken});
                         break;
                     }
@@ -1721,7 +1727,8 @@
         }
 
         function updateUI() {
-            document.getElementById('time-val').innerText = document.getElementById('think-time').value + "s";
+            let thinkVal = document.getElementById('think-time-val');
+            if (thinkVal) thinkVal.innerText = document.getElementById('think-time').value;
             let threadsEl = document.getElementById('threads');
             let raw = Number(threadsEl.value);
             let auto = autoThreadCount();
@@ -1882,6 +1889,7 @@
         let rightClickStartSq = null;
         let userArrows = [];
         let userHighlights = [];
+        let viewingIdx = -1;
         let viewingHistory = false;
 
         function snapToPresent() {
@@ -2037,8 +2045,10 @@
         }
 
         function viewHistory(idx) {
-            let temp = new Chess();
             let h = game.history();
+            if (idx >= h.length) { snapToPresent(); return; }
+            viewingIdx = idx;
+            let temp = new Chess();
             for(let i=0; i<=idx; i++) temp.move(h[i]);
             board.position(temp.fen(), false);
             viewingHistory = true;
@@ -2085,6 +2095,7 @@
             updateMaterial();
             if (miniBoard && !isThinking) miniBoard.position(game.fen(), false);
             if (!viewingHistory) {
+                viewingIdx = hv.length - 1;
                 if (hv.length > 0) setTimeout(() => highlightMove(hv[hv.length - 1].from, hv[hv.length - 1].to), 50);
             }
         }
@@ -2354,20 +2365,37 @@
         function handleWorkerMsg(e) {
             if (e.data && e.data.token !== undefined && e.data.token !== activeSearchToken) return;
             if (e.data.status === 'info') {
-                if (e.data.id === 0) {
-                    let evalNorm = (e.data.score * (game.turn() === 'w' ? 1 : -1) / 100);
-                    if (!hasSmoothedEval) { smoothedEval = evalNorm; hasSmoothedEval = true; }
-                    smoothedEval = smoothedEval * 0.85 + evalNorm * 0.15;
-                    document.getElementById('eval-bar').innerText = `Eval: ${smoothedEval.toFixed(2)}`;
-                    document.getElementById('eval-text').innerText = smoothedEval.toFixed(1);
+                    // Multi-PV aggregation: Update or add the entry for this specific worker ID
+                    let existingPV = multiPV.find(x => x.id === e.data.id);
+                    if (existingPV) {
+                        existingPV.move = e.data.move;
+                        existingPV.score = e.data.score;
+                        existingPV.depth = e.data.depth;
+                    } else {
+                        multiPV.push({ id: e.data.id, move: e.data.move, score: e.data.score, depth: e.data.depth });
+                    }
+                    multiPV.sort((a, b) => b.score - a.score);
 
-                    let fillPerc = 50 + (smoothedEval / 10) * 50;
-                    fillPerc = Math.max(0, Math.min(100, fillPerc));
-                    document.getElementById('eval-fill').style.height = fillPerc + '%';
+                    if (e.data.id === 0 || !hasSmoothedEval) {
+                        let evalNorm = (e.data.score * (game.turn() === 'w' ? 1 : -1) / 100);
+                        if (!hasSmoothedEval) { smoothedEval = evalNorm; hasSmoothedEval = true; }
+                        smoothedEval = smoothedEval * 0.85 + evalNorm * 0.15;
+                        document.getElementById('eval-bar').innerText = `Eval: ${smoothedEval.toFixed(2)}`;
+                        document.getElementById('eval-text').innerText = smoothedEval.toFixed(1);
 
-                    let pv = multiPV.slice(0, 3).map(x => x.move).join('  ');
-                    document.getElementById('commentary').innerText =
-                        `Depth: ${e.data.depth} | Nodes: ${e.data.nodes}` + (pv ? ` | PV: ${pv}` : '');
+                        let fillPerc = 50 + (smoothedEval / 10) * 50;
+                        fillPerc = Math.max(0, Math.min(100, fillPerc));
+                        document.getElementById('eval-fill').style.height = fillPerc + '%';
+                    }
+
+                    // Display top 4 lines in commentary
+                    let lines = multiPV.slice(0, 4).map((x, i) => {
+                        let scoreSign = x.score > 0 ? "+" : "";
+                        let scoreText = Math.abs(x.score) > 30000 ? "Mate" : (x.score / 100).toFixed(2);
+                        return `<div style="margin-bottom:2px; font-family: monospace;">Line ${i+1}: <b>${x.move}</b> (${scoreSign}${scoreText}) d${x.depth}</div>`;
+                    }).join('');
+                    
+                    document.getElementById('commentary').innerHTML = lines || "Analyzing...";
 
                     let timeTaken = Math.max(1, (Date.now() - window.searchStartGlobal)) / 1000;
                     document.getElementById('nps-val').innerText = (e.data.nodes / timeTaken / 1000).toFixed(1);
