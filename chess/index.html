@@ -1088,11 +1088,12 @@
         function initPeSTO() {
             for (let p = 0; p < 6; p++) {
                 for (let sq = 0; sq < 64; sq++) {
-                    mg_table[p * 64 + sq] = PESTO_MG_VALUE[p] + PESTO_MG[p][sq];
-                    eg_table[p * 64 + sq] = PESTO_EG_VALUE[p] + PESTO_EG[p][sq];
                     let flipSq = sq ^ 56;
-                    mg_table[(p + 6) * 64 + sq] = PESTO_MG_VALUE[p] + PESTO_MG[p][flipSq];
-                    eg_table[(p + 6) * 64 + sq] = PESTO_EG_VALUE[p] + PESTO_EG[p][flipSq];
+                    mg_table[p * 64 + sq] = PESTO_MG_VALUE[p] + PESTO_MG[p][flipSq];
+                    eg_table[p * 64 + sq] = PESTO_EG_VALUE[p] + PESTO_EG[p][flipSq];
+                    
+                    mg_table[(p + 6) * 64 + sq] = PESTO_MG_VALUE[p] + PESTO_MG[p][sq];
+                    eg_table[(p + 6) * 64 + sq] = PESTO_EG_VALUE[p] + PESTO_EG[p][sq];
                 }
             }
         }
@@ -1178,9 +1179,11 @@
             let egPhase = 24 - mgPhase;
             
             let score = (mgScore * mgPhase + egScore * egPhase) / 24;
+            
+            let finalScore = turn === 0 ? score : -score;
             // tempo
-            score += 10;
-            return turn === 0 ? Math.floor(score) : -Math.floor(score);
+            finalScore += 10;
+            return Math.floor(finalScore);
         }
 
         function evaluateFast() {
