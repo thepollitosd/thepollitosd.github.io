@@ -1428,7 +1428,16 @@
 
         function fmt(m) {
             let files="abcdefgh", ranks="12345678";
-            return m ? files[m.f&7] + ranks[m.f>>3] + files[m.t&7] + ranks[m.t>>3] + (m.prom!==-1 ? "q" : "") : "";
+            if (!m) return "";
+            let str = files[m.f&7] + ranks[m.f>>3] + files[m.t&7] + ranks[m.t>>3];
+            if (m.prom !== -1) {
+                let p = m.prom % 6;
+                if (p === 1) str += "n";
+                else if (p === 2) str += "b";
+                else if (p === 3) str += "r";
+                else str += "q";
+            }
+            return str;
         }
 
         function moveEquals(a, b) {
@@ -1493,7 +1502,8 @@
 
             // Zobrist TT
             let tte = getTT(hash);
-            if(tte && tte.depth >= depth) {
+            // FIX: Never cutoff at the root (ply > 0) to avoid playing corrupted moves from SharedArrayBuffer data races.
+            if(tte && tte.depth >= depth && ply > 0) {
                 if(tte.flag === 0) return {score: tte.score, move: tte.move};
                 if(tte.flag === 1 && tte.score <= alpha) return {score: tte.score, move: tte.move};
                 if(tte.flag === 2 && tte.score >= beta) return {score: tte.score, move: tte.move};
