@@ -1393,12 +1393,12 @@
             for (let p = 0; p < 12; p++) for (let sq = 0; sq < 64; sq++) counterMoves[p][sq] = null;
         }
 
-        function search(depth, rootMoves, alpha, beta) {
+        function search(depth, rootMoves, alpha, beta, startDepth = 1) {
             nodes=0; timeUp=false; startTime = Date.now();
             let bMove = null, bScore = -Infinity;
             resetHeuristics();
-            // IID and Aspiration Windows
-            for(let d=1; d<=depth; d++) {
+            // Iterative Deepening with Aspiration Windows
+            for(let d = startDepth; d <= depth; d++) {
                 if(timeUp && d > minSearchDepth) break;
                 if (rootMoves && bMove) {
                     rootMoves.sort((a, b) => (moveEquals(a, bMove) ? 1 : 0) - (moveEquals(b, bMove) ? 1 : 0));
@@ -1698,15 +1698,12 @@
                 useNN = msg.useNN !== false;
                 self.workerId = msg.id; 
                 let rootMoves = genLegalMoves(false, false);
-                // Shard BEFORE scoring/sorting to avoid N-times root sorting across workers.
-                if (msg.totalWorkers > 1 && rootMoves.length > 1) {
-                    let shard = rootMoves.filter((_, idx) => idx % msg.totalWorkers === msg.id);
-                    if (shard.length > 0) rootMoves = shard;
-                }
                 rootMoves.forEach(m => { m.s = scoreMove(m, null, 0, null); });
                 rootMoves.sort((a, b) => b.s - a.s);
-                let res = search(64, rootMoves, -50000, 50000);
-                postMessage({status: 'done', move: fmt(res.move), score: res.score, nodes: res.nodes, id: msg.id, token: self.searchToken});
+                // Lazy SMP: stagger starting depth so workers don't all hit the same depth simultaneously
+                let startDepth = 1 + (self.workerId % 3);
+                let res = search(64, rootMoves, -50000, 50000, startDepth);
+                postMessage({ status: 'done', move: fmt(res.move), score: res.score, nodes: res.nodes, id: msg.id, token: self.searchToken });
             }
         };
     </script>
@@ -2370,7 +2367,6 @@
                 workers[i].postMessage({
                     cmd: 'search',
                     id: i,
-                    totalWorkers: numThreads,
                     token: activeSearchToken,
                     fen: game.fen(),
                     time: timeSec,
@@ -2429,22 +2425,20 @@
                 document.getElementById('threat-area').innerText = e.data.msg;
             } else if (e.data.status === 'done') {
                 finishedWorkers++;
+                // Lazy SMP: accept the first worker that finishes as the answer, stop all others
                 if (e.data.move && e.data.score > bestGlobalScore) {
                     bestGlobalScore = e.data.score;
                     bestGlobalMove = e.data.move;
                 }
-                if (e.data.move) {
-                    multiPV.push({ move: e.data.move, score: e.data.score });
-                    multiPV.sort((a, b) => b.score - a.score);
-                    if (multiPV.length > 4) multiPV.length = 4;
-                }
-
-                if (finishedWorkers >= numThreads && isThinking) {
+                // Play as soon as ANY worker completes (they all searched the same moves)
+                if (isThinking && finishedWorkers === 1) {
                     let m = bestGlobalMove;
                     if (!m) {
                         let moves = game.moves({ verbose: true });
                         if (moves.length > 0) m = moves[0].from + moves[0].to + (moves[0].promotion || '');
                     }
+                    // Stop remaining workers immediately
+                    for (let w of workers) w.postMessage({ cmd: 'stop', token: activeSearchToken });
                     if (m) game.move({ from: m.substring(0, 2), to: m.substring(2, 4), promotion: m[4] || 'q' });
                     finishAiMove();
                 }
