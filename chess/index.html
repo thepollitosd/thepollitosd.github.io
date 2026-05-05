@@ -616,7 +616,6 @@
             }
             for(let i=0; i<16; i++) ZOB_CASTLE[i] = BigInt(Math.floor(Math.random()*4294967296))<<32n | BigInt(Math.floor(Math.random()*4294967296));
             for(let i=0; i<8; i++) ZOB_EP[i] = BigInt(Math.floor(Math.random()*4294967296))<<32n | BigInt(Math.floor(Math.random()*4294967296));
-            initMagics();
         }
 
         // ========================================================
@@ -731,20 +730,14 @@
             }
         }
 
+        const DIRS_BISHOP = [1, 3, 5, 7];
+        const DIRS_ROOK   = [0, 2, 4, 6];
+        const DIRS_QUEEN  = [0, 1, 2, 3, 4, 5, 6, 7];
+
         function getSliding(sq, occ, type) {
-            if (type === 2) { // Bishop
-                let mask = BISHOP_MASKS[sq];
-                let magic = BISHOP_MAGICS[sq];
-                let index = Number(BigInt.asUintN(64, (occ & mask) * magic.m) >> BigInt(magic.s)) + magic.o;
-                return BISHOP_ATTACKS[index];
-            } else if (type === 3) { // Rook
-                let mask = ROOK_MASKS[sq];
-                let magic = ROOK_MAGICS[sq];
-                let index = Number(BigInt.asUintN(64, (occ & mask) * magic.m) >> BigInt(magic.s)) + magic.o;
-                return ROOK_ATTACKS[index];
-            } else { // Queen
-                return getSliding(sq, occ, 2) | getSliding(sq, occ, 3);
-            }
+            if (type === 2) return getSlidingAttack(sq, occ, DIRS_BISHOP);
+            if (type === 3) return getSlidingAttack(sq, occ, DIRS_ROOK);
+            return getSlidingAttack(sq, occ, DIRS_QUEEN);
         }
 
         let bb = new BigUint64Array(12);
