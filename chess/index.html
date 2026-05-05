@@ -409,9 +409,12 @@
             <h2>Game Log</h2>
             <div id="moves"></div>
             <div class="control-group" style="margin-top: 10px; display: flex; gap: 5px;">
-                <button class="primary" onclick="viewHistory(Math.max(-1, viewingIdx - 1))" style="flex: 1;">&lt;</button>
-                <button class="primary" onclick="viewHistory(game.history().length - 1)" style="flex: 1;">Present</button>
-                <button class="primary" onclick="viewHistory(Math.min(game.history().length - 1, viewingIdx + 1))" style="flex: 1;">&gt;</button>
+                <button class="primary" onclick="viewHistory(Math.max(-1, viewingIdx - 1))"
+                    style="flex: 1;">&lt;</button>
+                <button class="primary" onclick="viewHistory(game.history().length - 1)"
+                    style="flex: 1;">Present</button>
+                <button class="primary" onclick="viewHistory(Math.min(game.history().length - 1, viewingIdx + 1))"
+                    style="flex: 1;">&gt;</button>
             </div>
         </div>
         <div id="center-area" onclick="closePanels()">
@@ -472,12 +475,14 @@
                     </div>
                     <div class="setting">
                         <div class="control-group">
-                            <label>Think Time: <span id="think-time-val">1.5</span>s</label>
-                            <input type="range" id="think-time" min="0.1" max="15" step="0.1" value="1.5" oninput="updateUI()">
+                            <label>Think Time: <span id="think-time-val">5</span>s</label>
+                            <input type="range" id="think-time" min="0.1" max="15" step="0.1" value="5"
+                                oninput="updateUI()">
                         </div>
                         <div class="control-group">
                             <label>Min Search Depth: <span id="min-depth-val">3</span></label>
-                            <input type="range" id="min-depth" min="1" max="12" step="1" value="3" oninput="document.getElementById('min-depth-val').innerText=this.value">
+                            <input type="range" id="min-depth" min="1" max="15" step="1" value="8"
+                                oninput="document.getElementById('min-depth-val').innerText=this.value">
                         </div>
                     </div>
                     <div class="setting">
@@ -1772,7 +1777,7 @@
                 } catch (e) { }
             }
             let moves = cgame.moves({ square: square, verbose: true });
-            
+
             let selEl = document.querySelector('.square-' + square);
             if (selEl) {
                 selEl.classList.add('highlight-selected');
@@ -1894,7 +1899,7 @@
             miniBoard = Chessboard('mini-board', {
                 position: game.fen(), showNotation: false, pieceTheme: `https://lichess1.org/assets/piece/${document.getElementById('piece-theme').value}/{piece}.svg`
             });
-            
+
             attachBoardEvents();
         }
 
@@ -1908,8 +1913,8 @@
         function snapToPresent() {
             viewingHistory = false;
             board.position(game.fen(), false);
-            let hv = game.history({verbose: true});
-            if (hv.length > 0) highlightMove(hv[hv.length-1].from, hv[hv.length-1].to);
+            let hv = game.history({ verbose: true });
+            if (hv.length > 0) highlightMove(hv[hv.length - 1].from, hv[hv.length - 1].to);
             else removeHighlights();
         }
 
@@ -1953,7 +1958,7 @@
                         clearDots();
                         premoves = [];
                         board.position(game.fen());
-                        updateLog(); 
+                        updateLog();
                         document.getElementById('bot-arrows').innerHTML = '';
                         triggerNextTurn();
                     } else {
@@ -1977,11 +1982,11 @@
         }
 
         function attachBoardEvents() {
-            $('#board').off('contextmenu').on('contextmenu', function(e) {
+            $('#board').off('contextmenu').on('contextmenu', function (e) {
                 e.preventDefault();
             });
 
-            $('#board').off('mousedown').on('mousedown', '.square-55d63', function(e) {
+            $('#board').off('mousedown').on('mousedown', '.square-55d63', function (e) {
                 if (e.button === 2) {
                     rightClickStartSq = $(this).attr('data-square');
                 } else if (e.button === 0) {
@@ -1990,7 +1995,7 @@
                 }
             });
 
-            $('#board').off('mouseup').on('mouseup', '.square-55d63', function(e) {
+            $('#board').off('mouseup').on('mouseup', '.square-55d63', function (e) {
                 if (e.button === 2 && rightClickStartSq) {
                     let rightClickEndSq = $(this).attr('data-square');
                     if (rightClickStartSq === rightClickEndSq) {
@@ -2000,14 +2005,14 @@
                     } else {
                         let existing = userArrows.findIndex(a => a.f === rightClickStartSq && a.t === rightClickEndSq);
                         if (existing >= 0) userArrows.splice(existing, 1);
-                        else userArrows.push({f: rightClickStartSq, t: rightClickEndSq});
+                        else userArrows.push({ f: rightClickStartSq, t: rightClickEndSq });
                     }
                     renderUserDrawings();
                     rightClickStartSq = null;
                 }
             });
 
-            $('#board').on('mousedown', function(e) {
+            $('#board').on('mousedown', function (e) {
                 if (e.button === 0) {
                     if (userArrows.length > 0 || userHighlights.length > 0) {
                         userArrows = [];
@@ -2022,7 +2027,7 @@
             let svg = document.getElementById('user-arrows');
             if (!svg) return;
             svg.innerHTML = '';
-            
+
             let boardPx = document.getElementById('board').clientWidth;
             let sqSize = boardPx / 8;
             let boardOri = board.orientation() === 'white' ? 1 : -1;
@@ -2037,7 +2042,7 @@
             let html = '';
             for (let sq of userHighlights) {
                 let c = getCenter(sq);
-                html += `<rect x="${c.x - sqSize/2}" y="${c.y - sqSize/2}" width="${sqSize}" height="${sqSize}" fill="rgba(235, 97, 80, 0.5)" />`;
+                html += `<rect x="${c.x - sqSize / 2}" y="${c.y - sqSize / 2}" width="${sqSize}" height="${sqSize}" fill="rgba(235, 97, 80, 0.5)" />`;
             }
 
             html += `<defs>
@@ -2052,7 +2057,7 @@
                 let dx = tc.x - fc.x, dy = tc.y - fc.y;
                 let angle = Math.atan2(dy, dx);
                 let len = Math.sqrt(dx * dx + dy * dy) - (sqSize * 0.35);
-                html += `<line x1="${fc.x}" y1="${fc.y}" x2="${fc.x + Math.cos(angle)*len}" y2="${fc.y + Math.sin(angle)*len}" stroke="rgba(235, 97, 80, 0.8)" stroke-width="${sqSize * 0.12}" marker-end="url(#user-arrowhead)" />`;
+                html += `<line x1="${fc.x}" y1="${fc.y}" x2="${fc.x + Math.cos(angle) * len}" y2="${fc.y + Math.sin(angle) * len}" stroke="rgba(235, 97, 80, 0.8)" stroke-width="${sqSize * 0.12}" marker-end="url(#user-arrowhead)" />`;
             }
             svg.innerHTML = html;
         }
@@ -2062,13 +2067,13 @@
             if (idx >= h.length) { snapToPresent(); return; }
             viewingIdx = idx;
             let temp = new Chess();
-            for(let i=0; i<=idx; i++) temp.move(h[i]);
+            for (let i = 0; i <= idx; i++) temp.move(h[i]);
             board.position(temp.fen(), false);
             viewingHistory = true;
             removeHighlights();
             if (idx >= 0) {
-                let m = temp.history({verbose: true}).pop();
-                if(m) highlightMove(m.from, m.to);
+                let m = temp.history({ verbose: true }).pop();
+                if (m) highlightMove(m.from, m.to);
             }
         }
 
@@ -2101,7 +2106,7 @@
             let hv = game.history({ verbose: true });
             for (let i = 0; i < h.length; i += 2) {
                 let m1 = `<div style="cursor:pointer;" onclick="viewHistory(${i})">${h[i]}</div>`;
-                let m2 = h[i+1] ? `<div style="cursor:pointer;" onclick="viewHistory(${i+1})">${h[i+1]}</div>` : `<div></div>`;
+                let m2 = h[i + 1] ? `<div style="cursor:pointer;" onclick="viewHistory(${i + 1})">${h[i + 1]}</div>` : `<div></div>`;
                 d.innerHTML += `<div class="move-num">${i / 2 + 1}.</div>${m1}${m2}`;
             }
             d.scrollTop = d.scrollHeight;
@@ -2354,7 +2359,7 @@
                     if (!isThinking || token !== activeSearchToken) return;
                     let m = bestGlobalMove;
                     if (!m) {
-                        let moves = game.moves({verbose: true});
+                        let moves = game.moves({ verbose: true });
                         if (moves.length > 0) m = moves[0].from + moves[0].to + (moves[0].promotion || '');
                     }
                     if (m) game.move({ from: m.substring(0, 2), to: m.substring(2, 4), promotion: m[4] || 'q' });
@@ -2378,43 +2383,43 @@
         function handleWorkerMsg(e) {
             if (e.data && e.data.token !== undefined && e.data.token !== activeSearchToken) return;
             if (e.data.status === 'info') {
-                    // Multi-PV aggregation: Update or add the entry for this specific worker ID
-                    let existingPV = multiPV.find(x => x.id === e.data.id);
-                    if (existingPV) {
-                        existingPV.move = e.data.move;
-                        existingPV.score = e.data.score;
-                        existingPV.depth = e.data.depth;
-                    } else {
-                        multiPV.push({ id: e.data.id, move: e.data.move, score: e.data.score, depth: e.data.depth });
-                    }
-                    multiPV.sort((a, b) => b.score - a.score);
+                // Multi-PV aggregation: Update or add the entry for this specific worker ID
+                let existingPV = multiPV.find(x => x.id === e.data.id);
+                if (existingPV) {
+                    existingPV.move = e.data.move;
+                    existingPV.score = e.data.score;
+                    existingPV.depth = e.data.depth;
+                } else {
+                    multiPV.push({ id: e.data.id, move: e.data.move, score: e.data.score, depth: e.data.depth });
+                }
+                multiPV.sort((a, b) => b.score - a.score);
 
-                    if (e.data.id === 0 || !hasSmoothedEval) {
-                        let evalNorm = (e.data.score * (game.turn() === 'w' ? 1 : -1) / 100);
-                        if (!hasSmoothedEval) { smoothedEval = evalNorm; hasSmoothedEval = true; }
-                        smoothedEval = smoothedEval * 0.85 + evalNorm * 0.15;
-                        document.getElementById('eval-bar').innerText = `Eval: ${smoothedEval.toFixed(2)}`;
-                        document.getElementById('eval-text').innerText = smoothedEval.toFixed(1);
+                if (e.data.id === 0 || !hasSmoothedEval) {
+                    let evalNorm = (e.data.score * (game.turn() === 'w' ? 1 : -1) / 100);
+                    if (!hasSmoothedEval) { smoothedEval = evalNorm; hasSmoothedEval = true; }
+                    smoothedEval = smoothedEval * 0.85 + evalNorm * 0.15;
+                    document.getElementById('eval-bar').innerText = `Eval: ${smoothedEval.toFixed(2)}`;
+                    document.getElementById('eval-text').innerText = smoothedEval.toFixed(1);
 
-                        let fillPerc = 50 + (smoothedEval / 10) * 50;
-                        fillPerc = Math.max(0, Math.min(100, fillPerc));
-                        document.getElementById('eval-fill').style.height = fillPerc + '%';
-                    }
+                    let fillPerc = 50 + (smoothedEval / 10) * 50;
+                    fillPerc = Math.max(0, Math.min(100, fillPerc));
+                    document.getElementById('eval-fill').style.height = fillPerc + '%';
+                }
 
-                    // Display depth header + top 4 lines in commentary
-                    let depthHeader = `<div style="font-size:0.8em; color:#aaa; margin-bottom:4px; font-family:monospace;">🔍 Depth: <b style="color:#00e5ff">${e.data.depth}</b> | Nodes: ${(e.data.nodes/1000).toFixed(0)}k</div>`;
-                    let lines = multiPV.slice(0, 4).map((x, i) => {
-                        let scoreSign = x.score > 0 ? "+" : "";
-                        let scoreText = Math.abs(x.score) > 30000 ? "Mate" : (x.score / 100).toFixed(2);
-                        let label = i === 0 ? `<span style="color:#00e5ff">▶ Line ${i+1}</span>` : `Line ${i+1}`;
-                        return `<div style="margin-bottom:2px; font-family:monospace;">${label}: <b>${x.move}</b> <span style="color:#aaa">(${scoreSign}${scoreText}) d${x.depth}</span></div>`;
-                    }).join('');
-                    document.getElementById('commentary').innerHTML = depthHeader + (lines || "<i>Analyzing...</i>");
+                // Display depth header + top 4 lines in commentary
+                let depthHeader = `<div style="font-size:0.8em; color:#aaa; margin-bottom:4px; font-family:monospace;">🔍 Depth: <b style="color:#00e5ff">${e.data.depth}</b> | Nodes: ${(e.data.nodes / 1000).toFixed(0)}k</div>`;
+                let lines = multiPV.slice(0, 4).map((x, i) => {
+                    let scoreSign = x.score > 0 ? "+" : "";
+                    let scoreText = Math.abs(x.score) > 30000 ? "Mate" : (x.score / 100).toFixed(2);
+                    let label = i === 0 ? `<span style="color:#00e5ff">▶ Line ${i + 1}</span>` : `Line ${i + 1}`;
+                    return `<div style="margin-bottom:2px; font-family:monospace;">${label}: <b>${x.move}</b> <span style="color:#aaa">(${scoreSign}${scoreText}) d${x.depth}</span></div>`;
+                }).join('');
+                document.getElementById('commentary').innerHTML = depthHeader + (lines || "<i>Analyzing...</i>");
 
-                    let timeTaken = Math.max(1, (Date.now() - window.searchStartGlobal)) / 1000;
-                    document.getElementById('nps-val').innerText = (e.data.nodes / timeTaken / 1000).toFixed(1);
+                let timeTaken = Math.max(1, (Date.now() - window.searchStartGlobal)) / 1000;
+                document.getElementById('nps-val').innerText = (e.data.nodes / timeTaken / 1000).toFixed(1);
 
-                    drawArrow(e.data.move);
+                drawArrow(e.data.move);
 
             } else if (e.data.status === 'brainstorm') {
                 if (e.data.id === 0 && miniBoard) {
@@ -2437,7 +2442,7 @@
                 if (finishedWorkers >= numThreads && isThinking) {
                     let m = bestGlobalMove;
                     if (!m) {
-                        let moves = game.moves({verbose: true});
+                        let moves = game.moves({ verbose: true });
                         if (moves.length > 0) m = moves[0].from + moves[0].to + (moves[0].promotion || '');
                     }
                     if (m) game.move({ from: m.substring(0, 2), to: m.substring(2, 4), promotion: m[4] || 'q' });
