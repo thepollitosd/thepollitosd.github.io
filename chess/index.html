@@ -466,9 +466,14 @@
                         </select>
                     </div>
                     <div class="setting">
-                        <label><span>Think Time (s)</span> <span id="time-val">3.0s</span></label>
-                        <input type="range" id="think-time" min="0.5" max="60" step="0.5" value="3.0"
-                            oninput="updateUI()">
+                        <div class="control-group">
+                            <label>Think Time: <span id="think-time-val">1.5</span>s</label>
+                            <input type="range" id="think-time" min="0.1" max="15" step="0.1" value="1.5" oninput="document.getElementById('think-time-val').innerText=this.value">
+                        </div>
+                        <div class="control-group">
+                            <label>Min Search Depth: <span id="min-depth-val">3</span></label>
+                            <input type="range" id="min-depth" min="1" max="12" step="1" value="3" oninput="document.getElementById('min-depth-val').innerText=this.value">
+                        </div>
                     </div>
                     <div class="setting">
                         <label><span>Workers (Threads)</span> <span id="threads-val">Auto</span></label>
@@ -1322,6 +1327,7 @@
         let timeUp = false;
         let limitMs = 0; // hard limit
         let softLimitMs = 0;
+        let minSearchDepth = 1;
         let startTime = 0;
         let lastBrainstorm = 0;
         
@@ -1370,19 +1376,19 @@
             resetHeuristics();
             // IID and Aspiration Windows
             for(let d=1; d<=depth; d++) {
-                if(timeUp) break;
+                if(timeUp && d > minSearchDepth) break;
                 if (rootMoves && bMove) {
                     rootMoves.sort((a, b) => (moveEquals(a, bMove) ? 1 : 0) - (moveEquals(b, bMove) ? 1 : 0));
                     rootMoves.reverse();
                 }
-                let a = d>2 ? bScore - 40 : -50000;
-                let b = d>2 ? bScore + 40 : 50000;
+                let a = d>2 ? bScore - 60 : -50000;
+                let b = d>2 ? bScore + 60 : 50000;
                 
                 while(true) {
                     let {score, move} = alphaBeta(d, 0, rootMoves||null, a, b);
-                    if(timeUp) break;
-                    if(score <= a) { a = Math.max(a - 200, -50000); }
-                    else if(score >= b) { b = Math.min(b + 200, 50000); }
+                    if(timeUp && d > minSearchDepth) break;
+                    if(score <= a) { a = Math.max(a - 500, -50000); }
+                    else if(score >= b) { b = Math.min(b + 500, 50000); }
                     else {
                         bScore = score;
                         if(move) bMove = move;
@@ -1391,7 +1397,7 @@
                     }
                 }
                 if (bScore > 40000) break; // Early exit on forced mate
-                if (Date.now() - startTime > softLimitMs) break; // Soft bound finished depth
+                if (Date.now() - startTime > softLimitMs && d >= minSearchDepth) break; // Soft bound finished depth
             }
             
             // TIER 5: Blunder Check & Focus
@@ -1443,13 +1449,13 @@
 
             if((nodes++ & 1023)===0) {
                 let now = Date.now();
-                if(now - startTime > limitMs) timeUp = true;
+                if(now - startTime > limitMs && depth > minSearchDepth) timeUp = true;
                 else if(now - lastBrainstorm >= 100) {
                     lastBrainstorm = now;
                     postMessage({status: 'brainstorm', fen: exportFEN(), id: self.workerId, token: self.searchToken});
                 }
             }
-            if(timeUp) return {score: alpha, move: null};
+            if(timeUp && depth > minSearchDepth) return {score: alpha, move: null};
             if (ply > 0 && isRepetition()) return {score: 0, move: null};
 
             let occ = wOcc() | bOcc();
@@ -1664,6 +1670,7 @@
                 if (!Number.isFinite(t) || t <= 0) t = 1.5;
                 softLimitMs = t * 1000;
                 limitMs = Math.max(softLimitMs * 1.5, softLimitMs + 1000);
+                minSearchDepth = Number(msg.minDepth) || 1;
                 useNN = msg.useNN !== false;
                 self.workerId = msg.id; 
                 let rootMoves = genMoves(false, false);
@@ -2338,6 +2345,7 @@
                     token: activeSearchToken,
                     fen: game.fen(),
                     time: timeSec,
+                    minDepth: parseInt(document.getElementById('min-depth').value),
                     useNN: document.getElementById('use-nn').checked
                 });
             }
