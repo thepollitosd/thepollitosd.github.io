@@ -2127,7 +2127,8 @@
 
             // Init workers if needed
             while (workers.length < numThreads) {
-                let weightSource = document.getElementById('nn-weights').textContent.trim();
+                let weightEl = document.getElementById('nn-weights');
+                let weightSource = weightEl ? weightEl.textContent.trim() : "null";
                 let workerSource = `const NN_WEIGHTS = ${weightSource};\n` + document.getElementById('worker-code').textContent;
                 let blob = new Blob([workerSource], { type: 'text/javascript' });
                 let w = new Worker(URL.createObjectURL(blob));
