@@ -184,7 +184,8 @@
             background-color: rgba(200, 200, 50, 0.5) !important;
         }
 
-        .highlight-dot {
+        .highlight-dot::after {
+            content: '';
             position: absolute;
             top: 50%;
             left: 50%;
@@ -197,7 +198,8 @@
             z-index: 10;
         }
 
-        .highlight-capture {
+        .highlight-capture::after {
+            content: '';
             position: absolute;
             top: 0;
             left: 0;
@@ -1743,20 +1745,26 @@
                 } catch (e) { }
             }
             let moves = cgame.moves({ square: square, verbose: true });
+            
+            let selEl = document.querySelector('.square-' + square);
+            if (selEl) {
+                selEl.classList.add('highlight-selected');
+                dotSquares.push({ el: selEl, cls: 'highlight-selected' });
+            }
+
             if (moves.length === 0) return;
             for (let m of moves) {
                 let sqEl = document.querySelector('.square-' + m.to);
                 if (sqEl) {
-                    let dot = document.createElement('div');
-                    dot.className = m.captured ? 'highlight-capture' : 'highlight-dot';
-                    sqEl.appendChild(dot);
-                    dotSquares.push(dot);
+                    let cls = m.captured ? 'highlight-capture' : 'highlight-dot';
+                    sqEl.classList.add(cls);
+                    dotSquares.push({ el: sqEl, cls: cls });
                 }
             }
         }
 
         function clearDots() {
-            dotSquares.forEach(el => el.remove());
+            dotSquares.forEach(item => { if (item.el) item.el.classList.remove(item.cls); });
             dotSquares = [];
         }
 
@@ -1835,6 +1843,7 @@
                     showLegalMoves(a, isThinking);
                 },
                 onDrop: (s, t) => {
+                    selectedSquare = null;
                     clearDots();
                     if (s === t) return 'snapback';
                     if (isThinking) {
@@ -1915,6 +1924,7 @@
                         selectedSquare = null;
                         clearDots();
                         premoves = [];
+                        board.position(game.fen());
                         updateLog(); 
                         document.getElementById('bot-arrows').innerHTML = '';
                         triggerNextTurn();
