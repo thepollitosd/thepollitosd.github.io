@@ -1119,37 +1119,6 @@
             return mask;
         }
 
-        function nnReady() {
-            return typeof NN_WEIGHTS !== 'undefined' && NN_WEIGHTS && NN_WEIGHTS.w1 && NN_WEIGHTS.w1.length > 0;
-        }
-
-        function nnPredict(features) {
-            if (!nnReady()) return 0;
-            let normalized = new Array(features.length);
-            for (let i = 0; i < features.length; i++) {
-                normalized[i] = (features[i] - NN_WEIGHTS.feature_mean[i]) / NN_WEIGHTS.feature_std[i];
-            }
-
-            let h1 = new Array(NN_WEIGHTS.w1.length);
-            for (let i = 0; i < NN_WEIGHTS.w1.length; i++) {
-                let total = NN_WEIGHTS.b1[i];
-                let row = NN_WEIGHTS.w1[i];
-                for (let j = 0; j < row.length; j++) total += row[j] * normalized[j];
-                h1[i] = Math.tanh(total);
-            }
-
-            let h2 = new Array(NN_WEIGHTS.w2.length);
-            for (let i = 0; i < NN_WEIGHTS.w2.length; i++) {
-                let total = NN_WEIGHTS.b2[i];
-                let row = NN_WEIGHTS.w2[i];
-                for (let j = 0; j < row.length; j++) total += row[j] * h1[j];
-                h2[i] = Math.tanh(total);
-            }
-
-            let out = NN_WEIGHTS.b3;
-            for (let i = 0; i < NN_WEIGHTS.w3.length; i++) out += NN_WEIGHTS.w3[i] * h2[i];
-            return out * 1000;
-        }
 
         function evaluate() {
             let mgWhite = 0, mgBlack = 0;
@@ -1574,7 +1543,14 @@
                     if (movesMade === 1) {
                         score = -alphaBeta(depth-1, ply+1, null, -beta, -alpha, m).score;
                     } else {
-                        if(depth <= 2 && movesMade > 10 && !inCheck && isQuiet) {
+                        // Late Move Pruning (LMP)
+                        let lmpThreshold = 3 + 2 * depth * depth;
+                        if(depth <= 4 && movesMade > lmpThreshold && !inCheck && isQuiet) {
+                            unmakeMove(m); continue;
+                        }
+
+                        // SEE Pruning for bad captures
+                        if (depth <= 3 && !isQuiet && !inCheck && see(m) < -200 * depth) {
                             unmakeMove(m); continue;
                         }
 
@@ -2127,9 +2103,7 @@
 
             // Init workers if needed
             while (workers.length < numThreads) {
-                let weightEl = document.getElementById('nn-weights');
-                let weightSource = weightEl ? weightEl.textContent.trim() : "null";
-                let workerSource = `const NN_WEIGHTS = ${weightSource};\n` + document.getElementById('worker-code').textContent;
+                let workerSource = document.getElementById('worker-code').textContent;
                 let blob = new Blob([workerSource], { type: 'text/javascript' });
                 let w = new Worker(URL.createObjectURL(blob));
                 w.onmessage = handleWorkerMsg;
