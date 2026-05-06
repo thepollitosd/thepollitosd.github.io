@@ -2451,6 +2451,7 @@
 
         function resign() {
             showGameOver("You Resigned", "You have conceded the match. Better luck next time!", playerSide === 'w' ? 'b' : 'w');
+            sounds.gameEnd.play().catch(() => { });
             if (currentMode === 'multiplayer' && conn && conn.open) {
                 conn.send({ type: 'resign' });
             }
@@ -2460,10 +2461,11 @@
             if (currentMode === 'multiplayer') {
                 if (conn && conn.open) {
                     conn.send({ type: 'draw-offer' });
-                    alert("Draw offer sent.");
+                    showGameOver("Draw Offered", "Waiting for opponent to accept the draw offer...", null);
                 }
             } else {
-                alert("The AI declined the draw offer. It plays to win!");
+                showGameOver("Draw Declined", "The AI declined your draw offer. It plays to win!", null);
+                sounds.gameEnd.play().catch(() => { });
             }
         }
 
@@ -2926,16 +2928,6 @@
             }
         });
 
-        function resign() {
-            let win = game.turn() === 'w' ? 'b' : 'w';
-            showGameOver("Resignation", (win === 'w' ? "White" : "Black") + " has won by resignation.", win);
-            sounds.gameEnd.play().catch(() => { });
-        }
-
-        function offerDraw() {
-            showGameOver("Draw Offered", "The game ended in a mutual draw.", null);
-            sounds.gameEnd.play().catch(() => { });
-        }
 
         function updateMaterial() {
             let f = game.fen().split(' ')[0];
