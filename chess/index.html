@@ -1966,7 +1966,58 @@
             });
         }
 
-        function switchView(view) {
+        function toggleLobby(show) {
+            const overlay = document.getElementById('lobby-overlay');
+            if (overlay) overlay.style.display = show ? 'flex' : 'none';
+            if (show) initPeer();
+        }
+
+        function createRoom() {
+            currentMode = 'multiplayer';
+            playerSide = 'w';
+            staticHumanSide = 'w';
+            initPeer();
+            document.getElementById('lobby-status').innerHTML = `
+                <div style="text-align:center; padding:20px;">
+                    <div style="font-size:0.75rem; color:var(--text-secondary); margin-bottom:8px;">YOUR ROOM ID</div>
+                    <div id="room-id-display" style="font-size:1.2rem; font-weight:800; color:var(--accent); letter-spacing:2px; margin-bottom:24px;">GENERATING...</div>
+                    <p style="font-size:0.85rem; color:var(--text-secondary);">Send this ID to your friend. The game will start automatically when they join.</p>
+                </div>
+            `;
+            if (peer && peer.id) {
+                document.getElementById('room-id-display').innerText = peer.id;
+            }
+        }
+
+        function joinRoom() {
+            const id = document.getElementById('room-id-input').value.trim();
+            if (!id) return;
+            currentMode = 'multiplayer';
+            playerSide = 'b';
+            staticHumanSide = 'b';
+            initPeer();
+            
+            const join = () => {
+                conn = peer.connect(id);
+                setupConnection(conn);
+            };
+
+            if (peer.id) join();
+            else peer.on('open', join);
+        }
+
+        function toggleSettings(show) {
+            const overlay = document.getElementById('settings-overlay');
+            if (overlay) overlay.style.display = show ? 'flex' : 'none';
+        }
+
+        function startEngineAnalysis() {
+            // Logic to start engine if it wasn't already thinking
+            if (!isThinking) {
+                makeAiMove();
+            }
+        }
+
         function switchView(viewId) {
             currentView = viewId;
             document.querySelectorAll('.view-container').forEach(v => v.classList.remove('active'));
@@ -2071,50 +2122,7 @@
             `).join('');
         }
 
-        function updateUI() {
-            // Update settings from inputs
-            thinkTime = parseInt(document.getElementById('time-limit')?.value || 10);
-            numThreads = parseInt(document.getElementById('threads')?.value || 4);
-            useBook = document.getElementById('use-book')?.checked || false;
-            useNN = document.getElementById('use-nn')?.checked || false;
-            
-            document.getElementById('thread-val').innerText = numThreads;
-            document.getElementById('depth-val').innerText = document.getElementById('min-depth')?.value || 1;
-            applyThemes();
-        }
 
-        function applyThemes() {
-            const theme = document.getElementById('board-theme').value;
-            let config = {
-                draggable: true,
-                position: game.fen(),
-                onDragStart: onDragStart,
-                onDrop: onDrop,
-                onSnapEnd: onSnapEnd
-            };
-
-            if (theme === 'minimalist') {
-                document.documentElement.style.setProperty('--accent', '#0071e3');
-                // Chessboard.js doesn't natively support full CSS themes easily without custom piece sets,
-                // but we can adjust the container styles.
-                document.getElementById('board').style.filter = 'grayscale(0.1) brightness(1.05)';
-            } else if (theme === 'classic') {
-                document.documentElement.style.setProperty('--accent', '#2c3e50');
-                document.getElementById('board').style.filter = 'sepia(0.2)';
-            } else if (theme === 'wood') {
-                document.documentElement.style.setProperty('--accent', '#8d6e63');
-                document.getElementById('board').style.filter = 'sepia(0.5) contrast(0.9)';
-            } else if (theme === 'slate') {
-                document.documentElement.style.setProperty('--accent', '#475569');
-                document.getElementById('board').style.filter = 'invert(0.05) contrast(1.1)';
-            }
-            
-            if (board) board.resize();
-        }
-
-        function toggleSettings(show) {
-            document.getElementById('settings-overlay').style.display = show ? 'flex' : 'none';
-        }
 
         function loadFromHistory(fen) {
             game.load(fen);
@@ -2127,11 +2135,15 @@
             currentMode = mode;
             document.querySelectorAll('.side-item').forEach(i => i.classList.remove('active'));
             if (mode === 'ai') {
-                const aiLink = document.querySelector('.side-item[onclick*="ai"]');
+                const aiLink = document.querySelector('.side-item[onclick*="\'ai\'"]');
                 if (aiLink) aiLink.classList.add('active');
                 document.getElementById('opponent-name').innerHTML = 'Stockfish 16 (AI) <span class="title-badge">LVL 8</span>';
                 roomId = null;
                 resetGame();
+            } else if (mode === 'multiplayer') {
+                const mpLink = document.querySelector('.side-item[onclick*="\'multiplayer\'"]');
+                if (mpLink) mpLink.classList.add('active');
+                toggleLobby(true);
             }
         }
 
@@ -2165,39 +2177,7 @@
             if (show) initPeer();
         }
 
-        function createRoom() {
-            currentMode = 'multiplayer';
-            playerSide = 'w';
-            initPeer();
-            
-            document.getElementById('lobby-status').innerHTML = `
-                <div style="margin-bottom:15px;">
-                    <div style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:5px;">Your Room ID:</div>
-                    <div id="room-id-display" style="font-family:monospace; font-size:1.2rem; font-weight:700; color:var(--accent); letter-spacing:2px;">Initializing...</div>
-                </div>
-                <p style="font-size:0.85rem; color:var(--text-secondary);">Waiting for friend to join...</p>
-            `;
-            board.orientation('white');
-        }
 
-        function joinRoom() {
-            const id = document.getElementById('room-id-input').value.trim();
-            if (!id) return alert("Please enter a Room ID");
-            
-            currentMode = 'multiplayer';
-            playerSide = 'b';
-            initPeer();
-            
-            peer.on('open', () => {
-                conn = peer.connect(id);
-                setupConnection(conn);
-            });
-            board.orientation('black');
-        }
-
-        function setupMultiplayerListener() {
-            // Deprecated in PeerJS version
-        }
 
         const game = new Chess();
         const TT_SIZE = 1 << 22;
@@ -2233,15 +2213,21 @@
         function updateUI() {
             let thinkVal = document.getElementById('think-time-val');
             if (thinkVal) thinkVal.innerText = document.getElementById('think-time').value;
+            
             let threadsEl = document.getElementById('threads');
             let raw = Number(threadsEl.value);
             let auto = autoThreadCount();
 
-            // Treat slider == auto as "Auto" mode (no extra toggle needed).
             let useAuto = !Number.isFinite(raw) || raw === auto;
             numThreads = useAuto ? auto : Math.max(1, Math.min(16, Math.floor(raw)));
 
-            document.getElementById('threads-val').innerText = useAuto ? 'Auto' : String(numThreads);
+            const threadsValEl = document.getElementById('threads-val');
+            if (threadsValEl) threadsValEl.innerText = useAuto ? 'Auto' : String(numThreads);
+            
+            // Sync with first version's variable names if any
+            thinkTime = parseFloat(document.getElementById('think-time').value);
+            useBook = document.getElementById('use-book')?.checked || false;
+            useNN = document.getElementById('use-nn')?.checked || false;
         }
 
         let dotSquares = [];
@@ -2324,10 +2310,10 @@
 
             let line = `<defs>
                            <marker id="arrowhead" markerWidth="6" markerHeight="6" refX="4" refY="3" orient="auto">
-                             <polygon points="0 0, 6 3, 0 6" fill="rgba(255, 128, 0, 0.8)"/>
+                             <polygon points="0 0, 6 3, 0 6" fill="rgba(0, 113, 227, 0.8)"/>
                            </marker>
                         </defs>
-                        <line x1="${fx}" y1="${fy}" x2="${fx + Math.cos(angle) * len}" y2="${fy + Math.sin(angle) * len}" stroke="rgba(255, 128, 0, 0.8)" stroke-width="${sqSize * 0.12}" marker-end="url(#arrowhead)" />`;
+                        <line x1="${fx}" y1="${fy}" x2="${fx + Math.cos(angle) * len}" y2="${fy + Math.sin(angle) * len}" stroke="rgba(0, 113, 227, 0.8)" stroke-width="${sqSize * 0.12}" marker-end="url(#arrowhead)" />`;
             svg.innerHTML = line;
         }
 
