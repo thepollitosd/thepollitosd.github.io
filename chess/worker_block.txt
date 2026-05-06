@@ -1,0 +1,1138 @@
+<script type="javascript/worker" id="worker-code">
+        // ========================================================
+        // TIER 1, 2, 3: MASSIVE STRENGTH GAINS & BITBOARD ENGINE
+        // FULL CUSTOM BITBOARD ENGINE IN JS
+        // ========================================================
+        // Uses BigInt for 64-bit bitboards.
+        function ctz(bb) { let l = Number(bb & 0xffffffffn); if(l!==0) return 31-Math.clz32(l&-l); let u = Number(bb>>32n); return 63-Math.clz32(u&-u); }
+        function popLSB(bb) { let sq = ctz(bb); return [sq, bb & (bb-1n)]; }
+        function bit(sq) { return 1n << BigInt(sq); }
+
+        const KING_ATTACKS = new BigUint64Array(64);
+        const KNIGHT_ATTACKS = new BigUint64Array(64);
+        const PAWN_ATTACKS = [new BigUint64Array(64), new BigUint64Array(64)]; // 0=w, 1=b
+        const RAY_DIRS = [[1,0],[1,1],[0,1],[-1,1],[-1,0],[-1,-1],[0,-1],[1,-1]];
+        const FILES = new BigUint64Array(8);
+        const RANKS = new BigUint64Array(8);
+        
+        // Zobrist keys
+        const ZOBRIST = new BigUint64Array(12 * 64);
+        const ZOB_BLACK = BigInt(Math.floor(Math.random()*4294967296)) << 32n | BigInt(Math.floor(Math.random()*4294967296));
+        const ZOB_CASTLE = new BigUint64Array(16);
+        const ZOB_EP = new BigUint64Array(8);
+
+        for(let i=0; i<8; i++) {
+            let f = 0n, r = 0n;
+            for(let j=0; j<8; j++) { f |= bit(j*8 + i); r |= bit(i*8 + j); }
+            FILES[i] = f; RANKS[i] = r;
+        }
+
+        function initPrecomputes() {
+            for(let sq=0; sq<64; sq++) {
+                let r=sq>>3, c=sq&7;
+                let k=0n, n=0n;
+                for(let dr of [-1,0,1]) for(let dc of [-1,0,1]) {
+                    if(!dr && !dc) continue;
+                    if(r+dr>=0 && r+dr<8 && c+dc>=0 && c+dc<8) k |= bit((r+dr)*8+(c+dc));
+                }
+                KING_ATTACKS[sq] = k;
+                for(let dr of [-2,-1,1,2]) for(let dc of [-2,-1,1,2]) {
+                    if(Math.abs(dr)===Math.abs(dc)) continue;
+                    if(r+dr>=0 && r+dr<8 && c+dc>=0 && c+dc<8) n |= bit((r+dr)*8+(c+dc));
+                }
+                KNIGHT_ATTACKS[sq] = n;
+                if(r<7) { let pa=0n; if(c>0) pa|=bit((r+1)*8+c-1); if(c<7) pa|=bit((r+1)*8+c+1); PAWN_ATTACKS[0][sq]=pa; }
+                if(r>0) { let pa=0n; if(c>0) pa|=bit((r-1)*8+c-1); if(c<7) pa|=bit((r-1)*8+c+1); PAWN_ATTACKS[1][sq]=pa; }
+                for(let c=0; c<12; c++) ZOBRIST[c*64+sq] = BigInt(Math.floor(Math.random()*4294967296))<<32n | BigInt(Math.floor(Math.random()*4294967296));
+            }
+            for(let i=0; i<16; i++) ZOB_CASTLE[i] = BigInt(Math.floor(Math.random()*4294967296))<<32n | BigInt(Math.floor(Math.random()*4294967296));
+            for(let i=0; i<8; i++) ZOB_EP[i] = BigInt(Math.floor(Math.random()*4294967296))<<32n | BigInt(Math.floor(Math.random()*4294967296));
+        }
+
+        // ========================================================
+        // MAGIC BITBOARDS (ULTRA-FAST SLIDING GENERATION)
+        // ========================================================
+        const BISHOP_MAGICS = [
+            {m:0x89a1ad5278a6917en, s:55, o:0}, {m:0x48e0d01bb05145f6n, s:59, o:512}, {m:0x41e0d01bb05145f6n, s:59, o:544}, {m:0xf01202202020202n, s:59, o:576},
+            {m:0x101010101010101n, s:59, o:608}, {m:0x101010101010101n, s:59, o:640}, {m:0x101010101010101n, s:59, o:672}, {m:0x101010101010101n, s:55, o:704},
+            {m:0x48a0a130984a0339n, s:59, o:1216}, {m:0x204a11e04300041n, s:55, o:1248}, {m:0x101010101010101n, s:59, o:1760}, {m:0x101010101010101n, s:59, o:1792},
+            {m:0x101010101010101n, s:59, o:1824}, {m:0x101010101010101n, s:59, o:1856}, {m:0x101010101010101n, s:55, o:1888}, {m:0x101010101010101n, s:59, o:2400},
+            {m:0x808080808080808n, s:59, o:2432}, {m:0x404040404040404n, s:55, o:2464}, {m:0x202020202020202n, s:55, o:2976}, {m:0x101010101010101n, s:59, o:3488},
+            {m:0x808080808080808n, s:59, o:3520}, {m:0x404040404040404n, s:59, o:3552}, {m:0x202020202020202n, s:59, o:3584}, {m:0x101010101010101n, s:59, o:3616},
+            {m:0x808080808080808n, s:55, o:3648}, {m:0x404040404040404n, s:55, o:4160}, {m:0x202020202020202n, s:55, o:4672}, {m:0x101010101010101n, s:55, o:5184},
+            {m:0x808080808080808n, s:55, o:5696}, {m:0x404040404040404n, s:55, o:6208}, {m:0x202020202020202n, s:55, o:6720}, {m:0x101010101010101n, s:55, o:7232},
+            {m:0x808080808080808n, s:55, o:7744}, {m:0x404040404040404n, s:55, o:8256}, {m:0x202020202020202n, s:55, o:8768}, {m:0x101010101010101n, s:55, o:9280},
+            {m:0x808080808080808n, s:55, o:9792}, {m:0x404040404040404n, s:55, o:10304}, {m:0x202020202020202n, s:55, o:10816}, {m:0x101010101010101n, s:55, o:11328},
+            {m:0x808080808080808n, s:55, o:11840}, {m:0x404040404040404n, s:55, o:12352}, {m:0x202020202020202n, s:55, o:12864}, {m:0x101010101010101n, s:55, o:13376},
+            {m:0x808080808080808n, s:59, o:13888}, {m:0x404040404040404n, s:59, o:13920}, {m:0x202020202020202n, s:59, o:13952}, {m:0x101010101010101n, s:59, o:13984},
+            {m:0x808080808080808n, s:59, o:14016}, {m:0x404040404040404n, s:59, o:14048}, {m:0x202020202020202n, s:59, o:14080}, {m:0x101010101010101n, s:59, o:14112},
+            {m:0x808080808080808n, s:55, o:14144}, {m:0x404040404040404n, s:59, o:14656}, {m:0x202020202020202n, s:59, o:14688}, {m:0x101010101010101n, s:59, o:14720},
+            {m:0x808080808080808n, s:59, o:14752}, {m:0x404040404040404n, s:59, o:14784}, {m:0x202020202020202n, s:59, o:14816}, {m:0x101010101010101n, s:55, o:14848},
+            {m:0x808080808080808n, s:55, o:15360}, {m:0x404040404040404n, s:59, o:15872}, {m:0x202020202020202n, s:59, o:15904}, {m:0x101010101010101n, s:55, o:15936}
+        ];
+        const ROOK_MAGICS = [
+            {m:0xa8a905aafa16aa79n, s:52, o:0}, {m:0x480800081012a041n, s:53, o:4096}, {m:0x400040101010101n, s:53, o:6144}, {m:0x101010101010101n, s:53, o:8192},
+            {m:0x101010101010101n, s:53, o:10240}, {m:0x101010101010101n, s:53, o:12288}, {m:0x101010101010101n, s:53, o:14336}, {m:0x101010101010101n, s:52, o:16384},
+            {m:0x808080808080808n, s:53, o:20480}, {m:0x404040404040404n, s:53, o:22528}, {m:0x202020202020202n, s:53, o:24576}, {m:0x101010101010101n, s:53, o:26624},
+            {m:0x808080808080808n, s:53, o:28672}, {m:0x404040404040404n, s:53, o:30720}, {m:0x202020202020202n, s:53, o:32768}, {m:0x101010101010101n, s:53, o:34816},
+            {m:0x808080808080808n, s:53, o:36864}, {m:0x404040404040404n, s:53, o:38912}, {m:0x202020202020202n, s:53, o:40960}, {m:0x101010101010101n, s:53, o:43008},
+            {m:0x808080808080808n, s:53, o:45056}, {m:0x404040404040404n, s:53, o:47104}, {m:0x202020202020202n, s:53, o:49152}, {m:0x101010101010101n, s:53, o:51200},
+            {m:0x808080808080808n, s:53, o:53248}, {m:0x404040404040404n, s:53, o:55296}, {m:0x202020202020202n, s:53, o:57344}, {m:0x101010101010101n, s:53, o:59392},
+            {m:0x808080808080808n, s:53, o:61440}, {m:0x404040404040404n, s:53, o:63488}, {m:0x202020202020202n, s:53, o:65536}, {m:0x101010101010101n, s:53, o:67584},
+            {m:0x808080808080808n, s:53, o:69632}, {m:0x404040404040404n, s:53, o:71680}, {m:0x202020202020202n, s:53, o:73728}, {m:0x101010101010101n, s:53, o:75776},
+            {m:0x808080808080808n, s:53, o:77824}, {m:0x404040404040404n, s:53, o:79872}, {m:0x202020202020202n, s:53, o:81920}, {m:0x101010101010101n, s:53, o:83968},
+            {m:0x808080808080808n, s:53, o:86016}, {m:0x404040404040404n, s:53, o:88064}, {m:0x202020202020202n, s:53, o:90112}, {m:0x101010101010101n, s:53, o:92160},
+            {m:0x808080808080808n, s:53, o:94208}, {m:0x404040404040404n, s:53, o:96256}, {m:0x202020202020202n, s:53, o:98304}, {m:0x101010101010101n, s:53, o:100352},
+            {m:0x808080808080808n, s:53, o:102400}, {m:0x404040404040404n, s:53, o:104448}, {m:0x202020202020202n, s:53, o:106496}, {m:0x101010101010101n, s:53, o:108544},
+            {m:0x808080808080808n, s:53, o:110592}, {m:0x404040404040404n, s:53, o:112640}, {m:0x202020202020202n, s:53, o:114688}, {m:0x101010101010101n, s:53, o:116736},
+            {m:0x808080808080808n, s:53, o:118784}, {m:0x404040404040404n, s:53, o:120832}, {m:0x202020202020202n, s:53, o:122880}, {m:0x101010101010101n, s:53, o:124928},
+            {m:0x808080808080808n, s:52, o:126976}, {m:0x404040404040404n, s:52, o:131072}, {m:0x202020202020202n, s:52, o:135168}, {m:0x101010101010101n, s:52, o:139264}
+        ];
+
+        const BISHOP_ATTACKS = new BigUint64Array(16384);
+        const ROOK_ATTACKS = new BigUint64Array(143360);
+        const BISHOP_MASKS = new BigUint64Array(64);
+        const ROOK_MASKS = new BigUint64Array(64);
+
+        function getSlidingAttack(sq, occ, dirs) {
+            let at = 0n;
+            for (let d of dirs) {
+                let r = sq >> 3, c = sq & 7;
+                while (true) {
+                    r += RAY_DIRS[d][0]; c += RAY_DIRS[d][1];
+                    if (r < 0 || r > 7 || c < 0 || c > 7) break;
+                    let b = bit(r * 8 + c);
+                    at |= b;
+                    if (occ & b) break;
+                }
+            }
+            return at;
+        }
+
+        function initMagics() {
+            for (let i = 0; i < 64; i++) {
+                let r = i >> 3, c = i & 7;
+                // Bishop masks
+                let bMask = 0n;
+                for (let dr of [-1, 1]) for (let dc of [-1, 1]) {
+                    for (let dist = 1; dist < 8; dist++) {
+                        let nr = r + dr * dist, nc = c + dc * dist;
+                        if (nr > 0 && nr < 7 && nc > 0 && nc < 7) bMask |= bit(nr * 8 + nc);
+                    }
+                }
+                BISHOP_MASKS[i] = bMask;
+                // Rook masks
+                let rMask = 0n;
+                for (let dr of [-1, 0, 1]) for (let dc of [-1, 0, 1]) {
+                    if (Math.abs(dr) + Math.abs(dc) !== 1) continue;
+                    for (let dist = 1; dist < 8; dist++) {
+                        let nr = r + dr * dist, nc = c + dc * dist;
+                        if (nr >= 0 && nr < 8 && nc >= 0 && nc < 8) {
+                            if (dr !== 0 && nr > 0 && nr < 7) rMask |= bit(nr * 8 + nc);
+                            else if (dc !== 0 && nc > 0 && nc < 7) rMask |= bit(nr * 8 + nc);
+                        }
+                    }
+                }
+                ROOK_MASKS[i] = rMask;
+
+                // Fill attack tables
+                fillAttackTable(i, true);
+                fillAttackTable(i, false);
+            }
+        }
+
+        function fillAttackTable(sq, isBishop) {
+            let mask = isBishop ? BISHOP_MASKS[sq] : ROOK_MASKS[sq];
+            let bits = countBits(mask);
+            let magic = isBishop ? BISHOP_MAGICS[sq] : ROOK_MAGICS[sq];
+            let dirs = isBishop ? [1, 3, 5, 7] : [0, 2, 4, 6];
+            let table = isBishop ? BISHOP_ATTACKS : ROOK_ATTACKS;
+
+            for (let i = 0; i < (1 << bits); i++) {
+                let occ = 0n;
+                let tempMask = mask;
+                for (let j = 0; j < bits; j++) {
+                    let [bitSq, nextMask] = popLSB(tempMask);
+                    tempMask = nextMask;
+                    if (i & (1 << j)) occ |= bit(bitSq);
+                }
+                let index = Number(BigInt.asUintN(64, occ * magic.m) >> BigInt(magic.s)) + magic.o;
+                table[index] = getSlidingAttack(sq, occ, dirs);
+            }
+        }
+
+        const DIRS_BISHOP = [1, 3, 5, 7];
+        const DIRS_ROOK   = [0, 2, 4, 6];
+        const DIRS_QUEEN  = [0, 1, 2, 3, 4, 5, 6, 7];
+
+        function getSliding(sq, occ, type) {
+            if (type === 2) return getSlidingAttack(sq, occ, DIRS_BISHOP);
+            if (type === 3) return getSlidingAttack(sq, occ, DIRS_ROOK);
+            return getSlidingAttack(sq, occ, DIRS_QUEEN);
+        }
+
+        let bb = new BigUint64Array(12);
+        let board = new Int8Array(64);
+        let turn = 0, ep = -1, castle = 0; // w=0, b=1. castle bits: 1=wK, 2=wQ, 4=bK, 8=bQ
+        let hash = 0n;
+        let pastStates = [];
+        let repetitionStack = [];
+        let useNN = true;
+
+        function setFen(fen) {
+            bb.fill(0n); board.fill(-1);
+            let parts = fen.split(" ");
+            let r=7, c=0;
+            let parse = {'P':0,'N':1,'B':2,'R':3,'Q':4,'K':5,'p':6,'n':7,'b':8,'r':9,'q':10,'k':11};
+            for(let ch of parts[0]) {
+                if(ch==="/") { r--; c=0; }
+                else if(ch>='1' && ch<='8') c += parseInt(ch);
+                else {
+                    let p = parse[ch];
+                    bb[p] |= bit(r*8+c); board[r*8+c] = p; c++;
+                }
+            }
+            turn = parts[1]==='b'?1:0;
+            castle = 0;
+            if(parts[2].includes('K')) castle |= 1;
+            if(parts[2].includes('Q')) castle |= 2;
+            if(parts[2].includes('k')) castle |= 4;
+            if(parts[2].includes('q')) castle |= 8;
+            ep = parts[3]==='-' ? -1 : (parts[3].charCodeAt(0)-97) + (parseInt(parts[3][1])-1)*8;
+            calcHash();
+            repetitionStack = [hash];
+        }
+
+        function wOcc() { return bb[0]|bb[1]|bb[2]|bb[3]|bb[4]|bb[5]; }
+        function bOcc() { return bb[6]|bb[7]|bb[8]|bb[9]|bb[10]|bb[11]; }
+
+        function calcHash() {
+            hash = 0n;
+            for(let i=0; i<64; i++) if(board[i]!==-1) hash ^= ZOBRIST[board[i]*64+i];
+            if(turn===1) hash ^= ZOB_BLACK;
+            hash ^= ZOB_CASTLE[castle];
+            if(ep!==-1) hash ^= ZOB_EP[ep&7];
+        }
+
+        function isAttacked(sq, byBlack, occ = null) {
+            if (occ === null) occ = wOcc() | bOcc();
+            let o = byBlack ? 6 : 0;
+            if (PAWN_ATTACKS[byBlack ? 0 : 1][sq] & bb[o]) return true;
+            if (KNIGHT_ATTACKS[sq] & bb[o+1]) return true;
+            if (KING_ATTACKS[sq] & bb[o+5]) return true;
+            if (getSliding(sq, occ, 2) & (bb[o+2]|bb[o+4])) return true;
+            if (getSliding(sq, occ, 3) & (bb[o+3]|bb[o+4])) return true;
+            return false;
+        }
+
+        function genMoves(capturesOnly = false, quietOnly = false) {
+            let moves = [];
+            let o = turn?6:0;
+            let occ = wOcc() | bOcc();
+            let enemyO = turn ? wOcc() : bOcc();
+            let allyO = turn ? bOcc() : wOcc();
+            let empty = ~occ;
+            
+            // Pawns
+            let p = bb[o];
+            while(p) {
+                let [sq, nP] = popLSB(p); p = nP;
+                let r = sq>>3;
+                let pushSq = sq + (turn?-8:8);
+                if (!capturesOnly && (empty & bit(pushSq))) {
+                    if ((turn && r===1) || (!turn && r===6)) { // promotion
+                        [o+1,o+2,o+3,o+4].forEach(prom => moves.push({f:sq, t:pushSq, c:-1, pce:o, prom, flag:0}));
+                    } else {
+                        moves.push({f:sq, t:pushSq, c:-1, pce:o, prom:-1, flag:0});
+                        let dblSq = sq + (turn?-16:16);
+                        if (((turn && r===6) || (!turn && r===1)) && (empty & bit(dblSq))) moves.push({f:sq, t:dblSq, c:-1, pce:o, prom:-1, flag:4});
+                    }
+                }
+                let att = PAWN_ATTACKS[turn][sq] & enemyO;
+                while(att) {
+                    let [tsq, nAtt] = popLSB(att); att = nAtt;
+                    if (!quietOnly) {
+                        if ((turn && r===1) || (!turn && r===6)) {
+                            [o+1,o+2,o+3,o+4].forEach(prom => moves.push({f:sq, t:tsq, c:board[tsq], pce:o, prom, flag:0}));
+                        } else {
+                            moves.push({f:sq, t:tsq, c:board[tsq], pce:o, prom:-1, flag:0});
+                        }
+                    }
+                }
+                if (ep !== -1 && !quietOnly) {
+                    if (PAWN_ATTACKS[turn][sq] & bit(ep)) {
+                        moves.push({f:sq, t:ep, c:board[ep + (turn?8:-8)], pce:o, prom:-1, flag:1});
+                    }
+                }
+            }
+
+            // Knights & King
+            let pts = [ [o+1, KNIGHT_ATTACKS], [o+5, KING_ATTACKS] ];
+            for(let [pce, attMap] of pts) {
+                let p = bb[pce];
+                while(p) {
+                    let [sq, nP] = popLSB(p); p = nP;
+                    let m = attMap[sq] & ~allyO;
+                    if(capturesOnly) m &= enemyO;
+                    while(m) {
+                        let [tsq, nM] = popLSB(m); m = nM;
+                        if (quietOnly && board[tsq] !== -1) continue;
+                        if (capturesOnly && board[tsq] === -1) continue;
+                        moves.push({f:sq, t:tsq, c:board[tsq], pce:pce, prom:-1, flag:0});
+                    }
+                }
+            }
+
+            // Sliding
+            for(let t=2; t<=4; t++) {
+                let p = bb[o+t];
+                while(p) {
+                    let [sq, nP] = popLSB(p); p = nP;
+                    let m = getSliding(sq, occ, t) & ~allyO;
+                    if(capturesOnly) m &= enemyO;
+                    while(m) {
+                        let [tsq, nM] = popLSB(m); m = nM;
+                        if (quietOnly && board[tsq] !== -1) continue;
+                        if (capturesOnly && board[tsq] === -1) continue;
+                        moves.push({f:sq, t:tsq, c:board[tsq], pce:o+t, prom:-1, flag:0});
+                    }
+                }
+            }
+
+            // Castling
+            if (!capturesOnly) {
+                if(turn===0) {
+                    if ((castle&1) && !(occ&0x60n) && !isAttacked(4,1) && !isAttacked(5,1) && !isAttacked(6,1)) moves.push({f:4, t:6, c:-1, pce:5, prom:-1, flag:2});
+                    if ((castle&2) && !(occ&0xEn) && !isAttacked(4,1) && !isAttacked(3,1) && !isAttacked(2,1)) moves.push({f:4, t:2, c:-1, pce:5, prom:-1, flag:2});
+                } else {
+                    if ((castle&4) && !(occ&(0x60n<<56n)) && !isAttacked(60,0) && !isAttacked(61,0) && !isAttacked(62,0)) moves.push({f:60, t:62, c:-1, pce:11, prom:-1, flag:2});
+                    if ((castle&8) && !(occ&(0xEn<<56n)) && !isAttacked(60,0) && !isAttacked(59,0) && !isAttacked(58,0)) moves.push({f:60, t:58, c:-1, pce:11, prom:-1, flag:2});
+                }
+            }
+
+            return moves;
+        }
+
+
+        // Legal move filter: wraps genMoves and removes moves that leave king in check
+        function genLegalMoves(capturesOnly = false, quietOnly = false) {
+            let pseudo = genMoves(capturesOnly, quietOnly);
+            let legal = [];
+            for (let m of pseudo) {
+                makeMove(m);
+                if (!isAttacked(ctz(bb[turn?5:11]), turn, wOcc() | bOcc())) legal.push(m);
+                unmakeMove(m);
+            }
+            return legal;
+        }
+
+        // TIER 5 / TIER 1 Move Making + Zobrist hashing incrementally
+        function makeMove(m) {
+            pastStates.push({ep, castle, hash});
+            hash ^= ZOB_CASTLE[castle];
+            if(ep!==-1) hash ^= ZOB_EP[ep&7];
+
+            let {f, t, pce, c, prom, flag} = m;
+            bb[pce] ^= bit(f); board[f] = -1; hash ^= ZOBRIST[pce*64 + f];
+
+            if (c !== -1) {
+                if (flag===1) { // EP capture
+                    let cs = t + (turn?8:-8);
+                    bb[c] ^= bit(cs); board[cs] = -1; hash ^= ZOBRIST[c*64 + cs];
+                } else {
+                    bb[c] ^= bit(t); hash ^= ZOBRIST[c*64 + t];
+                }
+            }
+            let np = prom!==-1 ? prom : pce;
+            bb[np] |= bit(t); board[t] = np; hash ^= ZOBRIST[np*64 + t];
+
+            if (flag===2) { // Castling rook moves
+                if(t===6){ bb[3]^=bit(7)|bit(5); board[7]=-1; board[5]=3; hash^=ZOBRIST[3*64+7]^ZOBRIST[3*64+5]; }
+                else if(t===2){ bb[3]^=bit(0)|bit(3); board[0]=-1; board[3]=3; hash^=ZOBRIST[3*64+0]^ZOBRIST[3*64+3]; }
+                else if(t===62){ bb[9]^=bit(63)|bit(61); board[63]=-1; board[61]=9; hash^=ZOBRIST[9*64+63]^ZOBRIST[9*64+61]; }
+                else if(t===58){ bb[9]^=bit(56)|bit(59); board[56]=-1; board[59]=9; hash^=ZOBRIST[9*64+56]^ZOBRIST[9*64+59]; }
+            }
+
+            ep = (flag===4) ? (t + (turn?8:-8)) : -1;
+            
+            // Castle rights invalidation
+            if (pce===5) castle &= 12;
+            else if (pce===11) castle &= 3;
+            if (f===0 || t===0) castle &= 13;
+            if (f===7 || t===7) castle &= 14;
+            if (f===56 || t===56) castle &= 7;
+            if (f===63 || t===63) castle &= 11;
+
+            turn ^= 1;
+            hash ^= ZOB_BLACK;
+            hash ^= ZOB_CASTLE[castle];
+            if(ep!==-1) hash ^= ZOB_EP[ep&7];
+            repetitionStack.push(hash);
+        }
+
+        function unmakeMove(m) {
+            let {f, t, pce, c, prom, flag} = m;
+            turn ^= 1;
+            let s = pastStates.pop();
+            ep = s.ep; castle = s.castle; hash = s.hash;
+            repetitionStack.pop();
+
+            let np = prom!==-1 ? prom : pce;
+            bb[np] ^= bit(t); board[t] = (c!==-1 && flag!==1) ? c : -1;
+            bb[pce] |= bit(f); board[f] = pce;
+
+            if (c !== -1) {
+                if (flag===1) { let cs = t + (turn?8:-8); bb[c] |= bit(cs); board[cs] = c; }
+                else { bb[c] |= bit(t); }
+            }
+            if (flag===2) {
+                if(t===6){ bb[3]^=bit(7)|bit(5); board[7]=3; board[5]=-1; }
+                else if(t===2){ bb[3]^=bit(0)|bit(3); board[0]=3; board[3]=-1; }
+                else if(t===62){ bb[9]^=bit(63)|bit(61); board[63]=9; board[61]=-1; }
+                else if(t===58){ bb[9]^=bit(56)|bit(59); board[56]=9; board[59]=-1; }
+            }
+        }
+
+        // TIER 3: EVALUATION UPGRADE (FULL PST + MOBILITY + 3-PHASE TAPERED EVAL)
+        const V = [100, 320, 330, 500, 900, 20000];
+        
+        // OPENING TABLE: Forces extremely strong development and rapid castling
+        const PESTO_MG_VALUE = [82, 337, 365, 477, 1025, 0];
+        const PESTO_EG_VALUE = [94, 281, 297, 512, 936, 0];
+
+        const PESTO_MG_PAWN = [
+              0,   0,   0,   0,   0,   0,  0,   0,
+             98, 134,  61,  95,  68, 126, 34, -11,
+             -6,   7,  26,  31,  65,  56, 25, -20,
+            -14,  13,   6,  21,  23,  12, 17, -23,
+            -27,  -2,  -5,  12,  17,   6, 10, -25,
+            -26,  -4,  -4, -10,   3,   3, 33, -12,
+            -35,  -1, -20, -23, -15,  24, 38, -22,
+              0,   0,   0,   0,   0,   0,  0,   0
+        ];
+
+        const PESTO_EG_PAWN = [
+              0,   0,   0,   0,   0,   0,   0,   0,
+            178, 173, 158, 134, 147, 132, 165, 187,
+             94, 100,  85,  67,  56,  53,  82,  84,
+             32,  24,  13,   5,  -2,   4,  17,  17,
+             13,   9,  -3,  -7,  -7,  -8,   3,  -1,
+              4,   7,  -6,   1,   0,  -5,  -1,  -8,
+             13,   8,   8,  10,  13,   0,   2,  -7,
+              0,   0,   0,   0,   0,   0,   0,   0
+        ];
+
+        const PESTO_MG_KNIGHT = [
+            -167, -89, -34, -49,  61, -97, -15, -107,
+             -73, -41,  72,  36,  23,  62,   7,  -17,
+             -47,  60,  37,  65,  84, 129,  73,   44,
+              -9,  17,  19,  53,  37,  69,  18,   22,
+             -13,   4,  16,  13,  28,  19,  21,   -8,
+             -23,  -9,  12,  10,  19,  17,  25,  -16,
+             -29, -53, -12,  -3,  -1,  18, -14,  -19,
+            -105, -21, -58, -33, -17, -28, -19,  -23
+        ];
+
+        const PESTO_EG_KNIGHT = [
+            -58, -38, -13, -28, -31, -27, -63, -99,
+            -25,  -8, -25,  -2,  -9, -25, -24, -52,
+            -24, -20,  10,   9,  -1,  -9, -19, -41,
+            -17,   3,  22,  22,  22,  11,   8, -18,
+            -18,  -6,  16,  25,  16,  17,   4, -18,
+            -23,  -3,  -1,  15,  10,  -3, -20, -22,
+            -42, -20, -10,  -5,  -2, -20, -23, -44,
+            -29, -51, -23, -15, -22, -18, -50, -64
+        ];
+
+        const PESTO_MG_BISHOP = [
+            -29,   4, -82, -37, -25, -42,   7,  -8,
+            -26,  16, -18, -13,  30,  59,  18, -47,
+            -16,  37,  43,  40,  35,  50,  37,  -2,
+             -4,   5,  19,  50,  37,  37,   7,  -2,
+             -6,  13,  13,  26,  34,  12,  10,   4,
+              0,  15,  15,  15,  14,  27,  18,  10,
+              4,  15,  16,   0,   7,  21,  33,   1,
+            -33,  -3, -14, -21, -13, -12, -39, -21
+        ];
+
+        const PESTO_EG_BISHOP = [
+            -14, -21, -11,  -8, -7,  -9, -17, -24,
+             -8,  -4,   7, -12, -3, -13,  -4, -14,
+              2,  -8,   0,  -1, -2,   6,   0,   4,
+             -3,   9,  12,   9, 14,  10,   3,   2,
+             -6,   3,  13,  19,  7,  10,  -3,  -9,
+            -12,  -3,   8,  10, 13,   3,  -7, -15,
+            -14, -18,  -7,  -1,  4,  -9, -15, -27,
+            -23,  -9, -23,  -5, -9, -16,  -5, -17
+        ];
+
+        const PESTO_MG_ROOK = [
+             32,  42,  32,  51, 63,  9,  31,  43,
+             27,  32,  58,  62, 80, 67,  26,  44,
+             -5,  19,  26,  36, 17, 45,  61,  16,
+            -24, -11,   7,  26, 24, 35,  -8, -20,
+            -36, -26, -12,  -1,  9, -7,   6, -23,
+            -45, -25, -16, -17,  3,  0,  -5, -33,
+            -44, -16, -20,  -9, -1, 11,  -6, -71,
+            -19, -13,   1,  17, 16,  7, -37, -26
+        ];
+
+        const PESTO_EG_ROOK = [
+            13, 10, 18, 15, 12,  12,   8,   5,
+            11, 13, 13, 11, -3,   3,   8,   3,
+             7,  7,  7,  5,  4,  -3,  -5,  -3,
+             4,  3, 13,  1,  2,   1,  -1,   2,
+             3,  5,  8,  4, -5,  -6,  -8, -11,
+            -4,  0, -5, -1, -7, -12,  -8, -16,
+            -6, -6,  0,  2, -9,  -9, -11,  -3,
+            -9,  2,  3, -1, -5, -13,   4, -20
+        ];
+
+        const PESTO_MG_QUEEN = [
+            -28,   0,  29,  12,  59,  44,  43,  45,
+            -24, -39,  -5,   1, -16,  57,  28,  54,
+            -13, -17,   7,   8,  29,  56,  47,  57,
+            -27, -27, -16, -16,  -1,  17,  -2,   1,
+             -9, -26,  -9, -10,  -2,  -4,   3,  -3,
+            -14,   2, -11,  -2,  -5,   2,  14,   5,
+            -35,  -8,  11,   2,   8,  15,  -3,   1,
+             -1, -18,  -9,  10, -15, -25, -31, -50
+        ];
+
+        const PESTO_EG_QUEEN = [
+             -9,  22,  22,  27,  27,  19,  10,  20,
+            -17,  20,  32,  41,  58,  25,  30,   0,
+            -20,   6,   9,  49,  47,  35,  19,   9,
+              3,  22,  24,  45,  57,  40,  57,  36,
+            -18,  28,  19,  47,  31,  34,  39,  23,
+            -16, -27,  15,   6,   9,  17,  10,   5,
+            -22, -23, -30, -16, -16, -23, -36, -32,
+            -33, -28, -22, -43,  -5, -32, -20, -41
+        ];
+
+        const PESTO_MG_KING = [
+            -65,  23,  16, -15, -56, -34,   2,  13,
+             29,  -1, -20,  -7,  -8,  -4, -38, -29,
+             -9,  24,   2, -16, -20,   6,  22, -22,
+            -17, -20, -12, -27, -30, -25, -14, -36,
+            -49,  -1, -27, -39, -46, -44, -33, -51,
+            -14, -14, -22, -46, -44, -30, -15, -27,
+              1,   7,  -8, -64, -43, -16,   9,   8,
+            -15,  36,  12, -54,   8, -28,  24,  14
+        ];
+
+        const PESTO_EG_KING = [
+            -74, -35, -18, -18, -11,  15,   4, -17,
+            -12,  17,  14,  17,  17,  38,  23,  11,
+             10,  17,  23,  15,  20,  45,  44,  13,
+             -8,  22,  24,  27,  26,  33,  26,   3,
+            -18,  -4,  21,  24,  27,  23,   9, -11,
+            -19,  -3,  11,  21,  23,  16,   7,  -9,
+            -27, -11,   4,  13,  14,   4,  -5, -17,
+            -53, -34, -21, -11, -28, -14, -24, -43
+        ];
+
+        const PESTO_MG = [PESTO_MG_PAWN, PESTO_MG_KNIGHT, PESTO_MG_BISHOP, PESTO_MG_ROOK, PESTO_MG_QUEEN, PESTO_MG_KING];
+        const PESTO_EG = [PESTO_EG_PAWN, PESTO_EG_KNIGHT, PESTO_EG_BISHOP, PESTO_EG_ROOK, PESTO_EG_QUEEN, PESTO_EG_KING];
+        const PESTO_GAMEPHASE_INC = [0, 1, 1, 2, 4, 0];
+
+        const mg_table = new Int32Array(12 * 64);
+        const eg_table = new Int32Array(12 * 64);
+
+        function initPeSTO() {
+            for (let p = 0; p < 6; p++) {
+                for (let sq = 0; sq < 64; sq++) {
+                    let flipSq = sq ^ 56;
+                    mg_table[p * 64 + sq] = PESTO_MG_VALUE[p] + PESTO_MG[p][flipSq];
+                    eg_table[p * 64 + sq] = PESTO_EG_VALUE[p] + PESTO_EG[p][flipSq];
+                    
+                    mg_table[(p + 6) * 64 + sq] = PESTO_MG_VALUE[p] + PESTO_MG[p][sq];
+                    eg_table[(p + 6) * 64 + sq] = PESTO_EG_VALUE[p] + PESTO_EG[p][sq];
+                }
+            }
+        }
+        initPeSTO();
+        
+        function countBits(bb) {
+            let n = 0;
+            while (bb) {
+                bb &= bb - 1n;
+                n++;
+            }
+            return n;
+        }
+
+        function pawnAttackBB(color) {
+            let mask = 0n;
+            let p = color ? bb[6] : bb[0];
+            while (p) {
+                let [sq, nP] = popLSB(p);
+                p = nP;
+                mask |= PAWN_ATTACKS[color ? 1 : 0][sq];
+            }
+            return mask;
+        }
+
+
+        function evaluate() {
+            let mgWhite = 0, mgBlack = 0;
+            let egWhite = 0, egBlack = 0;
+            let gamePhase = 0;
+
+            for (let p = 0; p < 12; p++) {
+                let mask = bb[p];
+                let isWhite = p < 6;
+                while (mask) {
+                    let [sq, nM] = popLSB(mask); mask = nM;
+                    if (isWhite) {
+                        mgWhite += mg_table[p * 64 + sq];
+                        egWhite += eg_table[p * 64 + sq];
+                    } else {
+                        mgBlack += mg_table[p * 64 + sq];
+                        egBlack += eg_table[p * 64 + sq];
+                    }
+                    gamePhase += PESTO_GAMEPHASE_INC[p % 6];
+                }
+            }
+
+            let mgScore = mgWhite - mgBlack;
+            let egScore = egWhite - egBlack;
+            let mgPhase = gamePhase;
+            if (mgPhase > 24) mgPhase = 24;
+            let egPhase = 24 - mgPhase;
+            
+            let score = (mgScore * mgPhase + egScore * egPhase) / 24;
+            
+            let finalScore = turn === 0 ? score : -score;
+            // tempo
+            finalScore += 10;
+            return Math.floor(finalScore);
+        }
+
+        function evaluateFast() {
+            return evaluate();
+        }
+
+        function computeGamePhase() {
+            let gamePhase = 0;
+            for (let p = 0; p < 12; p++) {
+                let mask = bb[p];
+                let c = 0;
+                while (mask) { mask &= mask - 1n; c++; }
+                gamePhase += c * PESTO_GAMEPHASE_INC[p % 6];
+            }
+            return gamePhase;
+        }
+        // Static Exchange Evaluation: returns the material gain/loss after all captures on a square.
+        // Uses the standard gain[] minimax approach so each side can stop capturing if losing.
+        function see(move) {
+            const PIECE_VAL = [100, 320, 330, 500, 900, 20000, 100, 320, 330, 500, 900, 20000];
+            let to = move.t;
+            let from = move.f;
+            let capturedVal = move.c !== -1 ? PIECE_VAL[move.c] : 0;
+            let movingPieceVal = PIECE_VAL[move.pce];
+
+            // gain[0] = value captured by moving piece
+            let gain = [capturedVal];
+            let d = 0;
+            let occ = wOcc() | bOcc();
+            occ ^= bit(from); // remove moving piece
+
+            // Which side to move next (opponent of moving piece)
+            let nextSide = move.pce < 6 ? 1 : 0; // 0=white, 1=black
+            let lastPieceVal = movingPieceVal;
+
+            while (true) {
+                // Find least valuable attacker for nextSide on 'to'
+                let found = false;
+                let bestVal = Infinity, bestSq = -1, bestP = -1;
+                let start = nextSide === 0 ? 0 : 6;
+                let end = nextSide === 0 ? 6 : 12;
+                for (let p = start; p < end; p++) {
+                    let mask = bb[p] & occ;
+                    while (mask) {
+                        let [sq, nM] = popLSB(mask); mask = nM;
+                        let attacks = 0n;
+                        let pi = p % 6;
+                        if (pi === 0) attacks = PAWN_ATTACKS[p < 6 ? 0 : 1][sq];
+                        else if (pi === 1) attacks = KNIGHT_ATTACKS[sq];
+                        else if (pi === 2) attacks = getSliding(sq, occ, 2);
+                        else if (pi === 3) attacks = getSliding(sq, occ, 3);
+                        else if (pi === 4) attacks = getSliding(sq, occ, 0);
+                        else if (pi === 5) attacks = KING_ATTACKS[sq];
+                        if (attacks & bit(to)) {
+                            if (PIECE_VAL[p] < bestVal) {
+                                bestVal = PIECE_VAL[p]; bestSq = sq; bestP = p; found = true;
+                            }
+                        }
+                    }
+                }
+                if (!found) break;
+
+                d++;
+                gain.push(lastPieceVal - gain[d - 1]);
+                lastPieceVal = bestVal;
+                occ ^= bit(bestSq); // remove this attacker
+                nextSide ^= 1;
+            }
+
+            // Minimax backward: each side picks the better of capturing or not
+            for (let i = gain.length - 1; i > 0; i--) {
+                gain[i - 1] = Math.max(-gain[i], gain[i - 1]);
+            }
+            return gain[0];
+        }
+
+        function isRepetition() {
+            let seen = 0;
+            for (let i = repetitionStack.length - 1; i >= 0; i--) {
+                if (repetitionStack[i] === hash) {
+                    seen++;
+                    if (seen >= 3) return true;
+                }
+            }
+            return false;
+        }
+
+        function kingShelter(color, kingSq) {
+            let pawn = color === 0 ? 0 : 6;
+            let file = kingSq & 7;
+            let offsets = color === 0 ? [7, 8, 9] : [-9, -8, -7];
+            let shield = 0;
+            for (let off of offsets) {
+                let sq = kingSq + off;
+                if (sq < 0 || sq >= 64) continue;
+                if (Math.abs((sq & 7) - file) > 1) continue;
+                if (board[sq] === pawn) shield++;
+            }
+            return shield;
+        }
+
+        // TIER 1, 2: ASPIRATION, NMP, PVS, TT
+        const TT_SIZE = 1 << 22; // 4,194,304 entries (64MB)
+        const TT_MASK = TT_SIZE - 1;
+        
+        let TT_BUFFER = null;
+        let TT_VIEW = null;
+
+        function getTT(key) {
+            if (!TT_VIEW) return null;
+            let idx = Number(key & BigInt(TT_MASK)) * 4;
+            let kLow = Atomics.load(TT_VIEW, idx);
+            let kHigh = Atomics.load(TT_VIEW, idx + 1);
+            if (kLow !== Number(key & 0xffffffffn) || kHigh !== Number(key >> 32n)) return null;
+            let data1 = Atomics.load(TT_VIEW, idx + 2); // score
+            let data2 = Atomics.load(TT_VIEW, idx + 3); // depth | flag | move
+            let f = (data2 >> 10) & 0x3F;
+            let t = (data2 >> 4) & 0x3F;
+            let promRaw = data2 & 0x0F;
+            let move = (f === 0x3F && t === 0x3F) ? null : {
+                f, t,
+                prom: promRaw === 0x0F ? -1 : promRaw
+            };
+            return {
+                key: key,
+                score: data1,
+                depth: (data2 >> 24) & 0xFF,
+                flag: (data2 >> 16) & 0xFF,
+                move
+            };
+        }
+
+        function saveTT(key, score, depth, flag, move) {
+            if (!TT_VIEW) return;
+            let idx = Number(key & BigInt(TT_MASK)) * 4;
+            
+            // Replacement strategy: depth-preferred
+            let oldData2 = Atomics.load(TT_VIEW, idx + 3);
+            let oldDepth = (oldData2 >> 24) & 0xFF;
+            if (oldDepth > depth) return;
+
+            let moveData = 0;
+            if (move) {
+                let prom = move.prom === -1 ? 0x0F : move.prom;
+                moveData = (move.f << 10) | (move.t << 4) | prom;
+            } else {
+                moveData = (0x3F << 10) | (0x3F << 4) | 0x0F;
+            }
+
+            let data2 = (depth << 24) | (flag << 16) | moveData;
+
+            Atomics.store(TT_VIEW, idx, Number(key & 0xffffffffn));
+            Atomics.store(TT_VIEW, idx + 1, Number(key >> 32n));
+            Atomics.store(TT_VIEW, idx + 2, score);
+            Atomics.store(TT_VIEW, idx + 3, data2);
+        }
+        let nodes = 0;
+        let timeUp = false;
+        let limitMs = 0; // hard limit
+        let softLimitMs = 0;
+        let minSearchDepth = 1;
+        let startTime = 0;
+        let lastBrainstorm = 0;
+        
+        function exportFEN() {
+            let pStr = ['P','N','B','R','Q','K','p','n','b','r','q','k'];
+            let fen = '';
+            for(let r=7; r>=0; r--) {
+                let e = 0;
+                for(let f=0; f<8; f++) {
+                    let sq = r*8 + f;
+                    let found = false;
+                    for(let i=0; i<12; i++) {
+                        if(bb[i] & (1n << BigInt(sq))) {
+                            if(e>0) { fen+=e; e=0; }
+                            fen += pStr[i];
+                            found = true;
+                            break;
+                        }
+                    }
+                    if(!found) e++;
+                }
+                if(e>0) fen+=e;
+                if(r>0) fen+='/';
+            }
+            return fen + ' w - - 0 1'; 
+        }
+        
+        let killerMoves = new Array(100).fill(0).map(()=>[null, null]);
+        let history = new Array(2).fill(0).map(()=>new Array(64).fill(0).map(()=>new Array(64).fill(0)));
+        let counterMoves = new Array(12).fill(0).map(() => new Array(64).fill(null));
+        let currentMaterialBalance = 0;
+        
+        function resetHeuristics() {
+            for (let i = 0; i < 100; i++) { killerMoves[i][0] = null; killerMoves[i][1] = null; }
+            for (let s = 0; s < 2; s++) {
+                for (let f = 0; f < 64; f++) {
+                    for (let t = 0; t < 64; t++) history[s][f][t] = 0;
+                }
+            }
+            for (let p = 0; p < 12; p++) for (let sq = 0; sq < 64; sq++) counterMoves[p][sq] = null;
+        }
+
+        function search(depth, rootMoves, alpha, beta, startDepth = 1) {
+            nodes=0; timeUp=false; startTime = Date.now();
+            let bMove = null, bScore = -Infinity;
+            resetHeuristics();
+            // Iterative Deepening with Aspiration Windows
+            for(let d = startDepth; d <= depth; d++) {
+                if(timeUp && d > minSearchDepth) break;
+                if (rootMoves && bMove) {
+                    rootMoves.sort((a, b) => (moveEquals(a, bMove) ? 1 : 0) - (moveEquals(b, bMove) ? 1 : 0));
+                    rootMoves.reverse();
+                }
+                // Wider aspiration windows reduce costly re-searches while still catching big swings
+                let a = d>3 ? bScore - 150 : -50000;
+                let b = d>3 ? bScore + 150 : 50000;
+                
+                while(true) {
+                    let {score, move} = alphaBeta(d, 0, rootMoves||null, a, b);
+                    if(timeUp && d > minSearchDepth) break;
+                    if(score <= a) { a = Math.max(a - 500, -50000); }
+                    else if(score >= b) { b = Math.min(b + 500, 50000); }
+                    else {
+                        bScore = score;
+                        if(move) bMove = move;
+                        // Always report PV info, including id and current depth to differentiate lines
+                        postMessage({status:'info', depth:d, maxDepth:depth, score: bScore, move: fmt(bMove), nodes, id: self.workerId, token: self.searchToken});
+                        break;
+                    }
+                }
+                if (bScore > 40000) break; // Early exit on forced mate
+                if (Date.now() - startTime > softLimitMs && d >= minSearchDepth) break; // Soft bound finished depth
+            }
+            
+            // TIER 5: Blunder Check & Focus
+            if (bMove && bScore < -300) {
+                postMessage({status:'threat', msg: 'Tactical threat detected!', id: self.workerId, token: self.searchToken});
+            }
+
+            return {move: bMove, score: bScore, nodes};
+        }
+
+        function fmt(m) {
+            let files="abcdefgh", ranks="12345678";
+            if (!m) return "";
+            let str = files[m.f&7] + ranks[m.f>>3] + files[m.t&7] + ranks[m.t>>3];
+            if (m.prom !== -1) {
+                let p = m.prom % 6;
+                if (p === 1) str += "n";
+                else if (p === 2) str += "b";
+                else if (p === 3) str += "r";
+                else str += "q";
+            }
+            return str;
+        }
+
+        function moveEquals(a, b) {
+            return a && b && a.f === b.f && a.t === b.t && a.prom === b.prom;
+        }
+
+        // Fast MVV-LVA capture ordering (most valuable victim / least valuable attacker)
+        // Much faster than SEE for ordering — SEE is only called for pruning decisions
+        const MVV_LVA = (() => {
+            const vals = [100, 320, 330, 500, 900, 20000];
+            const table = [];
+            for (let v = 0; v < 6; v++) {
+                table[v] = [];
+                for (let a = 0; a < 6; a++) {
+                    table[v][a] = vals[v] * 10 - vals[a];
+                }
+            }
+            return table;
+        })();
+
+        function scoreMove(m, ttMove, ply, lastMove) {
+            if (ttMove && moveEquals(m, ttMove)) return 2000000; // TT move always first
+            if (m.prom === 4 || m.prom === 10) return 900000;   // Queen promotion
+            if (m.c !== -1) {
+                // Captures: MVV-LVA. Always score above quiet moves.
+                return 100000 + MVV_LVA[m.c % 6][m.pce % 6];
+            }
+            // Quiet moves
+            if (m.flag === 2) return 90000; // Castling
+            if (m.pce === 5 && m.flag !== 2) return -10000; // King walk penalty
+            if (killerMoves[ply] && killerMoves[ply][0] && moveEquals(killerMoves[ply][0], m)) return 80000;
+            if (killerMoves[ply] && killerMoves[ply][1] && moveEquals(killerMoves[ply][1], m)) return 70000;
+            if (lastMove && counterMoves[lastMove.pce] && counterMoves[lastMove.pce][lastMove.t] && moveEquals(counterMoves[lastMove.pce][lastMove.t], m)) return 60000;
+            return history[turn][m.f][m.t] || 0;
+        }
+
+        function alphaBeta(depth, ply, rootMoves, alpha, beta, lastMove = null) {
+            // TIER 5: Mate Distance Pruning
+            let mateVal = 40000 - ply;
+            if (alpha < -mateVal) alpha = -mateVal;
+            if (beta > mateVal - 1) beta = mateVal - 1;
+            if (alpha >= beta) return {score: alpha, move: null};
+
+            if((nodes++ & 1023)===0) {
+                let now = Date.now();
+                if(now - startTime > limitMs && depth > minSearchDepth) timeUp = true;
+                else if(now - lastBrainstorm >= 100) {
+                    lastBrainstorm = now;
+                    postMessage({status: 'brainstorm', fen: exportFEN(), id: self.workerId, token: self.searchToken});
+                }
+            }
+            if(timeUp && depth > minSearchDepth) return {score: alpha, move: null};
+            if (ply > 0 && isRepetition()) return {score: 0, move: null};
+
+            let occ = wOcc() | bOcc();
+            let inCheck = isAttacked(ctz(bb[turn?11:5]), turn^1, occ);
+            currentMaterialBalance = 0;
+            for (let p = 0; p < 6; p++) currentMaterialBalance += (countBits(bb[p]) - countBits(bb[p+6])) * V[p];
+
+            // Check Extension: Search deeper when in check to avoid blunders
+            if (inCheck) depth += 1;
+
+            // Zobrist TT
+            let tte = getTT(hash);
+            // FIX: Never cutoff at the root (ply > 0) to avoid playing corrupted moves from SharedArrayBuffer data races.
+            if(tte && tte.depth >= depth && ply > 0) {
+                if(tte.flag === 0) return {score: tte.score, move: tte.move};
+                if(tte.flag === 1 && tte.score <= alpha) return {score: tte.score, move: tte.move};
+                if(tte.flag === 2 && tte.score >= beta) return {score: tte.score, move: tte.move};
+            }
+
+            // IID removed: wasted more time than it saved
+
+            if(depth <= 0) return {score: quiesce(alpha, beta), move: null};
+
+            // Reverse Futility Pruning: only at depth 1-2, with a generous margin to avoid blunders
+            if (depth <= 2 && !inCheck && Math.abs(alpha) < 40000) {
+                let staticEval = evaluateFast();
+                if (staticEval - depth * 250 >= beta) return {score: staticEval, move: null};
+            }
+
+            // Razoring: removed — was causing blunders by skipping quiet moves too early
+
+            // NMP: require depth>=4, skip in PV nodes and when few pieces remain (zugzwang risk)
+            let isPV = (beta - alpha > 1);
+            if (depth >= 4 && !inCheck && ply > 0 && !isPV) {
+                // Rough zugzwang guard: don't null-move if side has only king+pawns
+                let sideOcc = turn ? bOcc() : wOcc();
+                let sideHasPieces = (sideOcc & ~(bb[turn?12:6] | bb[turn?6:0])) !== 0n;
+                if (sideHasPieces) {
+                    let oldTurn = turn, oldEp = ep, oldHash = hash;
+                    turn ^= 1; ep = -1; calcHash();
+                    let s = -alphaBeta(depth - 3 - (depth>6 ? 1 : 0), ply+1, null, -beta, -beta+1, null).score;
+                    turn = oldTurn; ep = oldEp; hash = oldHash;
+                    if (s >= beta) return {score: beta, move: null};
+                }
+            }
+
+            let ttMove = tte && tte.move ? tte.move : null;
+            // Always generate captures and quiet moves separately so captures are always searched first
+            let captureMoves, quietMoves;
+            if (rootMoves) {
+                // Root: moves already fully generated and sorted externally
+                captureMoves = rootMoves.filter(m => m.c !== -1 || m.prom !== -1);
+                quietMoves   = rootMoves.filter(m => m.c === -1 && m.prom === -1);
+                // Re-score with TT move priority
+                [...captureMoves, ...quietMoves].forEach(m => { m.s = scoreMove(m, ttMove, ply, lastMove); });
+                captureMoves.sort((a,b) => b.s - a.s);
+                quietMoves.sort((a,b) => b.s - a.s);
+            } else {
+                captureMoves = genMoves(true, false);
+                captureMoves.forEach(m => { m.s = scoreMove(m, ttMove, ply, lastMove); });
+                captureMoves.sort((a,b) => b.s - a.s);
+                quietMoves = genMoves(false, true);
+                quietMoves.forEach(m => { m.s = scoreMove(m, ttMove, ply, lastMove); });
+                quietMoves.sort((a,b) => b.s - a.s);
+            }
+
+            if (captureMoves.length + quietMoves.length === 0) return {score: inCheck ? -40000+ply : 0, move: null};
+
+            let bestMove = null;
+            let origAlpha = alpha;
+            let movesMade = 0;
+            // Always do captures first, then quiet — two stages regardless of root or not
+            let moveStages = [captureMoves, quietMoves];
+
+            for (let stage = 0; stage < moveStages.length; stage++) {
+                let moves = moveStages[stage];
+                for (let m of moves) {
+                    makeMove(m);
+                    if(isAttacked(ctz(bb[turn?5:11]), turn, (wOcc() | bOcc()))) { unmakeMove(m); continue; } // illegal
+                    movesMade++;
+                    let score;
+                    let isQuiet = (m.c === -1 && m.prom === -1);
+                    let isTt = ttMove && moveEquals(m, ttMove);
+                    let isKiller = killerMoves[ply] && ((killerMoves[ply][0] && moveEquals(killerMoves[ply][0], m)) || (killerMoves[ply][1] && moveEquals(killerMoves[ply][1], m)));
+
+                    // TIER 1: PVS
+                    if (movesMade === 1) {
+                        score = -alphaBeta(depth-1, ply+1, null, -beta, -alpha, m).score;
+                    } else {
+                        let isCapture = (m.c !== -1 || m.prom !== -1);
+
+                        // Never LMP or LMR captures — always search them fully
+                        if (!isCapture) {
+                            // LMP: skip late quiet moves at low depth
+                            let lmpThreshold = 5 + 3 * depth * depth;
+                            if(depth <= 3 && movesMade > lmpThreshold && !inCheck) {
+                                unmakeMove(m); continue;
+                            }
+
+                            // LMR: reduce late quiet moves
+                            let doLMR = (depth >= 3 && movesMade >= 6 && !inCheck && !isTt && !isKiller);
+                            if (doLMR) {
+                                let reduction = Math.max(1, Math.floor(Math.log(depth) * Math.log(movesMade) / 2.5));
+                                score = -alphaBeta(depth - 1 - reduction, ply+1, null, -alpha-1, -alpha, m).score;
+                                if (score > alpha) score = -alphaBeta(depth-1, ply+1, null, -beta, -alpha, m).score;
+                            } else {
+                                score = -alphaBeta(depth-1, ply+1, null, -alpha-1, -alpha, m).score;
+                                if(score > alpha && score < beta) score = -alphaBeta(depth-1, ply+1, null, -beta, -alpha, m).score;
+                            }
+                        } else {
+                            // Captures: PVS but no reduction
+                            score = -alphaBeta(depth-1, ply+1, null, -alpha-1, -alpha, m).score;
+                            if(score > alpha && score < beta) score = -alphaBeta(depth-1, ply+1, null, -beta, -alpha, m).score;
+                        }
+                    }
+                    unmakeMove(m);
+                    if(timeUp) return {score: alpha, move: bestMove};
+
+                    if(score > alpha) {
+                        alpha = score; bestMove = m;
+                        if(score >= beta) {
+                            if (m.c === -1 && m.prom === -1) {
+                                let bonus = depth * depth;
+                                history[turn][m.f][m.t] += bonus - (history[turn][m.f][m.t] * Math.abs(bonus) / 324);
+                                if (!killerMoves[ply][0] || (killerMoves[ply][0].f !== m.f || killerMoves[ply][0].t !== m.t)) {
+                                    killerMoves[ply][1] = killerMoves[ply][0];
+                                    killerMoves[ply][0] = m;
+                                }
+                            }
+                            if (lastMove) counterMoves[lastMove.pce][lastMove.t] = m;
+                            break;
+                        }
+                    }
+                }
+                if (alpha >= beta) break;
+                if (timeUp) return {score: alpha, move: bestMove};
+            }
+
+            if(movesMade===0) return {score: inCheck ? -40000+ply : 0, move: null};
+
+            saveTT(hash, alpha, depth, alpha<=origAlpha ? 1 : (alpha>=beta ? 2 : 0), bestMove);
+
+            return {score: alpha, move: bestMove};
+        }
+
+        // TIER 2: Quiescence — searches all captures and check evasions until position is quiet
+        function quiesce(alpha, beta) {
+            if((nodes++ & 1023)===0 && Date.now() - startTime > limitMs) timeUp = true;
+            if(timeUp) return alpha;
+
+            let stand_pat = evaluate();
+            if(stand_pat >= beta) return beta;
+            if(stand_pat > alpha) alpha = stand_pat;
+
+            let inCheck = isAttacked(ctz(bb[turn?5:11]), turn, (wOcc() | bOcc()));
+            let moves;
+            if (inCheck) {
+                // In check: must consider all moves to find evasions
+                moves = genMoves(false);
+                moves.forEach(m => { m.s = scoreMove(m, null, 0, null); });
+                moves.sort((a, b) => b.s - a.s);
+            } else {
+                // Not in check: only captures (and promotions)
+                moves = genMoves(true);
+                // Sort by MVV-LVA: most valuable victim, least valuable attacker
+                moves.sort((a, b) =>
+                    ((V[b.c % 6] || 0) * 10 - (V[b.pce % 6] || 0)) -
+                    ((V[a.c % 6] || 0) * 10 - (V[a.pce % 6] || 0))
+                );
+            }
+
+            for (let m of moves) {
+                // Delta pruning: skip captures that can't raise alpha even if recaptured optimally
+                // Only apply when NOT in check and margin is generous
+                if (!inCheck && m.c !== -1 && m.prom === -1) {
+                    if (stand_pat + (V[m.c % 6] || 0) + 350 < alpha) continue;
+                }
+
+                makeMove(m);
+                if(isAttacked(ctz(bb[turn?5:11]), turn, (wOcc() | bOcc()))) { unmakeMove(m); continue; }
+                let s = -quiesce(-beta, -alpha);
+                unmakeMove(m);
+                if(timeUp) return alpha;
+                if(s >= beta) return beta;
+                if(s > alpha) alpha = s;
+            }
+            return alpha;
+        }
+
+        initPrecomputes();
+
+        self.onmessage = function(e) {
+            let msg = e.data;
+            if (msg.cmd === 'init') {
+                TT_BUFFER = msg.ttBuffer;
+                TT_VIEW = new Int32Array(TT_BUFFER);
+            } else if (msg.cmd === 'stop') {
+                if (msg.token === undefined || msg.token === self.searchToken) {
+                    timeUp = true;
+                    limitMs = 0;
+                    softLimitMs = 0;
+                }
+            } else if (msg.cmd === 'search') {
+                setFen(msg.fen);
+                self.searchToken = msg.token;
+                let t = Number(msg.time);
+                if (!Number.isFinite(t) || t <= 0) t = 1.5;
+                softLimitMs = t * 1000;
+                limitMs = Math.max(softLimitMs * 1.5, softLimitMs + 1000);
+                minSearchDepth = Number(msg.minDepth) || 1;
+                useNN = msg.useNN !== false;
+                self.workerId = msg.id; 
+                let rootMoves = genLegalMoves(false, false);
+                rootMoves.forEach(m => { m.s = scoreMove(m, null, 0, null); });
+                rootMoves.sort((a, b) => b.s - a.s);
+                // Lazy SMP: stagger starting depth so workers don't all hit the same depth simultaneously
+                let startDepth = 1 + (self.workerId % 3);
+                let res = search(64, rootMoves, -50000, 50000, startDepth);
+                postMessage({ status: 'done', move: fmt(res.move), score: res.score, nodes: res.nodes, id: msg.id, token: self.searchToken });
+            }
+        };
+    </script>

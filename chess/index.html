@@ -10,150 +10,342 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.12.0/chess.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg: #1e1e24;
-            --panel: #2b2b36;
-            --text: #e0e0e0;
-            --accent: #4caf50;
-            --light-sq: #eeeed2;
-            --dark-sq: #769656;
+            --bg: #312e2b;
+            --sidebar-bg: #262421;
+            --panel-bg: #262421;
+            --card-bg: #262421;
+            --text-primary: #ffffff;
+            --text-secondary: #bababa;
+            --accent: #81b64c;
+            --accent-hover: #a3d160;
+            --danger: #fa412d;
+            --light-sq: #ebecd0;
+            --dark-sq: #779556;
+            --move-highlight: rgba(255, 255, 0, 0.4);
+            --last-move: rgba(155, 199, 0, 0.41);
+            --border-radius: 4px;
         }
 
-        html {
-            touch-action: manipulation;
-            overscroll-behavior: none;
-        }
+        * { box-sizing: border-box; }
 
         body {
             margin: 0;
             height: 100vh;
             background: var(--bg);
-            color: var(--text);
-            font-family: 'Segoe UI', Tahoma, Verdana, sans-serif;
+            color: var(--text-primary);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             display: flex;
-            flex-direction: column;
             overflow: hidden;
         }
 
-        #header {
-            display: flex;
-            justify-content: space-between;
-            padding: 10px 15px;
-            background: #1a1a20;
-            align-items: center;
-            z-index: 100;
-            border-bottom: 1px solid #333;
-        }
-
-        #header h1 {
-            margin: 0;
-            font-size: 1.2em;
-            font-weight: 600;
-        }
-
-        .menu-btn {
-            background: #444;
-            color: white;
-            border: none;
-            padding: 8px 12px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: bold;
-        }
-
-        #main-container {
-            display: flex;
-            flex: 1;
-            flex-direction: row;
-            overflow: hidden;
-            position: relative;
-        }
-
-        .side-panel {
-            width: 320px;
-            background: var(--panel);
-            padding: 15px;
-            box-sizing: border-box;
+        /* Sidebar Navigation */
+        #sidebar {
+            width: 140px;
+            background: var(--sidebar-bg);
             display: flex;
             flex-direction: column;
-            gap: 10px;
-            overflow-y: auto;
-            z-index: 10;
-        }
-
-        #center-area {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-            overflow-y: auto;
-            padding: 20px 10px;
-        }
-
-        #status-container {
-            width: 100%;
-            max-width: 520px;
-            margin-bottom: 10px;
-            box-sizing: border-box;
-        }
-
-        #board-container {
-            display: flex;
-            align-items: stretch;
-            justify-content: center;
-            position: relative;
-            width: 100%;
-            max-width: 520px;
-            touch-action: none;
-            margin: 0 auto;
-            gap: 15px;
-        }
-
-        #eval-gauge {
+            padding: 20px 0;
+            border-right: 1px solid rgba(255,255,255,0.05);
             flex-shrink: 0;
-            width: 24px;
-            min-width: 24px;
-            background: #222;
-            border-radius: 4px;
-            border: 1px solid #444;
-            overflow: hidden;
+        }
+
+        .nav-item {
+            padding: 12px 20px;
             display: flex;
-            flex-direction: column-reverse;
-            position: relative;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: all 0.2s;
         }
 
-        #eval-fill {
-            width: 100%;
-            background: #fff;
-            height: 50%;
-            transition: height 0.3s ease, background 0.3s ease;
+        .nav-item:hover {
+            background: rgba(255,255,255,0.05);
+            color: white;
         }
 
-        #eval-text {
-            position: absolute;
+        .nav-item.active {
+            background: rgba(255,255,255,0.08);
+            color: white;
+            border-left: 3px solid var(--accent);
+        }
+
+        .nav-item i { font-size: 1.2rem; font-style: normal; }
+
+        /* Main App Container */
+        #app-container {
+            flex: 1;
+            display: flex;
+            padding: 20px;
+            gap: 20px;
+            max-width: 1600px;
+            margin: 0 auto;
             width: 100%;
-            top: 50%;
-            transform: translateY(-50%);
-            text-align: center;
-            color: #888;
-            font-size: 0.75em;
-            font-weight: bold;
-            mix-blend-mode: difference;
-            pointer-events: none;
+        }
+
+        /* Board Section */
+        #board-section {
+            flex: 3;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #game-area {
+            display: flex;
+            gap: 8px;
+            align-items: stretch;
+            width: 100%;
+            justify-content: center;
         }
 
         #board-wrapper {
-            flex: 1;
             position: relative;
+            aspect-ratio: 1/1;
             width: 100%;
+            max-width: 700px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+            border-radius: var(--border-radius);
+            overflow: hidden;
         }
 
-        #board {
-            width: 100%;
+        #board { width: 100%; }
+
+        /* Eval Bar */
+        #eval-bar-container {
+            width: 20px;
+            background: #403d39;
+            border-radius: 2px;
+            display: flex;
+            flex-direction: column-reverse;
+            position: relative;
+            overflow: hidden;
         }
+
+        #eval-bar-fill {
+            background: #ffffff;
+            height: 50%;
+            width: 100%;
+            transition: height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        #eval-bar-text {
+            position: absolute;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-size: 0.65rem;
+            font-weight: 800;
+            pointer-events: none;
+            color: #000;
+            z-index: 2;
+        }
+        #eval-bar-text.top { top: 5px; color: #fff; }
+        #eval-bar-text.bottom { bottom: 5px; color: #000; }
+
+        /* Player Cards */
+        .player-card {
+            width: 100%;
+            max-width: 700px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 0;
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            background: #444;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        .player-info { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+        .player-name { font-weight: 700; font-size: 0.95rem; }
+        .player-rating { color: var(--text-secondary); font-size: 0.8rem; background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 2px; }
+
+        .captured-pieces {
+            display: flex;
+            height: 20px;
+            gap: 2px;
+            opacity: 0.8;
+        }
+        .captured-pieces img { height: 100%; width: auto; }
+
+        /* Status Info */
+        #status-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            width: 100%;
+            max-width: 700px;
+        }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+
+        /* Right Panel */
+        #right-panel {
+            flex: 1.2;
+            min-width: 340px;
+            background: var(--panel-bg);
+            border-radius: var(--border-radius);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .panel-tabs {
+            display: flex;
+            background: rgba(0,0,0,0.2);
+        }
+        .tab {
+            flex: 1;
+            padding: 12px;
+            text-align: center;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--text-secondary);
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+        }
+        .tab.active {
+            color: white;
+            border-bottom-color: var(--accent);
+            background: rgba(255,255,255,0.03);
+        }
+
+        .panel-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 15px;
+            gap: 15px;
+            overflow-y: auto;
+        }
+
+        #move-list-container {
+            flex: 1;
+            background: rgba(0,0,0,0.1);
+            border-radius: 4px;
+            overflow-y: auto;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .move-row {
+            display: grid;
+            grid-template-columns: 35px 1fr 1fr;
+            padding: 6px 8px;
+            border-radius: 3px;
+            font-size: 0.9rem;
+            align-items: center;
+        }
+        .move-row:nth-child(odd) { background: rgba(255,255,255,0.02); }
+        .move-number { color: var(--text-secondary); font-size: 0.8rem; font-weight: 600; }
+        .move-val { cursor: pointer; padding: 2px 6px; border-radius: 3px; font-weight: 500; }
+        .move-val:hover { background: rgba(255,255,255,0.1); }
+        .move-val.active { background: var(--accent); color: white; }
+
+        /* Controls */
+        .controls { display: flex; flex-direction: column; gap: 8px; }
+        .btn-group { display: flex; gap: 8px; }
+        
+        button {
+            border: none;
+            border-radius: 4px;
+            padding: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            flex: 1;
+        }
+
+        button.primary { background: var(--accent); color: white; border-bottom: 3px solid #6a963f; }
+        button.primary:hover { background: var(--accent-hover); transform: translateY(-1px); }
+        button.primary:active { transform: translateY(1px); border-bottom-width: 0; }
+
+        button.secondary { background: #3c3a39; color: #bababa; border-bottom: 3px solid #2d2b2a; }
+        button.secondary:hover { background: #454341; color: white; }
+
+        /* Settings Modal */
+        #settings-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+            display: none; /* Changed via JS */
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(4px);
+        }
+
+        .settings-card {
+            background: var(--sidebar-bg);
+            width: 100%;
+            max-width: 450px;
+            border-radius: 8px;
+            padding: 24px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .settings-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+        .settings-header h2 { margin: 0; font-size: 1.5rem; }
+        .close-btn { background: none; border: none; font-size: 1.5rem; color: var(--text-secondary); cursor: pointer; padding: 0; min-width: auto; }
+
+        .setting-group { margin-bottom: 20px; }
+        .setting-group label { display: block; font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 8px; }
+        
+        .toggle-setting {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        select, input[type="range"] {
+            width: 100%;
+            background: #3c3a39;
+            border: 1px solid #4d4b49;
+            color: white;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: inherit;
+        }
+
+        /* Chessboard custom colors */
+        .white-1e1d7 { background-color: var(--light-sq) !important; color: var(--dark-sq) !important; }
+        .black-3c85d { background-color: var(--dark-sq) !important; color: var(--light-sq) !important; }
+        .premove-square { box-shadow: inset 0 0 0 50px rgba(220, 50, 50, 0.6) !important; }
+        .highlight-selected { background-color: rgba(200, 200, 50, 0.5) !important; }
 
         #arrow-svg {
             position: absolute;
@@ -163,406 +355,219 @@
             height: 100%;
             pointer-events: none;
             z-index: 100;
-            overflow: visible;
         }
 
-        .white-1e1d7 {
-            background-color: var(--light-sq) !important;
-            color: var(--dark-sq) !important;
-        }
-
-        .black-3c85d {
-            background-color: var(--dark-sq) !important;
-            color: var(--light-sq) !important;
-        }
-
-        .premove-square {
-            box-shadow: inset 0 0 0 50px rgba(220, 50, 50, 0.6) !important;
-        }
-
-        .highlight-selected {
-            background-color: rgba(200, 200, 50, 0.5) !important;
-        }
-
-        .highlight-dot::after {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 25%;
-            height: 25%;
-            background: rgba(0, 0, 0, 0.25);
-            border-radius: 50%;
-            transform: translate(-50%, -50%);
-            pointer-events: none;
-            z-index: 10;
-        }
-
-        .highlight-capture::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            border: 6px solid rgba(0, 0, 0, 0.25);
-            box-sizing: border-box;
-            border-radius: 50%;
-            pointer-events: none;
-            z-index: 10;
-        }
-
-        h2,
-        h3 {
-            margin: 0;
-            padding-bottom: 5px;
-            border-bottom: 1px solid #444;
-            font-weight: 500;
-        }
-
-        .box {
-            background: rgba(0, 0, 0, 0.2);
-            padding: 15px;
-            border-radius: 8px;
-        }
-
-        details {
-            background: rgba(0, 0, 0, 0.15);
-            border-radius: 6px;
-            margin-bottom: 5px;
-        }
-
-        summary {
-            padding: 10px;
-            font-weight: bold;
-            cursor: pointer;
-            outline: none;
-            user-select: none;
-        }
-
-        summary:hover {
-            background: rgba(255, 255, 255, 0.05);
-        }
-
-        .details-content {
-            padding: 10px;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            border-top: 1px solid #444;
-        }
-
-        .setting {
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-        }
-
-        .setting label {
-            font-size: 0.85em;
-            color: #bbb;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        input[type="range"] {
-            accent-color: var(--accent);
-            height: 15px;
-            cursor: pointer;
-        }
-
-        input[type="checkbox"] {
-            transform: scale(1.3);
-            accent-color: var(--accent);
-            cursor: pointer;
-        }
-
-        select {
-            background: #333;
-            color: white;
-            border: 1px solid #555;
-            padding: 6px;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-
-        button.primary {
-            background: var(--accent);
-            color: white;
-            border: none;
-            padding: 12px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-weight: bold;
-            text-transform: uppercase;
-            margin-top: 0;
-        }
-
-        button.primary:hover {
-            filter: brightness(1.2);
-        }
-
-        #moves {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 8px;
-            font-family: monospace;
-            font-size: 1.1em;
-            max-height: 100%;
-            overflow-y: auto;
-        }
-
-        .move-num {
-            color: #888;
-            text-align: right;
-            padding-right: 10px;
-        }
-
-        #commentary {
-            font-style: italic;
-            color: #aaa;
-            margin-top: 10px;
-            font-size: 0.95em;
-            line-height: 1.4;
-            min-height: 40px;
-            word-wrap: break-word;
-        }
-
-        #status-badge {
-            display: inline-block;
-            padding: 4px 10px;
-            border-radius: 4px;
-            background: #555;
-            font-size: 0.9em;
-            margin-bottom: 10px;
-            font-weight: bold;
-        }
-
-        #eval-bar {
-            font-size: 1.1em;
-            font-weight: bold;
-        }
-
-        #hw-info {
-            font-size: 0.78em;
-            color: #888;
-            margin-top: 4px;
-            letter-spacing: 0.03em;
-        }
-
-        #hw-info span {
-            color: #4caf50;
-            font-weight: bold;
-        }
-
-        @media (max-width: 1024px) {
-            #left-panel {
-                position: absolute;
-                left: 0;
-                height: 100%;
-                transform: translateX(-100%);
-                z-index: 20;
-                transition: transform 0.3s ease;
-            }
-
-            #right-panel {
-                position: absolute;
-                right: 0;
-                height: 100%;
-                transform: translateX(100%);
-                z-index: 20;
-                transition: transform 0.3s ease;
-            }
-
-            .side-panel.open {
-                transform: translateX(0) !important;
-                box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
-            }
-        }
-
-        @media (min-width: 1025px) {
-            #header {
-                display: none;
-            }
-        }
-
-        .warning-text {
-            font-size: 0.75em;
-            color: #ff9800;
-            margin-top: 2px;
-            display: flex;
-            align-items: center;
-            gap: 4px;
+        @media (max-width: 900px) {
+            #sidebar { display: none; }
+            #app-container { flex-direction: column; padding: 10px; }
+            #right-panel { min-width: 100%; }
         }
     </style>
 </head>
 
 <body>
-    <div id="header">
-        <button class="menu-btn" onclick="togglePanel('left-panel')">☰ Log</button>
-        <h1>V3.0.1</h1>
-        <button class="menu-btn" onclick="togglePanel('right-panel')">⚙️ Set</button>
-    </div>
-    <div id="main-container">
-        <div id="left-panel" class="side-panel">
-            <h2>Game Log</h2>
-            <div id="moves"></div>
-            <div class="control-group" style="margin-top: 10px; display: flex; gap: 5px;">
-                <button class="primary" onclick="viewHistory(Math.max(-1, viewingIdx - 1))"
-                    style="flex: 1;">&lt;</button>
-                <button class="primary" onclick="viewHistory(game.history().length - 1)"
-                    style="flex: 1;">Present</button>
-                <button class="primary" onclick="viewHistory(Math.min(game.history().length - 1, viewingIdx + 1))"
-                    style="flex: 1;">&gt;</button>
-            </div>
+    <div id="sidebar">
+        <div class="nav-item active">
+            <i>♟️</i>
+            <span>Play</span>
         </div>
-        <div id="center-area" onclick="closePanels()">
-            <div id="status-container" class="box">
-                <div id="status-badge" style="display:inline-block; margin-bottom:5px;">Your Turn</div>
-                <div id="material-tracker"
-                    style="display:inline-block; float:right; font-size:1.0em; font-weight:bold; color:#00e5ff;">
-                    Material: =</div>
-                <div id="eval-bar">Eval: 0.00</div>
-                <div id="hw-info">Engine: initializing...</div>
-                <div id="commentary">Waiting to start...</div>
-                <div id="threat-area" style="color: #f44336; font-weight: bold; font-size: 0.85em; margin-top: 5px;">
-                </div>
+        <div class="nav-item">
+            <i>🧩</i>
+            <span>Puzzles</span>
+        </div>
+        <div class="nav-item">
+            <i>🎓</i>
+            <span>Learn</span>
+        </div>
+        <div class="nav-item">
+            <i>👤</i>
+            <span>Profile</span>
+        </div>
+        <div style="flex: 1;"></div>
+        <div class="nav-item" onclick="toggleSettings(true)">
+            <i>⚙️</i>
+            <span>Settings</span>
+        </div>
+    </div>
+
+    <div id="app-container">
+        <div id="board-section">
+            <div id="status-info">
+                <div class="status-dot"></div>
+                <span id="status-text">Your Turn</span>
             </div>
-            <div id="board-container">
-                <div id="eval-gauge">
-                    <div id="eval-fill"></div>
-                    <div id="eval-text">0.0</div>
+
+            <!-- Opponent Card -->
+            <div class="player-card">
+                <div class="avatar">🤖</div>
+                <div class="player-info">
+                    <div class="player-name">Pro AI</div>
+                    <div class="captured-pieces" id="black-captured"></div>
+                </div>
+                <div class="player-rating">2800</div>
+            </div>
+
+            <div id="game-area">
+                <div id="eval-bar-container">
+                    <div id="eval-bar-fill"></div>
+                    <div id="eval-bar-text" class="top">0.0</div>
                 </div>
                 <div id="board-wrapper">
                     <div id="board"></div>
-                    <svg id="arrow-svg" xmlns="http://www.w3.org/2000/svg">
+                    <svg id="arrow-svg" viewBox="0 0 100 100">
                         <g id="user-arrows"></g>
                         <g id="bot-arrows"></g>
                     </svg>
                 </div>
             </div>
 
-            <div id="brainstorm-panel"
-                style="margin-top: 15px; text-align: center; background: #2a2a2a; padding: 10px; border-radius: 8px;">
-                <h4 style="margin: 0 0 10px 0; color: #ccc; font-size: 0.9em; text-transform: uppercase;">Engine Vision
-                    (Live FEN)</h4>
-                <div id="mini-board"
-                    style="width: 250px; margin: 0 auto; border: 2px solid #555; pointer-events: none;"></div>
+            <!-- Player Card -->
+            <div class="player-card">
+                <div class="avatar">👤</div>
+                <div class="player-info">
+                    <div class="player-name">Guest</div>
+                    <div class="captured-pieces" id="white-captured"></div>
+                </div>
+                <div class="player-rating">1200</div>
             </div>
         </div>
-        <div id="right-panel" class="side-panel">
-            <h2>Settings</h2>
-            <button class="primary" onclick="resetGame()">New Game</button>
-            <details open>
-                <summary>Match Parameters</summary>
-                <div class="details-content">
-                    <div class="setting">
-                        <label>Play Mode</label>
-                        <select id="play-mode">
-                            <option value="human">You vs Pro AI</option>
-                            <option value="stockfish">Pro AI vs Stockfish 16 (API)</option>
-                            <option value="ai-self">Pro AI vs Pro AI</option>
-                        </select>
+
+        <div id="right-panel">
+            <div class="panel-tabs">
+                <div class="tab active">Game</div>
+                <div class="tab">Engine</div>
+            </div>
+            <div class="panel-content">
+                <div id="move-list-container">
+                    <!-- Moves will be injected here -->
+                </div>
+                <div class="controls">
+                    <div class="btn-group">
+                        <button class="primary" onclick="resetGame()">New Game</button>
                     </div>
-                    <div class="setting">
-                        <label>Play As</label>
-                        <select id="player-color">
-                            <option value="w">White</option>
-                            <option value="b">Black</option>
-                            <option value="r">Random</option>
-                        </select>
+                    <div class="btn-group">
+                        <button class="secondary" onclick="board.flip()">Flip Board</button>
+                        <button class="secondary" onclick="toggleSettings(true)">Settings</button>
                     </div>
-                    <div class="setting">
-                        <div class="control-group">
-                            <label>Think Time: <span id="think-time-val">5</span>s</label>
-                            <input type="range" id="think-time" min="0.1" max="15" step="0.1" value="5"
-                                oninput="updateUI()">
-                        </div>
-                        <div class="control-group">
-                            <label>Min Search Depth: <span id="min-depth-val">8</span></label>
-                            <input type="range" id="min-depth" min="1" max="15" step="1" value="8"
-                                oninput="document.getElementById('min-depth-val').innerText=this.value">
-                        </div>
-                    </div>
-                    <div class="setting">
-                        <label><span>Workers (Threads)</span> <span id="threads-val">Auto</span></label>
-                        <input type="range" id="threads" min="1" max="16" step="1" value="4" oninput="updateUI()">
-                        <div class="warning-text">Tip: set the slider to the Auto value to enable Auto mode.</div>
-                    </div>
-                    <div class="setting">
-                        <label><span>Opening Book</span> <input type="checkbox" id="use-book" checked></label>
-                    </div>
-                    <div class="setting">
-                        <label><span>Show Arrows</span> <input type="checkbox" id="show-arrows" checked></label>
-                    </div>
-                    <div class="setting">
-                        <label><span>Syzygy Tablebases</span> <input type="checkbox" id="use-tb" checked></label>
-                    </div>
-                    <div class="setting">
-                        <label><span>Enable Neural Network</span> <input type="checkbox" id="use-nn" disabled></label>
-                        <div class="warning-text">⚠️ Neural evaluation is currently not stable</div>
+                    <div id="engine-status" style="font-size: 0.75rem; color: var(--text-secondary); text-align: center; margin-top: 5px;">
+                        Engine: Initializing...
                     </div>
                 </div>
-            </details>
-            <details>
-                <summary>Appearance</summary>
-                <div class="details-content">
-                    <div class="setting">
-                        <label>Board Theme</label>
-                        <select id="board-theme" onchange="applyThemes()">
-                            <option value="classic">Classic Green</option>
-                            <option value="wood">Wooden</option>
-                            <option value="slate">Slate</option>
-                        </select>
-                    </div>
-                    <div class="setting">
-                        <label>Piece Set</label>
-                        <select id="piece-theme" onchange="applyThemes()">
-                            <option value="alpha">Alpha</option>
-                            <option value="anarcandy">Anarcandy</option>
-                            <option value="caliente">Caliente</option>
-                            <option value="california">California</option>
-                            <option value="cardinal">Cardinal</option>
-                            <option value="cburnett">CBurnett</option>
-                            <option value="celtic">Celtic</option>
-                            <option value="chess7">Chess7</option>
-                            <option value="chessnut">Chessnut</option>
-                            <option value="companion">Companion</option>
-                            <option value="cooke">Cooke</option>
-                            <option value="disguised">Disguised</option>
-                            <option value="dubrovny">Dubrovny</option>
-                            <option value="fantasy">Fantasy</option>
-                            <option value="firi">Firi</option>
-                            <option value="fresca">Fresca</option>
-                            <option value="gioco">Gioco</option>
-                            <option value="governor">Governor</option>
-                            <option value="horsey">Horsey</option>
-                            <option value="icpieces">IC Pieces</option>
-                            <option value="kiwen-suwi">Kiwen-Suwi</option>
-                            <option value="kosal">Kosal</option>
-                            <option value="leipzig">Leipzig</option>
-                            <option value="letter">Letter</option>
-                            <option value="maestro">Maestro</option>
-                            <option value="merida">Merida</option>
-                            <option value="monarchy">Monarchy</option>
-                            <option value="mono">Mono</option>
-                            <option value="mpchess">MP Chess</option>
-                            <option value="pirouetti">Pirouetti</option>
-                            <option value="pixel">Pixel</option>
-                            <option value="reillycraig">Reilly Craig</option>
-                            <option value="rhosgfx">Rhosgfx</option>
-                            <option value="riohacha">Riohacha</option>
-                            <option value="shahi-ivory-brown">Shahi Ivory Brown</option>
-                            <option value="shapes">Shapes</option>
-                            <option value="spatial">Spatial</option>
-                            <option value="staunty">Staunty</option>
-                            <option value="tatiana">Tatiana</option>
-                            <option value="xkcd">XKCD</option>
-                        </select>
-                    </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="settings-overlay" onclick="if(event.target===this) toggleSettings(false)">
+        <div class="settings-card">
+            <div class="settings-header">
+                <h2>Settings</h2>
+                <button class="close-btn" onclick="toggleSettings(false)">&times;</button>
+            </div>
+            
+            <div class="setting-group">
+                <label>Play Mode</label>
+                <select id="play-mode" onchange="updateUI()">
+                    <option value="human">You vs Pro AI</option>
+                    <option value="stockfish">Pro AI vs Stockfish 16 (API)</option>
+                    <option value="ai-self">Pro AI vs Pro AI</option>
+                </select>
+            </div>
+
+            <div class="setting-group">
+                <label>Play As</label>
+                <select id="player-color" onchange="resetGame()">
+                    <option value="w">White</option>
+                    <option value="b">Black</option>
+                    <option value="r">Random</option>
+                </select>
+            </div>
+
+            <div class="setting-group">
+                <label>Think Time: <span id="think-time-val">5</span>s</label>
+                <input type="range" id="think-time" min="0.1" max="15" step="0.1" value="5" oninput="updateUI()">
+            </div>
+
+            <div class="setting-group">
+                <label>Threads (Auto recommended)</label>
+                <input type="range" id="threads" min="1" max="16" step="1" value="4" oninput="updateUI()">
+                <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 5px;">
+                    Active threads: <span id="threads-val">Auto</span>
                 </div>
-            </details>
+            </div>
+
+            <div class="toggle-setting">
+                <span>Opening Book</span>
+                <input type="checkbox" id="use-book" checked>
+            </div>
+
+            <div class="toggle-setting">
+                <span>Syzygy Tablebases</span>
+                <input type="checkbox" id="use-tb" checked>
+            </div>
+
+            <div class="toggle-setting">
+                <span>Show Engine Arrows</span>
+                <input type="checkbox" id="show-arrows" checked>
+            </div>
+
+            <div class="setting-group">
+                <label>Board Theme</label>
+                <select id="board-theme" onchange="applyThemes()">
+                    <option value="classic">Classic Green</option>
+                    <option value="wood">Wooden</option>
+                    <option value="slate">Slate</option>
+                </select>
+            </div>
+
+            <div class="setting-group">
+                <label>Piece Set</label>
+                <select id="piece-theme" onchange="applyThemes()">
+                    <option value="alpha">Alpha</option>
+                    <option value="anarcandy">Anarcandy</option>
+                    <option value="caliente">Caliente</option>
+                    <option value="california">California</option>
+                    <option value="cardinal">Cardinal</option>
+                    <option value="cburnett" selected>CBurnett</option>
+                    <option value="celtic">Celtic</option>
+                    <option value="chess7">Chess7</option>
+                    <option value="chessnut">Chessnut</option>
+                    <option value="companion">Companion</option>
+                    <option value="cooke">Cooke</option>
+                    <option value="disguised">Disguised</option>
+                    <option value="dubrovny">Dubrovny</option>
+                    <option value="fantasy">Fantasy</option>
+                    <option value="firi">Firi</option>
+                    <option value="fresca">Fresca</option>
+                    <option value="gioco">Gioco</option>
+                    <option value="governor">Governor</option>
+                    <option value="horsey">Horsey</option>
+                    <option value="icpieces">IC Pieces</option>
+                    <option value="kiwen-suwi">Kiwen-Suwi</option>
+                    <option value="kosal">Kosal</option>
+                    <option value="leipzig">Leipzig</option>
+                    <option value="letter">Letter</option>
+                    <option value="maestro">Maestro</option>
+                    <option value="merida">Merida</option>
+                    <option value="monarchy">Monarchy</option>
+                    <option value="mono">Mono</option>
+                    <option value="mpchess">MP Chess</option>
+                    <option value="pirouetti">Pirouetti</option>
+                    <option value="pixel">Pixel</option>
+                    <option value="reillycraig">Reilly Craig</option>
+                    <option value="rhosgfx">Rhosgfx</option>
+                    <option value="riohacha">Riohacha</option>
+                    <option value="shahi-ivory-brown">Shahi Ivory Brown</option>
+                    <option value="shapes">Shapes</option>
+                    <option value="spatial">Spatial</option>
+                    <option value="staunty">Staunty</option>
+                    <option value="tatiana">Tatiana</option>
+                    <option value="xkcd">XKCD</option>
+                </select>
+            </div>
+
+            <div class="setting-group" style="margin-top: 20px;">
+                <button class="primary" style="width: 100%;" onclick="toggleSettings(false)">Close</button>
+            </div>
         </div>
     </div>
 
@@ -1753,9 +1758,6 @@
             document.getElementById('threads-val').innerText = useAuto ? 'Auto' : String(numThreads);
         }
 
-        function togglePanel(id) { document.getElementById(id).classList.toggle('open'); }
-        function closePanels() { if (window.innerWidth <= 1024) document.querySelectorAll('.side-panel').forEach(p => p.classList.remove('open')); }
-
         let dotSquares = [];
         let premoves = [];
 
@@ -1890,12 +1892,11 @@
                 }
             });
 
-            if (miniBoard) miniBoard.destroy();
-            miniBoard = Chessboard('mini-board', {
-                position: game.fen(), showNotation: false, pieceTheme: `https://lichess1.org/assets/piece/${document.getElementById('piece-theme').value}/{piece}.svg`
-            });
-
             attachBoardEvents();
+        }
+
+        function toggleSettings(show) {
+            document.getElementById('settings-overlay').style.display = show ? 'flex' : 'none';
         }
 
         let selectedSquare = null;
@@ -2074,12 +2075,38 @@
 
         function updateMaterial() {
             let f = game.fen().split(' ')[0];
+            let pieceMap = {
+                'p': 'bp', 'n': 'bn', 'b': 'bb', 'r': 'br', 'q': 'bq',
+                'P': 'wp', 'N': 'wn', 'B': 'wb', 'R': 'wr', 'Q': 'wq'
+            };
+            
+            let whiteCaptured = { 'p': 8, 'n': 2, 'b': 2, 'r': 2, 'q': 1 };
+            let blackCaptured = { 'p': 8, 'n': 2, 'b': 2, 'r': 2, 'q': 1 };
+
+            for (let c of f) {
+                if (c >= 'a' && c <= 'z') whiteCaptured[c]--;
+                else if (c >= 'A' && c <= 'Z') blackCaptured[c.toLowerCase()]--;
+            }
+
+            const pieceTheme = document.getElementById('piece-theme').value || 'cburnett';
+            const getImg = (p) => `https://thepollitosd.github.io/chess/pieces/${pieceTheme}/${p}.svg`;
+
+            let wHTML = '', bHTML = '';
+            const order = ['q', 'r', 'b', 'n', 'p'];
+            
+            for (let p of order) {
+                for (let i = 0; i < whiteCaptured[p]; i++) wHTML += `<img src="${getImg('w' + p)}">`;
+                for (let i = 0; i < blackCaptured[p]; i++) bHTML += `<img src="${getImg('b' + p)}">`;
+            }
+
+            document.getElementById('white-captured').innerHTML = bHTML; // Pieces white has taken (black pieces)
+            document.getElementById('black-captured').innerHTML = wHTML; // Pieces black has taken (white pieces)
+
+            // Material diff
             let vals = { 'p': 1, 'n': 3, 'b': 3, 'r': 5, 'q': 9, 'P': -1, 'N': -3, 'B': -3, 'R': -5, 'Q': -9, 'k': 0, 'K': 0 };
             let diff = 0;
             for (let c of f) if (vals[c]) diff += vals[c];
-            let el = document.getElementById('material-tracker');
-            if (diff === 0) el.innerText = "Material: =";
-            else el.innerText = "Material: " + (diff > 0 ? "Black +" + diff : "White +" + (-diff));
+            // We could display +X next to pieces if desired
         }
 
         function removeHighlights() {
@@ -2096,17 +2123,40 @@
         }
 
         function updateLog() {
-            let d = document.getElementById('moves'); d.innerHTML = "";
+            let d = document.getElementById('move-list-container');
+            d.innerHTML = "";
             let h = game.history();
             let hv = game.history({ verbose: true });
+            
             for (let i = 0; i < h.length; i += 2) {
-                let m1 = `<div style="cursor:pointer;" onclick="viewHistory(${i})">${h[i]}</div>`;
-                let m2 = h[i + 1] ? `<div style="cursor:pointer;" onclick="viewHistory(${i + 1})">${h[i + 1]}</div>` : `<div></div>`;
-                d.innerHTML += `<div class="move-num">${i / 2 + 1}.</div>${m1}${m2}`;
+                let row = document.createElement('div');
+                row.className = 'move-row';
+                
+                let num = document.createElement('div');
+                num.className = 'move-number';
+                num.innerText = (i / 2 + 1) + '.';
+                row.appendChild(num);
+
+                let m1 = document.createElement('div');
+                m1.className = 'move-val' + (i === viewingIdx ? ' active' : '');
+                m1.innerText = h[i];
+                m1.onclick = () => viewHistory(i);
+                row.appendChild(m1);
+
+                if (h[i + 1]) {
+                    let m2 = document.createElement('div');
+                    m2.className = 'move-val' + (i + 1 === viewingIdx ? ' active' : '');
+                    m2.innerText = h[i+1];
+                    m2.onclick = () => viewHistory(i + 1);
+                    row.appendChild(m2);
+                }
+                
+                d.appendChild(row);
             }
+            
             d.scrollTop = d.scrollHeight;
             updateMaterial();
-            if (miniBoard && !isThinking) miniBoard.position(game.fen(), false);
+            
             if (!viewingHistory) {
                 viewingIdx = hv.length - 1;
                 if (hv.length > 0) setTimeout(() => highlightMove(hv[hv.length - 1].from, hv[hv.length - 1].to), 50);
@@ -2245,8 +2295,8 @@
 
         function triggerNextTurn() {
             if (game.game_over()) {
-                document.getElementById('status-badge').innerText = 'Game Over';
-                document.getElementById('status-badge').style.background = '#111';
+                document.getElementById('status-text').innerText = 'Game Over';
+                document.querySelector('.status-dot').style.background = '#ff0000';
                 setTimeout(() => alert('Game Over!'), 200);
                 return;
             }
@@ -2268,8 +2318,8 @@
         async function playStockfishMove() {
             if (game.game_over()) return;
             isThinking = true;
-            document.getElementById('status-badge').innerText = 'Stockfish 16 Thinking...';
-            document.getElementById('status-badge').style.background = '#0a5c88';
+            document.getElementById('status-text').innerText = 'Stockfish 16 Thinking...';
+            document.querySelector('.status-dot').style.background = '#0a5c88';
             document.getElementById('bot-arrows').innerHTML = '';
 
             try {
@@ -2298,9 +2348,9 @@
             if (game.game_over()) return;
             isThinking = true;
             document.getElementById('bot-arrows').innerHTML = '';
-            document.getElementById('status-badge').innerText = 'AI Thinking...';
-            document.getElementById('status-badge').style.background = '#d32f2f';
-            document.getElementById('hw-info').innerHTML = `⚡ Speed: <span id="nps-val" style="color:#00e5ff;">0</span> kN/s | Threads: <span>${numThreads}</span>`;
+            document.getElementById('status-text').innerText = 'AI Thinking...';
+            document.querySelector('.status-dot').style.background = '#d32f2f';
+            document.getElementById('engine-status').innerHTML = `Speed: <span id="nps-val" style="color:var(--accent);">${(0).toFixed(1)}</span> kN/s | Threads: ${numThreads}`;
             window.searchStartGlobal = Date.now();
             hasSmoothedEval = false;
             activeSearchToken++;
@@ -2402,12 +2452,23 @@
                     let evalNorm = (e.data.score * (game.turn() === 'w' ? 1 : -1) / 100);
                     if (!hasSmoothedEval) { smoothedEval = evalNorm; hasSmoothedEval = true; }
                     smoothedEval = smoothedEval * 0.85 + evalNorm * 0.15;
-                    document.getElementById('eval-bar').innerText = `Eval: ${smoothedEval.toFixed(2)}`;
-                    document.getElementById('eval-text').innerText = smoothedEval.toFixed(1);
+                    
+                    let displayScore = smoothedEval.toFixed(1);
+                    if (Math.abs(smoothedEval) > 20) displayScore = "Mate";
+                    
+                    document.getElementById('eval-bar-text').innerText = displayScore;
 
-                    let fillPerc = 50 + (smoothedEval / 10) * 50;
-                    fillPerc = Math.max(0, Math.min(100, fillPerc));
-                    document.getElementById('eval-fill').style.height = fillPerc + '%';
+                    let fillPerc = 50 + (smoothedEval / 8) * 50;
+                    fillPerc = Math.max(2, Math.min(98, fillPerc));
+                    document.getElementById('eval-bar-fill').style.height = fillPerc + '%';
+                    
+                    // Toggle text position based on who is winning
+                    const textEl = document.getElementById('eval-bar-text');
+                    if (fillPerc > 50) {
+                        textEl.className = 'bottom';
+                    } else {
+                        textEl.className = 'top';
+                    }
                 }
 
                 // Display depth header + top 4 lines in commentary
@@ -2426,9 +2487,7 @@
                 drawArrow(e.data.move);
 
             } else if (e.data.status === 'brainstorm') {
-                if (e.data.id === 0 && miniBoard) {
-                    try { miniBoard.position(e.data.fen, false); } catch (err) { }
-                }
+                // miniBoard update removed
             } else if (e.data.status === 'threat') {
                 document.getElementById('threat-area').innerText = e.data.msg;
             } else if (e.data.status === 'done') {
@@ -2480,9 +2539,8 @@
 
         function finishAiMove() {
             isThinking = false; board.position(game.fen()); updateLog();
-            document.getElementById('status-badge').innerText = 'Your Turn';
-            document.getElementById('status-badge').style.background = '#4caf50';
-            setTimeout(() => document.getElementById('threat-area').innerText = "", 2000);
+            document.getElementById('status-text').innerText = 'Your Turn';
+            document.querySelector('.status-dot').style.background = '#81b64c';
             triggerNextTurn();
         }
 
@@ -2514,8 +2572,7 @@
         window.viewHistory = viewHistory;
         window.resetGame = resetGame;
         window.snapToPresent = snapToPresent;
-        window.togglePanel = togglePanel;
-        window.closePanels = closePanels;
+        window.toggleSettings = toggleSettings;
         window.updateUI = updateUI;
 
         updateUI(); resetGame();
