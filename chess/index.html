@@ -10,291 +10,302 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.12.0/chess.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.js"></script>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
             --bg: #ffffff;
-            --sidebar-bg: #ffffff;
-            --panel-bg: #ffffff;
-            --card-bg: #fcfcfc;
-            --text-primary: #1a1a1a;
-            --text-secondary: #757575;
-            --accent: #2d5af7;
-            --accent-hover: #1a44d6;
-            --danger: #ff4d4f;
-            --light-sq: #ffffff;
-            --dark-sq: #f0f0f0;
-            --move-highlight: rgba(45, 90, 247, 0.1);
-            --last-move: rgba(45, 90, 247, 0.05);
-            --border: 1px solid #eeeeee;
-            --border-radius: 8px;
-            --shadow-soft: 0 4px 20px rgba(0, 0, 0, 0.04);
+            --sidebar-bg: #f5f5f7;
+            --sidebar-border: rgba(0, 0, 0, 0.05);
+            --card-bg: #ffffff;
+            --text-main: #1d1d1f;
+            --text-secondary: #86868b;
+            --accent: #0071e3;
+            --accent-hover: #0077ed;
+            --border: 1px solid rgba(0, 0, 0, 0.1);
+            --border-light: 1px solid rgba(0, 0, 0, 0.05);
+            --glass: rgba(255, 255, 255, 0.7);
+            --glass-border: 1px solid rgba(255, 255, 255, 0.4);
+            --shadow: 0 10px 40px rgba(0, 0, 0, 0.04);
+            --radius: 12px;
+            --highlight: #34c759;
+            --danger: #ff3b30;
         }
 
-        * { box-sizing: border-box; }
+        * {
+            box-sizing: border-box;
+            -webkit-font-smoothing: antialiased;
+        }
 
         body {
             margin: 0;
-            height: 100vh;
+            font-family: 'Inter', -apple-system, sans-serif;
             background: var(--bg);
-            color: var(--text-primary);
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            color: var(--text-main);
+            height: 100vh;
             display: flex;
             overflow: hidden;
         }
 
-        /* Sidebar Navigation */
+        /* --- SIDEBAR --- */
         #sidebar {
-            width: 80px;
+            width: 260px;
             background: var(--sidebar-bg);
-            border-right: var(--border);
+            border-right: var(--sidebar-border);
             display: flex;
             flex-direction: column;
-            align-items: center;
-            padding: 24px 0;
+            padding: 24px 12px;
             z-index: 100;
         }
 
-        .side-item {
-            width: 48px;
-            height: 48px;
+        .logo-container {
+            padding: 0 16px 32px;
             display: flex;
             align-items: center;
-            justify-content: center;
-            margin-bottom: 16px;
-            border-radius: 12px;
+            gap: 12px;
+            font-weight: 700;
+            font-size: 1.2rem;
+            letter-spacing: -0.5px;
+        }
+
+        .side-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            margin: 2px 0;
+            border-radius: 10px;
             cursor: pointer;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-            color: #ccc;
-            font-size: 1.25rem;
-            background: transparent;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.2s;
         }
 
-        .side-item:hover, .side-item.active {
-            background: #f5f5f5;
-            color: var(--accent);
+        .side-item:hover {
+            background: rgba(0,0,0,0.03);
+            color: var(--text-main);
         }
 
-        /* Main App Container */
-        #app-container {
+        .side-item.active {
+            background: #ffffff;
+            color: var(--text-main);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+
+        .side-item svg {
+            width: 20px;
+            height: 20px;
+            stroke-width: 2;
+        }
+
+        /* --- MAIN CONTENT --- */
+        #main-layout {
             flex: 1;
             display: flex;
-            padding: 20px;
+            flex-direction: column;
+            position: relative;
+        }
+
+        header {
+            height: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 40px;
+            border-bottom: var(--border-light);
+        }
+
+        .header-search {
+            background: #f5f5f7;
+            border-radius: 10px;
+            padding: 8px 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 300px;
+        }
+
+        .header-search input {
+            background: transparent;
+            border: none;
+            outline: none;
+            font-size: 0.9rem;
+            width: 100%;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
             gap: 20px;
-            max-width: 1600px;
+        }
+
+        .action-icon {
+            cursor: pointer;
+            color: var(--text-secondary);
+            transition: color 0.2s;
+        }
+
+        .action-icon:hover {
+            color: var(--text-main);
+        }
+
+        /* --- VIEWS --- */
+        .view-container {
+            flex: 1;
+            overflow-y: auto;
+            display: none;
+        }
+
+        .view-container.active {
+            display: flex;
+        }
+
+        /* --- PLAY VIEW --- */
+        .play-grid {
+            display: grid;
+            grid-template-columns: 1fr 360px;
+            gap: 40px;
+            padding: 40px;
+            max-width: 1400px;
             margin: 0 auto;
             width: 100%;
         }
 
-        /* Board Section */
-        #board-section {
-            flex: 3;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            align-items: center;
-            justify-content: center;
-        }
-
-        #game-area {
-            display: flex;
-            gap: 8px;
-            align-items: stretch;
-            width: 100%;
-            justify-content: center;
-        }
-
-        .eval-bar {
-            width: 12px;
-            background: #f0f0f0;
+        .board-wrapper {
             position: relative;
-            border-radius: 6px;
-            overflow: hidden;
-            margin-right: 24px;
-            border: var(--border);
-        }
-
-        #eval-bar-fill {
-            position: absolute;
-            bottom: 0;
-            width: 100%;
-            background: #2d2d2d;
-            height: 50%;
-            transition: height 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        #eval-bar-text {
-            position: absolute;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 0.65rem;
-            font-weight: 700;
-            pointer-events: none;
-            z-index: 10;
-        }
-
-        #eval-bar-text.top { top: 8px; color: #1a1a1a; }
-        #eval-bar-text.bottom { bottom: 8px; color: #ffffff; }
-
-        #board-wrapper {
-            position: relative;
-            width: 600px;
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08);
+            padding: 12px;
+            border: var(--border-light);
         }
 
         #board {
             width: 100%;
-            border-radius: var(--border-radius);
+            border-radius: 4px;
             overflow: hidden;
-            box-shadow: var(--shadow-soft);
-            border: var(--border);
         }
 
-        #arrow-svg {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 100;
-        }
-
-        /* Player Cards */
+        /* --- PLAYER CARDS --- */
         .player-card {
-            width: 600px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 0;
+            font-size: 0.95rem;
+        }
+
+        .player-info {
             display: flex;
             align-items: center;
             gap: 12px;
-            padding: 8px 0;
         }
 
-        .avatar {
-            width: 40px;
-            height: 40px;
-            background: #f0f0f0;
-            border-radius: 4px;
+        .player-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            background: #e8e8ed;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.5rem;
         }
 
-        .player-info { flex: 1; display: flex; flex-direction: column; gap: 2px; }
-        .player-name { font-weight: 700; font-size: 0.95rem; }
-        .player-rating { color: var(--text-secondary); font-size: 0.8rem; background: #f5f5f5; padding: 2px 6px; border-radius: 2px; }
-
-        .captured-pieces {
-            display: flex;
-            height: 20px;
-            gap: 2px;
-            opacity: 0.8;
-        }
-        .captured-pieces img { height: 100%; width: auto; }
-
-        /* Status Info */
-        .status-pill {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            background: #fcfcfc;
-            padding: 8px 16px;
-            border-radius: 20px;
-            border: var(--border);
-            font-size: 0.8rem;
+        .player-name {
             font-weight: 600;
-            color: var(--text-primary);
-            margin-top: 20px;
-            box-shadow: var(--shadow-soft);
         }
 
-        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+        .player-timer {
+            font-family: 'SF Mono', monospace;
+            font-weight: 700;
+            font-size: 1.1rem;
+            background: #f5f5f7;
+            padding: 4px 12px;
+            border-radius: 6px;
+            min-width: 80px;
+            text-align: center;
+        }
 
-        /* Right Panel */
-        #right-panel {
-            width: 400px;
-            background: var(--panel-bg);
-            border-left: var(--border);
+        .player-timer.active {
+            background: var(--text-main);
+            color: #ffffff;
+        }
+
+        /* --- RIGHT PANEL --- */
+        .right-panel {
             display: flex;
             flex-direction: column;
-            z-index: 50;
+            gap: 20px;
         }
 
-        .panel-tabs {
-            display: flex;
-            border-bottom: var(--border);
-            background: #fafafa;
-        }
-
-        .panel-tab {
-            flex: 1;
-            padding: 16px;
-            text-align: center;
-            cursor: pointer;
-            font-size: 0.85rem;
-            font-weight: 600;
-            color: var(--text-secondary);
-            border-bottom: 2px solid transparent;
-            transition: all 0.2s;
-        }
-
-        .panel-tab.active {
-            color: var(--text-primary);
-            border-bottom-color: var(--accent);
+        .moves-panel {
             background: #ffffff;
+            border: var(--border-light);
+            border-radius: 20px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: var(--shadow);
         }
 
-        .panel-content {
+        .moves-header {
+            padding: 16px 20px;
+            border-bottom: var(--border-light);
+            font-weight: 700;
+            font-size: 0.9rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        #move-list-container {
             flex: 1;
             overflow-y: auto;
-            padding: 24px;
-        }
-
-        #commentary {
-            font-size: 0.9rem;
-            line-height: 1.6;
-            color: var(--text-primary);
-            background: #fcfcfc;
-            padding: 20px;
-            border-radius: var(--border-radius);
-            border: var(--border);
-        }
-
-        .move-grid {
-            display: grid;
-            grid-template-columns: 40px 1fr 1fr;
-            font-size: 0.85rem;
+            padding: 8px 0;
         }
 
         .move-row {
-            display: contents;
+            display: grid;
+            grid-template-columns: 40px 1fr 1fr;
+            font-size: 0.85rem;
+            cursor: pointer;
         }
 
         .move-num {
-            padding: 12px 8px;
-            background: #fafafa;
-            color: #999;
+            padding: 8px;
+            color: var(--text-secondary);
             text-align: center;
-            border-bottom: var(--border);
+            background: #fafafa;
         }
 
         .move-val {
-            padding: 12px 16px;
-            cursor: pointer;
-            border-bottom: var(--border);
-            transition: background 0.1s;
+            padding: 8px 12px;
+            font-weight: 500;
         }
 
-        .move-val:hover { background: #f9f9f9; }
-        .move-val.active { background: #eef2ff; color: var(--accent); font-weight: 600; }
+        .move-val:hover {
+            background: #f5f5f7;
+        }
 
-        /* Controls */
-        .controls { display: flex; flex-direction: column; gap: 8px; margin-top: 20px; }
-        .btn-group { display: flex; gap: 8px; }
-        
+        .move-val.active {
+            background: #eef2ff;
+            color: var(--accent);
+        }
+
+        .panel-actions {
+            padding: 20px;
+            border-top: var(--border-light);
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
         button {
-            border: none;
-            border-radius: 8px;
+            border-radius: 10px;
             padding: 12px;
+            font-size: 0.85rem;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.2s;
@@ -302,297 +313,446 @@
             align-items: center;
             justify-content: center;
             gap: 8px;
-            flex: 1;
+            border: none;
         }
 
-        button.primary { background: var(--accent); color: white; }
-        button.primary:hover { background: var(--accent-hover); transform: translateY(-1px); }
+        button.primary {
+            background: var(--text-main);
+            color: #ffffff;
+        }
+
+        button.primary:hover {
+            background: #333;
+        }
 
         button.secondary {
-            background: transparent;
-            color: var(--text-primary);
-            border: var(--border);
+            background: #f5f5f7;
+            color: var(--text-main);
         }
-        button.secondary:hover { background: #f5f5f5; }
 
-        /* Settings Modal */
-        #settings-overlay {
+        button.secondary:hover {
+            background: #e8e8ed;
+        }
+
+        button.accent {
+            background: var(--accent);
+            color: #ffffff;
+            grid-column: span 2;
+        }
+
+        /* --- GLASS PANEL --- */
+        .glass-panel {
+            background: var(--glass);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border: var(--glass-border);
+            border-radius: 20px;
+            padding: 24px;
+        }
+
+        /* --- UTILS --- */
+        .title-badge {
+            font-size: 0.65rem;
+            font-weight: 800;
+            padding: 2px 6px;
+            border-radius: 4px;
+            background: #e8e8ed;
+            color: #666;
+            text-transform: uppercase;
+            margin-left: 8px;
+        }
+
+        /* --- HIGHLIGHTS --- */
+        .highlight-white, .highlight-black {
+            box-shadow: inset 0 0 0 3px var(--accent) !important;
+        }
+        .highlight-selected {
+            background-color: rgba(52, 199, 89, 0.2) !important;
+        }
+
+        /* --- OVERLAYS --- */
+        .overlay {
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.4);
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
             z-index: 1000;
             display: none;
             align-items: center;
             justify-content: center;
-            backdrop-filter: blur(4px);
         }
 
-        .settings-card {
+        .modal-card {
             background: #ffffff;
             width: 100%;
             max-width: 440px;
-            border-radius: 16px;
+            border-radius: 24px;
             padding: 32px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
-            border: var(--border);
+            box-shadow: 0 20px 80px rgba(0, 0, 0, 0.1);
         }
 
-        .settings-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 28px;
+        .eval-bar {
+            width: 14px;
+            height: 100%;
+            background: #2c2c2e;
+            border-radius: 4px;
+            position: relative;
+            overflow: hidden;
+            flex-shrink: 0;
+            margin-right: 12px;
         }
-
-        .settings-header h2 { margin: 0; font-size: 1.5rem; font-weight: 700; color: #1a1a1a; }
-
-        .setting-group { margin-bottom: 24px; }
-        .setting-group label {
-            display: block;
-            margin-bottom: 10px;
-            font-size: 0.85rem;
-            font-weight: 600;
-            color: var(--text-primary);
-        }
-
-        .setting-group select, .setting-group input[type="range"], .setting-group input[type="number"] {
+        #eval-bar-fill {
+            position: absolute;
+            bottom: 0;
+            left: 0;
             width: 100%;
-            padding: 10px;
-            border-radius: 8px;
-            border: var(--border);
-            background: #f9f9f9;
-            color: var(--text-primary);
-            outline: none;
+            height: 50%;
+            background: #ffffff;
+            transition: height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
         }
-
-        .toggle-setting {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 16px 0;
-            border-bottom: var(--border);
+        #eval-bar-text {
+            position: absolute;
+            width: 100%;
+            text-align: center;
+            font-size: 0.55rem;
+            font-weight: 800;
+            color: #ffffff;
+            z-index: 2;
+            mix-blend-mode: difference;
         }
+        #eval-bar-text.top { top: 4px; }
+        #eval-bar-text.bottom { bottom: 4px; }
 
-        .toggle-setting span { font-size: 0.9rem; font-weight: 500; }
-
-        /* Chessboard custom colors */
-        .white-1e1d7 { background-color: var(--light-sq) !important; color: var(--dark-sq) !important; }
-        .black-3c85d { background-color: var(--dark-sq) !important; color: var(--light-sq) !important; }
-
-        @media (max-width: 900px) {
-            #sidebar { display: none; }
-            #app-container { flex-direction: column; padding: 10px; }
+        @media (max-width: 1100px) {
+            .play-grid {
+                grid-template-columns: 1fr;
+            }
+            .right-panel {
+                max-width: 500px;
+                margin: 0 auto;
+                width: 100%;
+            }
         }
     </style>
 </head>
 
 <body>
-    <div id="sidebar">
-        <div class="side-item active" title="Play">♟</div>
-        <div class="side-item" title="Puzzles">🧩</div>
-        <div class="side-item" title="Learn">📖</div>
-        <div class="side-item" title="Profile">👤</div>
-        <div style="flex: 1;"></div>
-        <div class="side-item" title="Settings" onclick="toggleSettings(true)">⚙️</div>
-    </div>
+    <aside id="sidebar">
+        <div class="logo-container">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+            </svg>
+            CHESS_LAB
+        </div>
 
-    <div id="app-container">
-        <div id="board-section">
-            <div id="status-info">
-                <div class="status-dot"></div>
-                <span id="status-text">Your Turn</span>
+        <div class="side-item active" onclick="switchView('play'); setMode('ai')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+            Play Online
+        </div>
+        <div class="side-item" onclick="toggleLobby(true)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            Play Friends
+        </div>
+        <div class="side-item" onclick="switchView('study')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+            Study Lab
+        </div>
+        <div class="side-item" onclick="switchView('rankings')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20V14"/></svg>
+            History
+        </div>
+        <div class="side-item" onclick="switchView('profile')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            Profile
+        </div>
+
+        <div style="margin-top:auto; padding-top:20px;">
+            <button class="primary" style="width:100%" onclick="resetGame()">New Game</button>
+        </div>
+    </aside>
+
+    <div id="main-layout">
+        <header>
+            <div class="header-search">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+                <input type="text" placeholder="Search tournaments...">
             </div>
 
-            <!-- Opponent Card -->
-            <div class="player-card">
-                <div class="avatar">🤖</div>
-                <div class="player-info">
-                    <div class="player-name">Pro AI</div>
-                    <div class="captured-pieces" id="black-captured"></div>
+            <div class="header-actions">
+                <div class="action-icon" onclick="toggleSettings(true)">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                    </svg>
                 </div>
-                <div class="player-rating">2800</div>
-            </div>
-
-            <div id="game-area">
-                <div class="eval-bar">
-                    <div id="eval-bar-fill"></div>
-                    <div id="eval-bar-text" class="top">0.0</div>
-                </div>
-                <div id="board-wrapper">
-                    <div id="board"></div>
-                    <svg id="arrow-svg" viewBox="0 0 100 100">
-                        <g id="user-arrows"></g>
-                        <g id="bot-arrows"></g>
+                <div class="action-icon">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
                     </svg>
                 </div>
             </div>
+        </header>
 
-            <!-- Player Card -->
-            <div class="player-card">
-                <div class="avatar">👤</div>
-                <div class="player-info">
-                    <div class="player-name">Guest</div>
-                    <div class="captured-pieces" id="white-captured"></div>
+        <!-- VIEW: PLAY -->
+        <div id="play-view" class="view-container active">
+            <div class="play-grid">
+                <div class="board-section">
+                    <div class="player-card">
+                        <div class="player-info">
+                            <div class="player-avatar">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+                            </div>
+                            <div style="display:flex; flex-direction:column; gap:4px;">
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <span class="player-name" id="opponent-name">Pro AI</span>
+                                    <span class="title-badge" id="opponent-badge">LVL 24</span>
+                                </div>
+                                <div id="top-captured" style="display:flex; height:18px; align-items:center;"></div>
+                            </div>
+                        </div>
+                        <div class="player-timer" id="top-clock">10:00</div>
+                    </div>
+
+                    <div class="board-wrapper" style="display:flex; align-items:center;">
+                        <div class="eval-bar">
+                            <div id="eval-bar-fill"></div>
+                            <div id="eval-bar-text" class="top">0.0</div>
+                        </div>
+                        <div id="board" style="flex:1;"></div>
+                    </div>
+
+                    <div class="player-card">
+                        <div class="player-info">
+                            <div class="player-avatar" style="background:#0071e3; color:white;">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                            </div>
+                            <div style="display:flex; flex-direction:column; gap:4px;">
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <span class="player-name">Guest Player</span>
+                                    <span class="title-badge">Rated</span>
+                                </div>
+                                <div id="bottom-captured" style="display:flex; height:18px; align-items:center;"></div>
+                            </div>
+                        </div>
+                        <div class="player-timer active" id="bottom-clock">10:00</div>
+                    </div>
                 </div>
-                <div class="player-rating">1200</div>
+
+                <div class="right-panel">
+                    <div class="moves-panel">
+                        <div class="moves-header">
+                            <span>Move History</span>
+                            <span style="color:var(--text-secondary); font-size: 0.75rem;">PGN</span>
+                        </div>
+                        <div id="move-list-container"></div>
+                        <div class="panel-actions">
+                            <button class="secondary" onclick="resign()">Resign</button>
+                            <button class="secondary" onclick="offerDraw()">Draw</button>
+                            <button class="accent" onclick="startEngineAnalysis()">Engine Analysis</button>
+                        </div>
+                    </div>
+
+                    <div class="glass-panel" style="padding: 16px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                            <div style="font-size:0.75rem; color:var(--text-secondary); font-weight:700; text-transform:uppercase;">Live Analysis</div>
+                            <div class="status-dot" style="width:8px; height:8px; background:#81b64c; border-radius:50%;"></div>
+                        </div>
+                        <div id="status-text" style="font-weight:600; font-size:0.9rem; margin-bottom:4px;">White to move</div>
+                        <div id="engine-status" style="font-size:0.75rem; color:var(--text-secondary); margin-bottom:12px;">Engine Ready</div>
+                        
+                        <div id="commentary" style="font-size:0.85rem; line-height:1.5; color:var(--text-main); min-height:60px; padding:10px; background:rgba(0,0,0,0.02); border-radius:8px; margin-bottom:10px;">
+                            Waiting for calculation...
+                        </div>
+                        <div id="threat-area" style="font-size:0.75rem; color:#d32f2f; font-weight:600;"></div>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <div id="right-panel">
-            <div class="panel-tabs">
-                <div class="panel-tab active">Game</div>
-                <div class="panel-tab">Engine</div>
-            </div>
-            <div class="panel-content">
-                <div id="move-list-container">
-                    <!-- Moves will be injected here -->
+        <!-- VIEW: HISTORY -->
+        <div id="rankings-view" class="view-container">
+            <div style="padding: 60px; max-width: 1000px; width: 100%; margin: 0 auto;">
+                <h1 style="font-size: 2.5rem; letter-spacing: -1.5px; margin-bottom: 8px;">Game History</h1>
+                <p style="color:var(--text-secondary); margin-bottom: 40px;">Review your tactical evolution and previous encounters.</p>
+                
+                <div class="glass-panel" style="padding:0; overflow:hidden;">
+                    <table style="width:100%; border-collapse: collapse; text-align: left;">
+                        <thead style="background:rgba(0,0,0,0.02); font-size:0.7rem; text-transform:uppercase; letter-spacing:1px; color:var(--text-secondary);">
+                            <tr>
+                                <th style="padding:20px 24px; border-bottom:var(--border-light);">Date</th>
+                                <th style="padding:20px 24px; border-bottom:var(--border-light);">Opponent</th>
+                                <th style="padding:20px 24px; border-bottom:var(--border-light);">Result</th>
+                                <th style="padding:20px 24px; border-bottom:var(--border-light);">Accuracy</th>
+                                <th style="padding:20px 24px; border-bottom:var(--border-light);">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="history-body">
+                            <tr>
+                                <td colspan="5" style="padding:40px; text-align:center; color:var(--text-secondary);">No games played yet. Start a new match to build your history.</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
-                <div class="controls">
-                    <div class="btn-group">
-                        <button class="primary" onclick="resetGame()">New Game</button>
+            </div>
+        </div>
+
+        <!-- VIEW: STUDY -->
+        <div id="study-view" class="view-container">
+            <div style="padding: 60px; max-width: 1000px; width: 100%; margin: 0 auto;">
+                <h1 style="font-size: 2.5rem; letter-spacing: -1.5px; margin-bottom: 8px;">Study Lab</h1>
+                <p style="color:var(--text-secondary); margin-bottom: 40px;">Load FEN or PGN data to analyze specific positions or masterclass games.</p>
+
+                <div class="glass-panel">
+                    <div style="margin-bottom:24px;">
+                        <label style="display:block; font-weight:700; margin-bottom:8px; font-size:0.85rem;">Input Game Data</label>
+                        <textarea id="pgn-input" placeholder="Paste PGN or FEN here..." style="width:100%; height:160px; border-radius:12px; border:var(--border-light); padding:16px; font-family: 'SF Mono', monospace; font-size:0.9rem; resize:none;"></textarea>
                     </div>
-                    <div class="btn-group">
-                        <button class="secondary" onclick="board.flip()">Flip Board</button>
-                        <button class="secondary" onclick="toggleSettings(true)">Settings</button>
+                    <button class="primary" style="width:100%" onclick="loadStudyData()">Load into Analysis</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- VIEW: PROFILE -->
+        <div id="profile-view" class="view-container">
+            <div style="padding: 60px; max-width: 1000px; width: 100%; margin: 0 auto;">
+                <div style="display:flex; align-items:center; gap:32px; margin-bottom:48px;">
+                    <div style="width:120px; height:120px; border-radius:30px; background:var(--text-main); color:white; display:flex; align-items:center; justify-content:center; font-size:3rem; font-weight:800;">GP</div>
+                    <div>
+                        <h1 style="font-size: 2.5rem; letter-spacing: -1.5px; margin-bottom: 4px;">Guest Player</h1>
+                        <p style="color:var(--accent); font-weight:700;">PRO MEMBER</p>
                     </div>
-                    <div class="status-pill">
-                        <div class="status-dot" style="background: #81b64c;"></div>
-                        <span id="status-text">Your Turn</span>
+                </div>
+
+                <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:24px; margin-bottom:48px;">
+                    <div class="glass-panel" style="text-align:center;">
+                        <div style="font-size:0.75rem; color:var(--text-secondary); text-transform:uppercase; font-weight:700; margin-bottom:8px;">Blitz Rating</div>
+                        <div style="font-size:1.8rem; font-weight:800;">1850</div>
                     </div>
-                    <div id="engine-status" style="font-size: 0.75rem; color: var(--text-secondary); text-align: center; margin-top: 5px;">
-                        Engine: Initializing...
+                    <div class="glass-panel" style="text-align:center;">
+                        <div style="font-size:0.75rem; color:var(--text-secondary); text-transform:uppercase; font-weight:700; margin-bottom:8px;">Win Rate</div>
+                        <div style="font-size:1.8rem; font-weight:800; color:var(--highlight);">64%</div>
                     </div>
-                    <div id="threat-area" style="display:none;"></div>
+                    <div class="glass-panel" style="text-align:center;">
+                        <div style="font-size:0.75rem; color:var(--text-secondary); text-transform:uppercase; font-weight:700; margin-bottom:8px;">Tactical ELO</div>
+                        <div style="font-size:1.8rem; font-weight:800;">2240</div>
+                    </div>
+                </div>
+
+                <h2 style="font-size:1.2rem; margin-bottom:20px;">Recent Achievements</h2>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
+                    <div class="glass-panel" style="display:flex; align-items:center; gap:16px;">
+                        <div style="width:48px; height:48px; border-radius:12px; background:#fff2cc; display:flex; align-items:center; justify-content:center; color:#f1c40f; font-size:1.5rem;">🏆</div>
+                        <div>
+                            <div style="font-weight:700; font-size:0.9rem;">Blitz Master</div>
+                            <div style="font-size:0.75rem; color:var(--text-secondary);">Won 10 consecutive blitz games.</div>
+                        </div>
+                    </div>
+                    <div class="glass-panel" style="display:flex; align-items:center; gap:16px;">
+                        <div style="width:48px; height:48px; border-radius:12px; background:#e1f5fe; display:flex; align-items:center; justify-content:center; color:#03a9f4; font-size:1.5rem;">🧠</div>
+                        <div>
+                            <div style="font-weight:700; font-size:0.9rem;">Tactical Genius</div>
+                            <div style="font-size:0.75rem; color:var(--text-secondary);">Solved 500+ puzzles with 90% accuracy.</div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <div id="settings-overlay" onclick="if(event.target===this) toggleSettings(false)">
-        <div class="settings-card">
-            <div class="settings-header">
-                <h2>Settings</h2>
-                <button class="close-btn" onclick="toggleSettings(false)">&times;</button>
+    <!-- OVERLAY: MULTIPLAYER LOBBY -->
+    <div id="lobby-overlay" class="overlay">
+        <div class="modal-card">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
+                <h2 style="margin:0; font-size:1.5rem; letter-spacing:-0.5px;">Multiplayer Lobby</h2>
+                <svg onclick="toggleLobby(false)" width="24" height="24" viewBox="0 0 24 24" style="cursor:pointer; color:var(--text-secondary);"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
             </div>
+            <p style="color:var(--text-secondary); font-size:0.9rem; margin-bottom:24px;">Direct P2P connection. Share your ID with a friend to start playing.</p>
             
-            <div class="setting-group">
-                <label>Play Mode</label>
-                <select id="play-mode" onchange="updateUI()">
-                    <option value="human">You vs Pro AI</option>
-                    <option value="stockfish">Pro AI vs Stockfish 16 (API)</option>
-                    <option value="ai-self">Pro AI vs Pro AI</option>
-                </select>
-            </div>
-
-            <div class="setting-group">
-                <label>Play As</label>
-                <select id="player-color" onchange="resetGame()">
-                    <option value="w">White</option>
-                    <option value="b">Black</option>
-                    <option value="r">Random</option>
-                </select>
-            </div>
-
-            <div class="setting-group">
-                <label>Think Time: <span id="think-time-val">5</span>s</label>
-                <input type="range" id="think-time" min="0.1" max="15" step="0.1" value="5" oninput="updateUI()">
-            </div>
-
-            <div class="setting-group">
-                <label>Threads (Auto recommended)</label>
-                <input type="range" id="threads" min="1" max="16" step="1" value="4" oninput="updateUI()">
-                <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 5px;">
-                    Active threads: <span id="threads-val">Auto</span>
+            <div id="lobby-status">
+                <button class="primary" onclick="createRoom()" style="width:100%; margin-bottom:12px;">Host New Match</button>
+                <div style="display:flex; gap:8px; margin-top:20px;">
+                    <input type="text" id="room-id-input" placeholder="Paste Friend's ID" style="flex:1; padding:12px; border-radius:10px; border:var(--border-light); background:#f9f9f9; outline:none;">
+                    <button class="primary" style="padding:0 24px;" onclick="joinRoom()">Join</button>
                 </div>
             </div>
+        </div>
+    </div>
 
-            <div class="setting-group">
-                <label>Minimum Depth</label>
-                <input type="number" id="min-depth" value="1" min="1" max="32">
+    <!-- OVERLAY: SETTINGS -->
+    <div id="settings-overlay" class="overlay" onclick="if(event.target===this) toggleSettings(false)">
+        <div class="modal-card">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
+                <h2 style="margin:0; font-size:1.5rem; letter-spacing:-0.5px;">Preferences</h2>
+                <svg onclick="toggleSettings(false)" width="24" height="24" viewBox="0 0 24 24" style="cursor:pointer; color:var(--text-secondary);"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
             </div>
 
-            <div class="toggle-setting">
-                <span>Neural Network (NNUE)</span>
-                <input type="checkbox" id="use-nn">
-            </div>
+            <div style="display:flex; flex-direction:column; gap:20px; max-height: 70vh; overflow-y: auto; padding-right: 10px;">
+                <div>
+                    <label style="display:block; font-size:0.75rem; font-weight:700; color:var(--text-secondary); text-transform:uppercase; margin-bottom:8px;">
+                        Engine Think Time: <span id="think-time-val" style="color:var(--accent)">5</span>s
+                    </label>
+                    <input type="range" id="think-time" min="0.1" max="15" step="0.1" value="5" style="width:100%;" oninput="updateUI()">
+                </div>
+                
+                <div>
+                    <label style="display:block; font-size:0.75rem; font-weight:700; color:var(--text-secondary); text-transform:uppercase; margin-bottom:8px;">
+                        CPU Threads: <span id="threads-val" style="color:var(--accent)">Auto</span>
+                    </label>
+                    <input type="range" id="threads" min="1" max="16" step="1" value="4" style="width:100%;" oninput="updateUI()">
+                </div>
 
-            <div class="toggle-setting">
-                <span>Opening Book</span>
-                <input type="checkbox" id="use-book" checked>
-            </div>
+                <div>
+                    <label style="display:block; font-size:0.75rem; font-weight:700; color:var(--text-secondary); text-transform:uppercase; margin-bottom:8px;">Board Theme</label>
+                    <select id="board-theme" onchange="applyThemes()" style="width:100%; padding:12px; border-radius:10px; border:var(--border-light); background:#f9f9f9;">
+                        <option value="minimalist">Minimalist White</option>
+                        <option value="classic">Classic Club</option>
+                        <option value="wood">Professional Wood</option>
+                        <option value="slate">Modern Slate</option>
+                    </select>
+                </div>
 
-            <div class="toggle-setting">
-                <span>Syzygy Tablebases</span>
-                <input type="checkbox" id="use-tb" checked>
-            </div>
+                <div>
+                    <label style="display:block; font-size:0.75rem; font-weight:700; color:var(--text-secondary); text-transform:uppercase; margin-bottom:8px;">Play Mode</label>
+                    <select id="play-mode" onchange="resetGame()" style="width:100%; padding:12px; border-radius:10px; border:var(--border-light); background:#f9f9f9;">
+                        <option value="human">Player vs AI</option>
+                        <option value="stockfish">Player vs Stockfish (Cloud)</option>
+                        <option value="ai-self">AI vs AI (Self Play)</option>
+                    </select>
+                </div>
 
-            <div class="toggle-setting">
-                <span>Show Engine Arrows</span>
-                <input type="checkbox" id="show-arrows" checked>
-            </div>
+                <div>
+                    <label style="display:block; font-size:0.75rem; font-weight:700; color:var(--text-secondary); text-transform:uppercase; margin-bottom:8px;">Your Color</label>
+                    <select id="player-color" onchange="resetGame()" style="width:100%; padding:12px; border-radius:10px; border:var(--border-light); background:#f9f9f9;">
+                        <option value="w">White</option>
+                        <option value="b">Black</option>
+                        <option value="r">Random</option>
+                    </select>
+                </div>
 
-            <div class="setting-group">
-                <label>Board Theme</label>
-                <select id="board-theme" onchange="applyThemes()">
-                    <option value="minimalist" selected>Minimalist White</option>
-                    <option value="classic">Classic Green</option>
-                    <option value="wood">Wooden</option>
-                    <option value="slate">Slate</option>
-                </select>
-            </div>
+                <div>
+                    <label style="display:block; font-size:0.75rem; font-weight:700; color:var(--text-secondary); text-transform:uppercase; margin-bottom:8px;">Difficulty</label>
+                    <select id="min-depth" style="width:100%; padding:12px; border-radius:10px; border:var(--border-light); background:#f9f9f9;">
+                        <option value="1">Beginner (1)</option>
+                        <option value="4">Intermediate (4)</option>
+                        <option value="8">Expert (8)</option>
+                        <option value="12">Master (12)</option>
+                    </select>
+                </div>
 
-            <div class="setting-group">
-                <label>Piece Set</label>
-                <select id="piece-theme" onchange="applyThemes()">
-                    <option value="alpha">Alpha</option>
-                    <option value="anarcandy">Anarcandy</option>
-                    <option value="caliente">Caliente</option>
-                    <option value="california">California</option>
-                    <option value="cardinal">Cardinal</option>
-                    <option value="cburnett" selected>CBurnett</option>
-                    <option value="celtic">Celtic</option>
-                    <option value="chess7">Chess7</option>
-                    <option value="chessnut">Chessnut</option>
-                    <option value="companion">Companion</option>
-                    <option value="cooke">Cooke</option>
-                    <option value="disguised">Disguised</option>
-                    <option value="dubrovny">Dubrovny</option>
-                    <option value="fantasy">Fantasy</option>
-                    <option value="firi">Firi</option>
-                    <option value="fresca">Fresca</option>
-                    <option value="gioco">Gioco</option>
-                    <option value="governor">Governor</option>
-                    <option value="horsey">Horsey</option>
-                    <option value="icpieces">IC Pieces</option>
-                    <option value="kiwen-suwi">Kiwen-Suwi</option>
-                    <option value="kosal">Kosal</option>
-                    <option value="leipzig">Leipzig</option>
-                    <option value="letter">Letter</option>
-                    <option value="maestro">Maestro</option>
-                    <option value="merida">Merida</option>
-                    <option value="monarchy">Monarchy</option>
-                    <option value="mono">Mono</option>
-                    <option value="mpchess">MP Chess</option>
-                    <option value="pirouetti">Pirouetti</option>
-                    <option value="pixel">Pixel</option>
-                    <option value="reillycraig">Reilly Craig</option>
-                    <option value="rhosgfx">Rhosgfx</option>
-                    <option value="riohacha">Riohacha</option>
-                    <option value="shahi-ivory-brown">Shahi Ivory Brown</option>
-                    <option value="shapes">Shapes</option>
-                    <option value="spatial">Spatial</option>
-                    <option value="staunty">Staunty</option>
-                    <option value="tatiana">Tatiana</option>
-                    <option value="xkcd">XKCD</option>
-                </select>
+                <div style="display:flex; flex-direction:column; gap:10px; padding: 10px 0;">
+                    <label style="display:flex; align-items:center; gap:10px; font-size:0.85rem; cursor:pointer;">
+                        <input type="checkbox" id="use-book" checked> Use Opening Book
+                    </label>
+                    <label style="display:flex; align-items:center; gap:10px; font-size:0.85rem; cursor:pointer;">
+                        <input type="checkbox" id="use-tb" checked> Use Tablebases
+                    </label>
+                    <label style="display:flex; align-items:center; gap:10px; font-size:0.85rem; cursor:pointer;">
+                        <input type="checkbox" id="show-arrows" checked> Show Engine Arrows
+                    </label>
+                </div>
             </div>
-
-            <div class="setting-group" style="margin-top: 20px;">
-                <button class="primary" style="width: 100%;" onclick="toggleSettings(false)">Close</button>
-            </div>
+            
+            <button class="primary" style="width:100%; margin-top:24px;" onclick="toggleSettings(false)">Apply Settings</button>
         </div>
     </div>
 
@@ -1738,6 +1898,307 @@
 
     <!-- OVERARCHING SYSTEM -->
     <script>
+        // --- MULTIPLAYER & NAVIGATION SYSTEM (PeerJS Edition) ---
+        let currentView = 'play';
+        let currentMode = 'ai'; // 'ai' or 'multiplayer'
+        let roomId = null;
+        let playerSide = 'w';
+        let peer = null;
+        let conn = null;
+
+        function initPeer() {
+            if (peer) return;
+            // PeerJS public server is free and requires no API key for basic usage.
+            peer = new Peer();
+            
+            peer.on('open', (id) => {
+                console.log('Peer ID:', id);
+                if (currentMode === 'multiplayer' && playerSide === 'w') {
+                    document.getElementById('room-id-display').innerText = id;
+                }
+            });
+
+            peer.on('connection', (c) => {
+                if (conn) conn.close();
+                conn = c;
+                setupConnection(c);
+            });
+
+            peer.on('error', (err) => {
+                console.error('PeerJS Error:', err);
+                alert("Connection Error: " + err.type);
+            });
+        }
+
+        function setupConnection(c) {
+            c.on('open', () => {
+                console.log('Connected to:', c.peer);
+                toggleLobby(false);
+                if (playerSide === 'b') {
+                    document.getElementById('opponent-name').innerHTML = 'Player 1 <span class="title-badge">P2P</span>';
+                } else {
+                    document.getElementById('opponent-name').innerHTML = 'Player 2 <span class="title-badge">P2P</span>';
+                    // Send initial state
+                    c.send({ type: 'init', fen: game.fen(), turn: game.turn() });
+                }
+                resetGame();
+            });
+
+            c.on('data', (data) => {
+                if (data.type === 'move') {
+                    if (data.fen !== game.fen()) {
+                        game.load(data.fen);
+                        board.position(data.fen);
+                        updateLog();
+                        playMoveSound(data.lastMove);
+                        triggerNextTurn();
+                    }
+                } else if (data.type === 'init') {
+                    game.load(data.fen);
+                    board.position(data.fen);
+                    updateLog();
+                }
+            });
+
+            c.on('close', () => {
+                alert("Opponent disconnected.");
+                setMode('ai');
+            });
+        }
+
+        function switchView(view) {
+        function switchView(viewId) {
+            currentView = viewId;
+            document.querySelectorAll('.view-container').forEach(v => v.classList.remove('active'));
+            const target = document.getElementById(viewId + '-view');
+            if (target) target.classList.add('active');
+
+            document.querySelectorAll('.side-item').forEach(item => {
+                item.classList.remove('active');
+                if (item.getAttribute('onclick') && item.getAttribute('onclick').includes(`'${viewId}'`)) {
+                    item.classList.add('active');
+                }
+            });
+
+            if (viewId === 'play' && board) {
+                setTimeout(() => board.resize(), 100);
+            }
+            if (viewId === 'rankings') {
+                updateHistoryTable();
+            }
+        }
+
+        function loadStudyData() {
+            const input = document.getElementById('pgn-input').value.trim();
+            if (!input) return;
+
+            // Simple check if it's FEN or PGN
+            if (input.split(' ').length >= 4) {
+                // likely FEN
+                if (game.load(input)) {
+                    board.position(game.fen());
+                    updateLog();
+                    switchView('play');
+                } else {
+                    alert("Invalid FEN");
+                }
+            } else {
+                // likely PGN
+                if (game.load_pgn(input)) {
+                    board.position(game.fen());
+                    updateLog();
+                    switchView('play');
+                } else {
+                    alert("Invalid PGN");
+                }
+            }
+        }
+
+        function loadPGN() {
+            const pgn = document.getElementById('pgn-input').value;
+            if (game.load_pgn(pgn)) {
+                board.position(game.fen());
+                updateLog();
+                switchView('play');
+            } else {
+                alert("Invalid PGN");
+            }
+        }
+
+        function loadFEN() {
+            const fen = document.getElementById('fen-input').value;
+            if (game.load(fen)) {
+                board.position(game.fen());
+                updateLog();
+                switchView('play');
+            } else {
+                alert("Invalid FEN");
+            }
+        }
+
+        function saveGameToHistory() {
+            const history = JSON.parse(localStorage.getItem('chess_lab_history') || '[]');
+            const gameData = {
+                date: new Date().toLocaleDateString(),
+                opponent: currentMode === 'ai' ? 'Stockfish 16' : 'Multiplayer',
+                result: game.in_draw() ? 'Draw' : (game.turn() === 'w' ? 'Black Wins' : 'White Wins'),
+                moves: game.history().length,
+                fen: game.fen()
+            };
+            history.unshift(gameData);
+            localStorage.setItem('chess_lab_history', JSON.stringify(history.slice(0, 20)));
+        }
+
+        function updateHistoryTable() {
+            const history = JSON.parse(localStorage.getItem('chess_lab_history') || '[]');
+            const tbody = document.getElementById('history-body');
+            if (history.length === 0) return;
+            
+            tbody.innerHTML = history.map(g => `
+                <tr>
+                    <td style="padding:20px 24px; border-bottom:1px solid rgba(0,0,0,0.02); font-size:0.9rem;">${g.date}</td>
+                    <td style="padding:20px 24px; border-bottom:1px solid rgba(0,0,0,0.02); font-size:0.9rem; font-weight:600;">${g.opponent}</td>
+                    <td style="padding:20px 24px; border-bottom:1px solid rgba(0,0,0,0.02); font-size:0.9rem;">
+                        <span class="title-badge" style="background:${g.result.includes('Win') ? '#eefdf3' : '#f9f9f9'}; color:${g.result.includes('Win') ? '#22c55e' : '#64748b'};">
+                            ${g.result}
+                        </span>
+                    </td>
+                    <td style="padding:20px 24px; border-bottom:1px solid rgba(0,0,0,0.02); font-size:0.9rem;">${g.moves} moves</td>
+                    <td style="padding:20px 24px; border-bottom:1px solid rgba(0,0,0,0.02);">
+                        <button class="action" onclick="loadFromHistory('${g.fen}')" style="padding: 6px 12px; font-size: 0.75rem;">View</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function updateUI() {
+            // Update settings from inputs
+            thinkTime = parseInt(document.getElementById('time-limit')?.value || 10);
+            numThreads = parseInt(document.getElementById('threads')?.value || 4);
+            useBook = document.getElementById('use-book')?.checked || false;
+            useNN = document.getElementById('use-nn')?.checked || false;
+            
+            document.getElementById('thread-val').innerText = numThreads;
+            document.getElementById('depth-val').innerText = document.getElementById('min-depth')?.value || 1;
+            applyThemes();
+        }
+
+        function applyThemes() {
+            const theme = document.getElementById('board-theme').value;
+            let config = {
+                draggable: true,
+                position: game.fen(),
+                onDragStart: onDragStart,
+                onDrop: onDrop,
+                onSnapEnd: onSnapEnd
+            };
+
+            if (theme === 'minimalist') {
+                document.documentElement.style.setProperty('--accent', '#0071e3');
+                // Chessboard.js doesn't natively support full CSS themes easily without custom piece sets,
+                // but we can adjust the container styles.
+                document.getElementById('board').style.filter = 'grayscale(0.1) brightness(1.05)';
+            } else if (theme === 'classic') {
+                document.documentElement.style.setProperty('--accent', '#2c3e50');
+                document.getElementById('board').style.filter = 'sepia(0.2)';
+            } else if (theme === 'wood') {
+                document.documentElement.style.setProperty('--accent', '#8d6e63');
+                document.getElementById('board').style.filter = 'sepia(0.5) contrast(0.9)';
+            } else if (theme === 'slate') {
+                document.documentElement.style.setProperty('--accent', '#475569');
+                document.getElementById('board').style.filter = 'invert(0.05) contrast(1.1)';
+            }
+            
+            if (board) board.resize();
+        }
+
+        function toggleSettings(show) {
+            document.getElementById('settings-overlay').style.display = show ? 'flex' : 'none';
+        }
+
+        function loadFromHistory(fen) {
+            game.load(fen);
+            board.position(fen);
+            updateLog();
+            switchView('play');
+        }
+
+        function setMode(mode) {
+            currentMode = mode;
+            document.querySelectorAll('.side-item').forEach(i => i.classList.remove('active'));
+            if (mode === 'ai') {
+                const aiLink = document.querySelector('.side-item[onclick*="ai"]');
+                if (aiLink) aiLink.classList.add('active');
+                document.getElementById('opponent-name').innerHTML = 'Stockfish 16 (AI) <span class="title-badge">LVL 8</span>';
+                roomId = null;
+                resetGame();
+            }
+        }
+
+        function resign() {
+            if (confirm("Are you sure you want to resign?")) {
+                alert("You resigned. Game over.");
+                resetGame();
+            }
+        }
+
+        function offerDraw() {
+            if (currentMode === 'ai') {
+                alert("The AI declined the draw offer.");
+            } else if (conn) {
+                conn.send({ type: 'draw_offer' });
+                alert("Draw offer sent.");
+            }
+        }
+
+        function startEngineAnalysis() {
+            if (isThinking) {
+                timeUp = true;
+                setTimeout(makeAiMove, 200);
+            } else {
+                makeAiMove();
+            }
+        }
+
+        function toggleLobby(show) {
+            document.getElementById('lobby-overlay').style.display = show ? 'flex' : 'none';
+            if (show) initPeer();
+        }
+
+        function createRoom() {
+            currentMode = 'multiplayer';
+            playerSide = 'w';
+            initPeer();
+            
+            document.getElementById('lobby-status').innerHTML = `
+                <div style="margin-bottom:15px;">
+                    <div style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:5px;">Your Room ID:</div>
+                    <div id="room-id-display" style="font-family:monospace; font-size:1.2rem; font-weight:700; color:var(--accent); letter-spacing:2px;">Initializing...</div>
+                </div>
+                <p style="font-size:0.85rem; color:var(--text-secondary);">Waiting for friend to join...</p>
+            `;
+            board.orientation('white');
+        }
+
+        function joinRoom() {
+            const id = document.getElementById('room-id-input').value.trim();
+            if (!id) return alert("Please enter a Room ID");
+            
+            currentMode = 'multiplayer';
+            playerSide = 'b';
+            initPeer();
+            
+            peer.on('open', () => {
+                conn = peer.connect(id);
+                setupConnection(conn);
+            });
+            board.orientation('black');
+        }
+
+        function setupMultiplayerListener() {
+            // Deprecated in PeerJS version
+        }
+
         const game = new Chess();
         const TT_SIZE = 1 << 22;
         let board = null;
@@ -1873,7 +2334,7 @@
         function applyThemes() {
             let b = document.getElementById('board-theme').value;
             let c = {
-                minimalist: { l: '#ffffff', d: '#f0f0f0' },
+                minimalist: { l: '#ffffff', d: '#f0f2f5' },
                 classic: { l: '#eeeed2', d: '#769656' },
                 wood: { l: '#f0d9b5', d: '#b58863' },
                 slate: { l: '#98a6b5', d: '#5c7080' }
@@ -1883,17 +2344,19 @@
 
             if (board) board.destroy();
             board = Chessboard('board', {
-                position: game.fen(), draggable: true, pieceTheme: `https://thepollitosd.github.io/chess/pieces/${document.getElementById('piece-theme').value}/{piece}.svg`,
+                position: game.fen(),
+                draggable: true,
+                // Lichess 'cburnett' set for a professional, engineered look.
+                pieceTheme: 'https://lichess1.org/assets/piece/cburnett/{piece}.svg',
                 onDragStart: (a, p) => {
-                    if (viewingHistory) {
-                        snapToPresent();
-                        return false;
-                    }
+                    if (viewingHistory) { snapToPresent(); return false; }
                     if (game.game_over()) return false;
-                    let mode = document.getElementById('play-mode').value;
-                    if (mode === 'ai-self') return false;
-                    if (mode === 'human' && p[0] !== staticHumanSide) return false;
-                    if (mode === 'stockfish' && p[0] !== staticHumanSide) return false;
+
+                    if (currentMode === 'multiplayer') {
+                        if (game.turn() !== playerSide || p[0] !== playerSide) return false;
+                    } else {
+                        if (p[0] !== staticHumanSide) return false;
+                    }
 
                     showLegalMoves(a, isThinking);
                 },
@@ -1901,17 +2364,17 @@
                     selectedSquare = null;
                     clearDots();
                     if (s === t) return 'snapback';
-                    if (isThinking) {
-                        premoves.push({ from: s, to: t, promotion: 'q' });
-                        renderPremoves();
-                        return 'snapback';
-                    } else {
-                        let m = game.move({ from: s, to: t, promotion: 'q' });
-                        if (!m) return 'snapback';
-                        premoves = [];
-                        updateLog(); document.getElementById('bot-arrows').innerHTML = '';
-                        triggerNextTurn();
+
+                    let m = game.move({ from: s, to: t, promotion: 'q' });
+                    if (!m) return 'snapback';
+
+                    if (currentMode === 'multiplayer') {
+                        syncMove(m);
                     }
+
+                    updateLog();
+                    document.getElementById('bot-arrows').innerHTML = '';
+                    triggerNextTurn();
                 },
                 onSnapEnd: () => {
                     if (!viewingHistory) board.position(game.fen());
@@ -1919,6 +2382,16 @@
             });
 
             attachBoardEvents();
+        }
+
+        function syncMove(move) {
+            if (!conn || !conn.open) return;
+            conn.send({
+                type: 'move',
+                fen: game.fen(),
+                lastMove: move,
+                turn: game.turn()
+            });
         }
 
         function toggleSettings(show) {
@@ -1932,6 +2405,58 @@
         let viewingIdx = -1;
         let viewingHistory = false;
 
+        // Sound System
+        const sounds = {
+            move: new Audio('https://www.chess.com/chess-themes/sounds/standard/move-self.mp3'),
+            capture: new Audio('https://www.chess.com/chess-themes/sounds/standard/capture.mp3'),
+            check: new Audio('https://www.chess.com/chess-themes/sounds/standard/move-check.mp3'),
+            gameEnd: new Audio('https://www.chess.com/chess-themes/sounds/standard/game-end.mp3')
+        };
+
+        // Clock System
+        let whiteTime = 600;
+        let blackTime = 600;
+        let clockInterval = null;
+
+        function startClocks() {
+            if (clockInterval) clearInterval(clockInterval);
+            clockInterval = setInterval(() => {
+                if (game.game_over()) {
+                    clearInterval(clockInterval);
+                    return;
+                }
+                if (game.turn() === 'w') {
+                    whiteTime = Math.max(0, whiteTime - 1);
+                    updateClockDisplay('bottom', whiteTime);
+                } else {
+                    blackTime = Math.max(0, blackTime - 1);
+                    updateClockDisplay('top', blackTime);
+                }
+                if (whiteTime === 0 || blackTime === 0) {
+                    clearInterval(clockInterval);
+                    alert('Time Out!');
+                }
+            }, 1000);
+        }
+
+        function updateClockDisplay(side, time) {
+            let el = document.getElementById(side + '-clock');
+            if (!el) return;
+            let m = Math.floor(time / 60);
+            let s = time % 60;
+            el.innerText = `${m}:${s < 10 ? '0' : ''}${s}`;
+
+            let isCurrent = (game.turn() === (side === 'bottom' ? 'w' : 'b'));
+            el.classList.toggle('active', isCurrent);
+        }
+
+        function playMoveSound(move) {
+            if (!move) return;
+            if (game.in_check()) sounds.check.play().catch(() => { });
+            else if (move.flags && (move.flags.includes('c') || move.flags.includes('e'))) sounds.capture.play().catch(() => { });
+            else sounds.move.play().catch(() => { });
+        }
+
         function snapToPresent() {
             viewingHistory = false;
             board.position(game.fen(), false);
@@ -1941,31 +2466,14 @@
         }
 
         function handleSquareClick(sq) {
-            if (viewingHistory) {
-                snapToPresent();
-                return;
-            }
+            if (viewingHistory) { snapToPresent(); return; }
             if (game.game_over()) return;
-            let mode = document.getElementById('play-mode').value;
-            if (mode === 'ai-self') return;
-            if (mode !== 'human' && mode !== 'stockfish') return;
 
-            let isMyTurn = (game.turn() === staticHumanSide);
+            let sideToMove = (currentMode === 'multiplayer') ? playerSide : staticHumanSide;
+            let isMyTurn = (game.turn() === sideToMove);
+
             if (!isMyTurn) {
-                if (selectedSquare) {
-                    if (selectedSquare !== sq) {
-                        premoves.push({ from: selectedSquare, to: sq, promotion: 'q' });
-                        renderPremoves();
-                    }
-                    selectedSquare = null;
-                    clearDots();
-                } else {
-                    let p = game.get(sq);
-                    if (p && p.color === staticHumanSide) {
-                        selectedSquare = sq;
-                        showLegalMoves(sq, true);
-                    }
-                }
+                // Pre-move logic simplified for clarity
                 return;
             }
 
@@ -1976,16 +2484,17 @@
                 } else {
                     let m = game.move({ from: selectedSquare, to: sq, promotion: 'q' });
                     if (m) {
+                        if (currentMode === 'multiplayer') syncMove(m);
+                        playMoveSound(m);
                         selectedSquare = null;
                         clearDots();
-                        premoves = [];
                         board.position(game.fen());
                         updateLog();
                         document.getElementById('bot-arrows').innerHTML = '';
                         triggerNextTurn();
                     } else {
                         let p = game.get(sq);
-                        if (p && p.color === staticHumanSide) {
+                        if (p && p.color === sideToMove) {
                             selectedSquare = sq;
                             showLegalMoves(sq, false);
                         } else {
@@ -1996,7 +2505,7 @@
                 }
             } else {
                 let p = game.get(sq);
-                if (p && p.color === staticHumanSide) {
+                if (p && p.color === sideToMove) {
                     selectedSquare = sq;
                     showLegalMoves(sq, false);
                 }
@@ -2105,7 +2614,7 @@
                 'p': 'bp', 'n': 'bn', 'b': 'bb', 'r': 'br', 'q': 'bq',
                 'P': 'wp', 'N': 'wn', 'B': 'wb', 'R': 'wr', 'Q': 'wq'
             };
-            
+
             let whiteCaptured = { 'p': 8, 'n': 2, 'b': 2, 'r': 2, 'q': 1 };
             let blackCaptured = { 'p': 8, 'n': 2, 'b': 2, 'r': 2, 'q': 1 };
 
@@ -2114,19 +2623,22 @@
                 else if (c >= 'A' && c <= 'Z') blackCaptured[c.toLowerCase()]--;
             }
 
-            const pieceTheme = document.getElementById('piece-theme').value || 'cburnett';
-            const getImg = (p) => `https://thepollitosd.github.io/chess/pieces/${pieceTheme}/${p}.svg`;
+            const getImg = (p) => `https://lichess1.org/assets/piece/cburnett/${p}.svg`;
 
             let wHTML = '', bHTML = '';
             const order = ['q', 'r', 'b', 'n', 'p'];
-            
+
             for (let p of order) {
-                for (let i = 0; i < whiteCaptured[p]; i++) wHTML += `<img src="${getImg('w' + p)}">`;
-                for (let i = 0; i < blackCaptured[p]; i++) bHTML += `<img src="${getImg('b' + p)}">`;
+                for (let i = 0; i < whiteCaptured[p]; i++) wHTML += `<img src="${getImg('w' + p)}" style="width:16px; margin-right:-4px;">`;
+                for (let i = 0; i < blackCaptured[p]; i++) bHTML += `<img src="${getImg('b' + p)}" style="width:16px; margin-right:-4px;">`;
             }
 
-            document.getElementById('white-captured').innerHTML = bHTML; // Pieces white has taken (black pieces)
-            document.getElementById('black-captured').innerHTML = wHTML; // Pieces black has taken (white pieces)
+            // Note: In the new layout, we might not have these specific IDs yet,
+            // but we'll ensure they are handled if present.
+            let wcEl = document.getElementById('bottom-captured');
+            let bcEl = document.getElementById('top-captured');
+            if (wcEl) wcEl.innerHTML = bHTML;
+            if (bcEl) bcEl.innerHTML = wHTML;
 
             // Material diff
             let vals = { 'p': 1, 'n': 3, 'b': 3, 'r': 5, 'q': 9, 'P': -1, 'N': -3, 'B': -3, 'R': -5, 'Q': -9, 'k': 0, 'K': 0 };
@@ -2143,7 +2655,7 @@
             removeHighlights();
             let el1 = document.querySelector('.square-' + s);
             let el2 = document.querySelector('.square-' + t);
-            let hl = 'inset 0 0 0 50px rgba(255, 255, 0, 0.4)';
+            let hl = 'inset 0 0 0 3px var(--accent)';
             if (el1) el1.style.boxShadow = hl;
             if (el2) el2.style.boxShadow = hl;
         }
@@ -2153,11 +2665,11 @@
             d.innerHTML = "";
             let h = game.history();
             let hv = game.history({ verbose: true });
-            
+
             for (let i = 0; i < h.length; i += 2) {
                 let row = document.createElement('div');
                 row.className = 'move-row';
-                
+
                 let num = document.createElement('div');
                 num.className = 'move-number';
                 num.innerText = (i / 2 + 1) + '.';
@@ -2172,17 +2684,17 @@
                 if (h[i + 1]) {
                     let m2 = document.createElement('div');
                     m2.className = 'move-val' + (i + 1 === viewingIdx ? ' active' : '');
-                    m2.innerText = h[i+1];
+                    m2.innerText = h[i + 1];
                     m2.onclick = () => viewHistory(i + 1);
                     row.appendChild(m2);
                 }
-                
+
                 d.appendChild(row);
             }
-            
+
             d.scrollTop = d.scrollHeight;
             updateMaterial();
-            
+
             if (!viewingHistory) {
                 viewingIdx = hv.length - 1;
                 if (hv.length > 0) setTimeout(() => highlightMove(hv[hv.length - 1].from, hv[hv.length - 1].to), 50);
@@ -2322,10 +2834,13 @@
         function triggerNextTurn() {
             if (game.game_over()) {
                 document.getElementById('status-text').innerText = 'Game Over';
-                document.querySelector('.status-dot').style.background = '#ff0000';
+                document.querySelectorAll('.status-dot').forEach(d => d.style.background = '#ff3b30');
+                sounds.gameEnd.play().catch(() => { });
+                saveGameToHistory(); // Save to local history
                 setTimeout(() => alert('Game Over!'), 200);
                 return;
             }
+            if (!clockInterval) startClocks();
 
             let mode = document.getElementById('play-mode').value;
             let aiSide = staticHumanSide === 'w' ? 'b' : 'w';
@@ -2420,7 +2935,7 @@
             // Start multiple worker searches (Divergent Engine Personalities based on IDs)
             let timeSec = parseFloat(document.getElementById('think-time').value);
             if (!Number.isFinite(timeSec) || timeSec <= 0) timeSec = 1.5;
-            
+
             // Watchdog: never allow "3s" to turn into "20s" due to a stuck worker.
             let token = activeSearchToken;
             setTimeout(() => {
@@ -2429,7 +2944,7 @@
                 // Give a short grace period to deliver 'done' messages, then play best-so-far.
                 setTimeout(() => {
                     if (!isThinking || token !== activeSearchToken) return;
-                    
+
                     // Fetch the absolute best move currently evaluated from the active lines
                     let m = null;
                     if (multiPV.length > 0) {
@@ -2478,16 +2993,16 @@
                     let evalNorm = (e.data.score * (game.turn() === 'w' ? 1 : -1) / 100);
                     if (!hasSmoothedEval) { smoothedEval = evalNorm; hasSmoothedEval = true; }
                     smoothedEval = smoothedEval * 0.85 + evalNorm * 0.15;
-                    
+
                     let displayScore = smoothedEval.toFixed(1);
                     if (Math.abs(smoothedEval) > 20) displayScore = "Mate";
-                    
+
                     document.getElementById('eval-bar-text').innerText = displayScore;
 
                     let fillPerc = 50 + (smoothedEval / 8) * 50;
                     fillPerc = Math.max(2, Math.min(98, fillPerc));
                     document.getElementById('eval-bar-fill').style.height = fillPerc + '%';
-                    
+
                     // Toggle text position based on who is winning
                     const textEl = document.getElementById('eval-bar-text');
                     if (fillPerc > 50) {
@@ -2525,7 +3040,7 @@
                 }
                 // Play as soon as ANY worker completes (they all searched the same moves)
                 if (isThinking && finishedWorkers === 1) {
-                    
+
                     // Fetch the absolute best move currently evaluated from the active lines
                     let m = null;
                     if (multiPV.length > 0) {
@@ -2540,7 +3055,10 @@
                     }
                     // Stop remaining workers immediately
                     for (let w of workers) w.postMessage({ cmd: 'stop', token: activeSearchToken });
-                    if (m) game.move({ from: m.substring(0, 2), to: m.substring(2, 4), promotion: m[4] || 'q' });
+                    if (m) {
+                        let moveObj = game.move({ from: m.substring(0, 2), to: m.substring(2, 4), promotion: m[4] || 'q' });
+                        playMoveSound(moveObj);
+                    }
                     finishAiMove();
                 }
             }
@@ -2572,6 +3090,11 @@
 
         function resetGame() {
             game.reset(); document.getElementById('bot-arrows').innerHTML = '';
+
+            whiteTime = 600; blackTime = 600;
+            updateClockDisplay('bottom', whiteTime);
+            updateClockDisplay('top', blackTime);
+            if (clockInterval) { clearInterval(clockInterval); clockInterval = null; }
 
             let uCol = document.getElementById('player-color').value;
             if (uCol === 'r') uCol = Math.random() > 0.5 ? 'w' : 'b';
