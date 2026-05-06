@@ -164,13 +164,22 @@
         /* --- PLAY VIEW --- */
         .play-grid {
             display: grid;
-            grid-template-columns: 1fr 360px;
-            gap: 32px;
-            padding: 32px;
-            max-width: 1400px;
+            grid-template-columns: 1fr 380px;
+            gap: 24px;
+            padding: 24px;
+            max-width: 1600px;
             margin: 0 auto;
             width: 100%;
             height: calc(100vh - 64px);
+            min-height: 0;
+            overflow: hidden; /* Ensure 100vh fit */
+        }
+
+        .board-section {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            height: 100%;
             min-height: 0;
         }
 
@@ -227,6 +236,7 @@
 
         #board {
             width: 100%;
+            max-height: 100%;
             border-radius: 4px;
             overflow: hidden;
             aspect-ratio: 1;
@@ -282,6 +292,8 @@
             display: flex;
             flex-direction: column;
             gap: 20px;
+            height: 100%;
+            min-height: 0;
         }
 
         .moves-panel {
@@ -2522,7 +2534,7 @@
         function snapToPresent() {
             viewingHistory = false;
             viewingIdx = -1;
-            board.position(game.fen(), false);
+            board.position(game.fen(), true);
             let hv = game.history({ verbose: true });
             if (hv.length > 0) highlightMove(hv[hv.length - 1].from, hv[hv.length - 1].to);
             else removeHighlights();
@@ -2661,10 +2673,13 @@
         function viewHistory(idx) {
             let h = game.history();
             if (idx >= h.length - 1 && !viewingHistory) { snapToPresent(); return; }
+            if (idx < -1) idx = -1;
+            if (idx >= h.length) idx = h.length - 1;
+            
             viewingIdx = idx;
             let temp = new Chess();
             for (let i = 0; i <= idx; i++) temp.move(h[i]);
-            board.position(temp.fen(), false);
+            board.position(temp.fen(), true);
             viewingHistory = true;
             removeHighlights();
             if (idx >= 0) {
@@ -2673,6 +2688,25 @@
             }
             updateLog();
         }
+
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                let h = game.history();
+                if (h.length === 0) return;
+                let current = viewingHistory ? viewingIdx : h.length - 1;
+                viewHistory(current - 1);
+            } else if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                let h = game.history();
+                if (!viewingHistory) return;
+                if (viewingIdx >= h.length - 1) {
+                    snapToPresent();
+                } else {
+                    viewHistory(viewingIdx + 1);
+                }
+            }
+        });
 
         function resign() {
             let win = game.turn() === 'w' ? 'b' : 'w';
@@ -3267,7 +3301,7 @@
             updateUI(); 
             resetGame();
             if (board) board.resize();
-        }, 300);
+        }, 500);
     </script>
 </body>
 
