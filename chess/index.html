@@ -83,14 +83,14 @@
         }
 
         .side-item:hover {
-            background: rgba(0,0,0,0.03);
+            background: rgba(0, 0, 0, 0.03);
             color: var(--text-main);
         }
 
         .side-item.active {
             background: #ffffff;
             color: var(--text-main);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
         }
 
         .side-item svg {
@@ -172,7 +172,8 @@
             width: 100%;
             height: calc(100vh - 64px);
             min-height: 0;
-            overflow: hidden; /* Ensure 100vh fit */
+            overflow: hidden;
+            /* Ensure 100vh fit */
         }
 
         .board-section {
@@ -192,6 +193,7 @@
                 height: auto;
                 overflow-y: auto;
             }
+
             .right-panel {
                 height: 500px;
             }
@@ -201,19 +203,24 @@
             header {
                 padding: 0 16px;
             }
+
             .header-search {
                 display: none;
             }
+
             .play-grid {
                 padding: 8px;
                 gap: 12px;
             }
+
             .board-wrapper {
                 padding: 6px;
             }
+
             .right-panel {
                 height: 400px;
             }
+
             .player-timer {
                 min-width: 60px;
                 font-size: 0.9rem;
@@ -430,9 +437,11 @@
         }
 
         /* --- HIGHLIGHTS --- */
-        .highlight-white, .highlight-black {
+        .highlight-white,
+        .highlight-black {
             box-shadow: inset 0 0 0 3px var(--accent) !important;
         }
+
         .highlight-selected {
             background-color: rgba(52, 199, 89, 0.2) !important;
         }
@@ -440,7 +449,10 @@
         /* --- OVERLAYS --- */
         .overlay {
             position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
             background: rgba(0, 0, 0, 0.1);
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
@@ -457,6 +469,18 @@
             border-radius: 24px;
             padding: 32px;
             box-shadow: 0 20px 80px rgba(0, 0, 0, 0.1);
+            animation: modalFadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .modal-card.win { border: 2px solid rgba(52, 199, 89, 0.3); box-shadow: 0 0 40px rgba(52, 199, 89, 0.1), 0 20px 80px rgba(0, 0, 0, 0.1); }
+        .modal-card.loss { border: 2px solid rgba(255, 59, 48, 0.3); box-shadow: 0 0 40px rgba(255, 59, 48, 0.1), 0 20px 80px rgba(0, 0, 0, 0.1); }
+        .modal-card.draw { border: 2px solid rgba(0, 113, 227, 0.3); box-shadow: 0 0 40px rgba(0, 113, 227, 0.1), 0 20px 80px rgba(0, 0, 0, 0.1); }
+
+        @keyframes modalFadeIn {
+            from { opacity: 0; transform: scale(0.95) translateY(20px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
         }
 
         .eval-bar {
@@ -469,6 +493,7 @@
             flex-shrink: 0;
             margin-right: 12px;
         }
+
         #eval-bar-fill {
             position: absolute;
             bottom: 0;
@@ -478,6 +503,7 @@
             background: #ffffff;
             transition: height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
         }
+
         #eval-bar-text {
             position: absolute;
             width: 100%;
@@ -488,13 +514,20 @@
             z-index: 2;
             mix-blend-mode: difference;
         }
-        #eval-bar-text.top { top: 4px; }
-        #eval-bar-text.bottom { bottom: 4px; }
+
+        #eval-bar-text.top {
+            top: 4px;
+        }
+
+        #eval-bar-text.bottom {
+            bottom: 4px;
+        }
 
         @media (max-width: 1100px) {
             .play-grid {
                 grid-template-columns: 1fr;
             }
+
             .right-panel {
                 max-width: 500px;
                 margin: 0 auto;
@@ -514,23 +547,40 @@
         </div>
 
         <div class="side-item active" onclick="switchView('play'); setMode('ai')">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+            </svg>
             Play Online
         </div>
         <div class="side-item" onclick="toggleLobby(true)">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+            </svg>
             Play Friends
         </div>
         <div class="side-item" onclick="switchView('study')">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+            </svg>
             Study Lab
         </div>
         <div class="side-item" onclick="switchView('rankings')">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20V14"/></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path d="M18 20V10" />
+                <path d="M12 20V4" />
+                <path d="M6 20V14" />
+            </svg>
             History
         </div>
         <div class="side-item" onclick="switchView('profile')">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
+            </svg>
             Profile
         </div>
 
@@ -542,19 +592,25 @@
     <div id="main-layout">
         <header>
             <div class="header-search">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                    <circle cx="11" cy="11" r="8" />
+                    <path d="M21 21l-4.35-4.35" />
+                </svg>
                 <input type="text" placeholder="Search tournaments...">
             </div>
 
             <div class="header-actions">
                 <div class="action-icon" onclick="toggleSettings(true)">
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                        <circle cx="12" cy="12" r="3" />
+                        <path
+                            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
                     </svg>
                 </div>
                 <div class="action-icon">
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+                        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                        <path d="M13.73 21a2 2 0 0 1-3.46 0" />
                     </svg>
                 </div>
             </div>
@@ -567,7 +623,10 @@
                     <div class="player-card">
                         <div class="player-info">
                             <div class="player-avatar">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2.5">
+                                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+                                </svg>
                             </div>
                             <div style="display:flex; flex-direction:column; gap:4px;">
                                 <div style="display:flex; align-items:center; gap:8px;">
@@ -588,9 +647,12 @@
                         <div id="board-container" style="flex:1; position: relative; min-width: 0;">
                             <div class="board-inner">
                                 <div id="board"></div>
-                                <svg id="arrow-svg" style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:10;"></svg>
-                                <svg id="bot-arrows" style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:11;"></svg>
-                                <svg id="user-arrows" style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:12;"></svg>
+                                <svg id="arrow-svg"
+                                    style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:10;"></svg>
+                                <svg id="bot-arrows"
+                                    style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:11;"></svg>
+                                <svg id="user-arrows"
+                                    style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:12;"></svg>
                             </div>
                         </div>
                     </div>
@@ -598,7 +660,11 @@
                     <div class="player-card">
                         <div class="player-info">
                             <div class="player-avatar" style="background:#0071e3; color:white;">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2.5">
+                                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                                    <circle cx="12" cy="7" r="4" />
+                                </svg>
                             </div>
                             <div style="display:flex; flex-direction:column; gap:4px;">
                                 <div style="display:flex; align-items:center; gap:8px;">
@@ -627,19 +693,28 @@
                     </div>
 
                     <div class="glass-panel" style="padding: 16px;">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                            <div style="font-size:0.75rem; color:var(--text-secondary); font-weight:700; text-transform:uppercase;">Live Analysis</div>
-                            <div class="status-dot" style="width:8px; height:8px; background:#81b64c; border-radius:50%;"></div>
+                        <div
+                            style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                            <div
+                                style="font-size:0.75rem; color:var(--text-secondary); font-weight:700; text-transform:uppercase;">
+                                Live Analysis</div>
+                            <div class="status-dot"
+                                style="width:8px; height:8px; background:#81b64c; border-radius:50%;"></div>
                         </div>
-                        <div id="status-text" style="font-weight:600; font-size:0.9rem; margin-bottom:4px;">White to move</div>
-                        <div id="engine-status" style="font-size:0.75rem; color:var(--text-secondary); margin-bottom:12px;">Engine Ready</div>
-                        
-                        <div style="display:flex; justify-content:space-between; font-size:0.7rem; color:var(--text-secondary); margin-bottom:8px;">
+                        <div id="status-text" style="font-weight:600; font-size:0.9rem; margin-bottom:4px;">White to
+                            move</div>
+                        <div id="engine-status"
+                            style="font-size:0.75rem; color:var(--text-secondary); margin-bottom:12px;">Engine Ready
+                        </div>
+
+                        <div
+                            style="display:flex; justify-content:space-between; font-size:0.7rem; color:var(--text-secondary); margin-bottom:8px;">
                             <span>Nodes/s: <b id="nps-val" style="color:var(--text-main)">0</b>k</span>
                             <span>TB Hits: <b id="tb-hits" style="color:var(--text-main)">0</b></span>
                         </div>
 
-                        <div id="commentary" style="font-size:0.85rem; line-height:1.5; color:var(--text-main); min-height:60px; padding:10px; background:rgba(0,0,0,0.02); border-radius:8px; margin-bottom:10px;">
+                        <div id="commentary"
+                            style="font-size:0.85rem; line-height:1.5; color:var(--text-main); min-height:60px; padding:10px; background:rgba(0,0,0,0.02); border-radius:8px; margin-bottom:10px;">
                             Waiting for calculation...
                         </div>
                         <div id="threat-area" style="font-size:0.75rem; color:#d32f2f; font-weight:600;"></div>
@@ -652,11 +727,13 @@
         <div id="rankings-view" class="view-container">
             <div style="padding: 60px; max-width: 1000px; width: 100%; margin: 0 auto;">
                 <h1 style="font-size: 2.5rem; letter-spacing: -1.5px; margin-bottom: 8px;">Game History</h1>
-                <p style="color:var(--text-secondary); margin-bottom: 40px;">Review your tactical evolution and previous encounters.</p>
-                
+                <p style="color:var(--text-secondary); margin-bottom: 40px;">Review your tactical evolution and previous
+                    encounters.</p>
+
                 <div class="glass-panel" style="padding:0; overflow:hidden;">
                     <table style="width:100%; border-collapse: collapse; text-align: left;">
-                        <thead style="background:rgba(0,0,0,0.02); font-size:0.7rem; text-transform:uppercase; letter-spacing:1px; color:var(--text-secondary);">
+                        <thead
+                            style="background:rgba(0,0,0,0.02); font-size:0.7rem; text-transform:uppercase; letter-spacing:1px; color:var(--text-secondary);">
                             <tr>
                                 <th style="padding:20px 24px; border-bottom:var(--border-light);">Date</th>
                                 <th style="padding:20px 24px; border-bottom:var(--border-light);">Opponent</th>
@@ -667,7 +744,8 @@
                         </thead>
                         <tbody id="history-body">
                             <tr>
-                                <td colspan="5" style="padding:40px; text-align:center; color:var(--text-secondary);">No games played yet. Start a new match to build your history.</td>
+                                <td colspan="5" style="padding:40px; text-align:center; color:var(--text-secondary);">No
+                                    games played yet. Start a new match to build your history.</td>
                             </tr>
                         </tbody>
                     </table>
@@ -679,12 +757,15 @@
         <div id="study-view" class="view-container">
             <div style="padding: 60px; max-width: 1000px; width: 100%; margin: 0 auto;">
                 <h1 style="font-size: 2.5rem; letter-spacing: -1.5px; margin-bottom: 8px;">Study Lab</h1>
-                <p style="color:var(--text-secondary); margin-bottom: 40px;">Load FEN or PGN data to analyze specific positions or masterclass games.</p>
+                <p style="color:var(--text-secondary); margin-bottom: 40px;">Load FEN or PGN data to analyze specific
+                    positions or masterclass games.</p>
 
                 <div class="glass-panel">
                     <div style="margin-bottom:24px;">
-                        <label style="display:block; font-weight:700; margin-bottom:8px; font-size:0.85rem;">Input Game Data</label>
-                        <textarea id="pgn-input" placeholder="Paste PGN or FEN here..." style="width:100%; height:160px; border-radius:12px; border:var(--border-light); padding:16px; font-family: 'SF Mono', monospace; font-size:0.9rem; resize:none;"></textarea>
+                        <label style="display:block; font-weight:700; margin-bottom:8px; font-size:0.85rem;">Input Game
+                            Data</label>
+                        <textarea id="pgn-input" placeholder="Paste PGN or FEN here..."
+                            style="width:100%; height:160px; border-radius:12px; border:var(--border-light); padding:16px; font-family: 'SF Mono', monospace; font-size:0.9rem; resize:none;"></textarea>
                     </div>
                     <button class="primary" style="width:100%" onclick="loadStudyData()">Load into Analysis</button>
                 </div>
@@ -695,7 +776,9 @@
         <div id="profile-view" class="view-container">
             <div style="padding: 60px; max-width: 1000px; width: 100%; margin: 0 auto;">
                 <div style="display:flex; align-items:center; gap:32px; margin-bottom:48px;">
-                    <div style="width:120px; height:120px; border-radius:30px; background:var(--text-main); color:white; display:flex; align-items:center; justify-content:center; font-size:3rem; font-weight:800;">GP</div>
+                    <div
+                        style="width:120px; height:120px; border-radius:30px; background:var(--text-main); color:white; display:flex; align-items:center; justify-content:center; font-size:3rem; font-weight:800;">
+                        GP</div>
                     <div>
                         <h1 style="font-size: 2.5rem; letter-spacing: -1.5px; margin-bottom: 4px;">Guest Player</h1>
                         <p style="color:var(--accent); font-weight:700;">PRO MEMBER</p>
@@ -704,15 +787,21 @@
 
                 <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:24px; margin-bottom:48px;">
                     <div class="glass-panel" style="text-align:center;">
-                        <div style="font-size:0.75rem; color:var(--text-secondary); text-transform:uppercase; font-weight:700; margin-bottom:8px;">Blitz Rating</div>
+                        <div
+                            style="font-size:0.75rem; color:var(--text-secondary); text-transform:uppercase; font-weight:700; margin-bottom:8px;">
+                            Blitz Rating</div>
                         <div style="font-size:1.8rem; font-weight:800;">1850</div>
                     </div>
                     <div class="glass-panel" style="text-align:center;">
-                        <div style="font-size:0.75rem; color:var(--text-secondary); text-transform:uppercase; font-weight:700; margin-bottom:8px;">Win Rate</div>
+                        <div
+                            style="font-size:0.75rem; color:var(--text-secondary); text-transform:uppercase; font-weight:700; margin-bottom:8px;">
+                            Win Rate</div>
                         <div style="font-size:1.8rem; font-weight:800; color:var(--highlight);">64%</div>
                     </div>
                     <div class="glass-panel" style="text-align:center;">
-                        <div style="font-size:0.75rem; color:var(--text-secondary); text-transform:uppercase; font-weight:700; margin-bottom:8px;">Tactical ELO</div>
+                        <div
+                            style="font-size:0.75rem; color:var(--text-secondary); text-transform:uppercase; font-weight:700; margin-bottom:8px;">
+                            Tactical ELO</div>
                         <div style="font-size:1.8rem; font-weight:800;">2240</div>
                     </div>
                 </div>
@@ -720,17 +809,23 @@
                 <h2 style="font-size:1.2rem; margin-bottom:20px;">Recent Achievements</h2>
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
                     <div class="glass-panel" style="display:flex; align-items:center; gap:16px;">
-                        <div style="width:48px; height:48px; border-radius:12px; background:#fff2cc; display:flex; align-items:center; justify-content:center; color:#f1c40f; font-size:1.5rem;">🏆</div>
+                        <div
+                            style="width:48px; height:48px; border-radius:12px; background:#fff2cc; display:flex; align-items:center; justify-content:center; color:#f1c40f;">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg></div>
                         <div>
                             <div style="font-weight:700; font-size:0.9rem;">Blitz Master</div>
-                            <div style="font-size:0.75rem; color:var(--text-secondary);">Won 10 consecutive blitz games.</div>
+                            <div style="font-size:0.75rem; color:var(--text-secondary);">Won 10 consecutive blitz games.
+                            </div>
                         </div>
                     </div>
                     <div class="glass-panel" style="display:flex; align-items:center; gap:16px;">
-                        <div style="width:48px; height:48px; border-radius:12px; background:#e1f5fe; display:flex; align-items:center; justify-content:center; color:#03a9f4; font-size:1.5rem;">🧠</div>
+                        <div
+                            style="width:48px; height:48px; border-radius:12px; background:#e1f5fe; display:flex; align-items:center; justify-content:center; color:#03a9f4;">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.5 2A5.5 5.5 0 0 0 4 7.5a5.503 5.503 0 0 0 4.293 5.372c.49.124.96.48 1.135.955L10 16h4l.572-2.173c.175-.475.645-.83.135-.955A5.503 5.503 0 0 0 20 7.5 5.5 5.5 0 0 0 14.5 2h-5z"/></svg></div>
                         <div>
                             <div style="font-weight:700; font-size:0.9rem;">Tactical Genius</div>
-                            <div style="font-size:0.75rem; color:var(--text-secondary);">Solved 500+ puzzles with 90% accuracy.</div>
+                            <div style="font-size:0.75rem; color:var(--text-secondary);">Solved 500+ puzzles with 90%
+                                accuracy.</div>
                         </div>
                     </div>
                 </div>
@@ -743,26 +838,33 @@
         <div class="modal-card">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
                 <h2 style="margin:0; font-size:1.5rem; letter-spacing:-0.5px;">Multiplayer Lobby</h2>
-                <svg onclick="toggleLobby(false)" width="24" height="24" viewBox="0 0 24 24" style="cursor:pointer; color:var(--text-secondary);"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                <svg onclick="toggleLobby(false)" width="24" height="24" viewBox="0 0 24 24"
+                    style="cursor:pointer; color:var(--text-secondary);">
+                    <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                </svg>
             </div>
-            <p style="color:var(--text-secondary); font-size:0.9rem; margin-bottom:24px;">Direct P2P connection. Share your ID with a friend to start playing.</p>
-            
+            <p style="color:var(--text-secondary); font-size:0.9rem; margin-bottom:24px;">Direct P2P connection. Share
+                your ID with a friend to start playing.</p>
+
             <div id="lobby-status">
-                <button class="primary" onclick="createRoom()" style="width:100%; margin-bottom:12px;">Host New Match</button>
+                <button class="primary" onclick="createRoom()" style="width:100%; margin-bottom:12px;">Host New
+                    Match</button>
                 <div style="display:flex; gap:8px; margin-top:20px;">
-                    <input type="text" id="room-id-input" placeholder="Paste Friend's ID" style="flex:1; padding:12px; border-radius:10px; border:var(--border-light); background:#f9f9f9; outline:none;">
+                    <input type="text" id="room-id-input" placeholder="Paste Friend's ID"
+                        style="flex:1; padding:12px; border-radius:10px; border:var(--border-light); background:#f9f9f9; outline:none;">
                     <button class="primary" style="padding:0 24px;" onclick="joinRoom()">Join</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- OVERLAY: GAME OVER -->
     <div id="game-over-overlay" class="overlay">
-        <div class="modal-card" style="text-align: center;">
-            <div id="game-over-icon" style="font-size: 4rem; margin-bottom: 20px;">🏆</div>
+        <div id="game-over-card" class="modal-card" style="text-align: center;">
+            <div id="game-over-icon" style="margin-bottom: 20px; display: flex; justify-content: center; color: var(--accent);"></div>
             <h2 id="game-over-title" style="font-size: 1.8rem; font-weight: 800; margin-bottom: 12px;">Checkmate!</h2>
-            <p id="game-over-msg" style="color: var(--text-secondary); margin-bottom: 32px; font-size: 1.1rem; line-height: 1.5;">White has won the game by checkmate.</p>
+            <p id="game-over-msg"
+                style="color: var(--text-secondary); margin-bottom: 32px; font-size: 1.1rem; line-height: 1.5;">White
+                has won the game by checkmate.</p>
             <div style="display: flex; gap: 12px;">
                 <button class="primary" onclick="closeGameOver(); resetGame();" style="flex: 1;">New Game</button>
                 <button class="secondary" onclick="closeGameOver()" style="flex: 1;">Analyze</button>
@@ -775,27 +877,38 @@
         <div class="modal-card">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
                 <h2 style="margin:0; font-size:1.5rem; letter-spacing:-0.5px;">Preferences</h2>
-                <svg onclick="toggleSettings(false)" width="24" height="24" viewBox="0 0 24 24" style="cursor:pointer; color:var(--text-secondary);"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                <svg onclick="toggleSettings(false)" width="24" height="24" viewBox="0 0 24 24"
+                    style="cursor:pointer; color:var(--text-secondary);">
+                    <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                </svg>
             </div>
 
-            <div style="display:flex; flex-direction:column; gap:20px; max-height: 70vh; overflow-y: auto; padding-right: 10px;">
+            <div
+                style="display:flex; flex-direction:column; gap:20px; max-height: 70vh; overflow-y: auto; padding-right: 10px;">
                 <div>
-                    <label style="display:block; font-size:0.75rem; font-weight:700; color:var(--text-secondary); text-transform:uppercase; margin-bottom:8px;">
+                    <label
+                        style="display:block; font-size:0.75rem; font-weight:700; color:var(--text-secondary); text-transform:uppercase; margin-bottom:8px;">
                         Engine Think Time: <span id="think-time-val" style="color:var(--accent)">5</span>s
                     </label>
-                    <input type="range" id="think-time" min="0.1" max="15" step="0.1" value="5" style="width:100%;" oninput="updateUI()">
-                </div>
-                
-                <div>
-                    <label style="display:block; font-size:0.75rem; font-weight:700; color:var(--text-secondary); text-transform:uppercase; margin-bottom:8px;">
-                        CPU Threads: <span id="threads-val" style="color:var(--accent)">Auto</span>
-                    </label>
-                    <input type="range" id="threads" min="1" max="16" step="1" value="4" style="width:100%;" oninput="updateUI()">
+                    <input type="range" id="think-time" min="0.1" max="15" step="0.1" value="5" style="width:100%;"
+                        oninput="updateUI()">
                 </div>
 
                 <div>
-                    <label style="display:block; font-size:0.75rem; font-weight:700; color:var(--text-secondary); text-transform:uppercase; margin-bottom:8px;">Board Theme</label>
-                    <select id="board-theme" onchange="applyThemes()" style="width:100%; padding:12px; border-radius:10px; border:var(--border-light); background:#f9f9f9;">
+                    <label
+                        style="display:block; font-size:0.75rem; font-weight:700; color:var(--text-secondary); text-transform:uppercase; margin-bottom:8px;">
+                        CPU Threads: <span id="threads-val" style="color:var(--accent)">Auto</span>
+                    </label>
+                    <input type="range" id="threads" min="1" max="16" step="1" value="4" style="width:100%;"
+                        oninput="updateUI()">
+                </div>
+
+                <div>
+                    <label
+                        style="display:block; font-size:0.75rem; font-weight:700; color:var(--text-secondary); text-transform:uppercase; margin-bottom:8px;">Board
+                        Theme</label>
+                    <select id="board-theme" onchange="applyThemes()"
+                        style="width:100%; padding:12px; border-radius:10px; border:var(--border-light); background:#f9f9f9;">
                         <option value="minimalist">Minimalist White</option>
                         <option value="classic">Classic Club</option>
                         <option value="wood">Professional Wood</option>
@@ -804,8 +917,11 @@
                 </div>
 
                 <div>
-                    <label style="display:block; font-size:0.75rem; font-weight:700; color:var(--text-secondary); text-transform:uppercase; margin-bottom:8px;">Play Mode</label>
-                    <select id="play-mode" onchange="resetGame()" style="width:100%; padding:12px; border-radius:10px; border:var(--border-light); background:#f9f9f9;">
+                    <label
+                        style="display:block; font-size:0.75rem; font-weight:700; color:var(--text-secondary); text-transform:uppercase; margin-bottom:8px;">Play
+                        Mode</label>
+                    <select id="play-mode" onchange="resetGame()"
+                        style="width:100%; padding:12px; border-radius:10px; border:var(--border-light); background:#f9f9f9;">
                         <option value="human">Player vs AI</option>
                         <option value="stockfish">Player vs Stockfish (Cloud)</option>
                         <option value="ai-self">AI vs AI (Self Play)</option>
@@ -813,8 +929,11 @@
                 </div>
 
                 <div>
-                    <label style="display:block; font-size:0.75rem; font-weight:700; color:var(--text-secondary); text-transform:uppercase; margin-bottom:8px;">Your Color</label>
-                    <select id="player-color" onchange="resetGame()" style="width:100%; padding:12px; border-radius:10px; border:var(--border-light); background:#f9f9f9;">
+                    <label
+                        style="display:block; font-size:0.75rem; font-weight:700; color:var(--text-secondary); text-transform:uppercase; margin-bottom:8px;">Your
+                        Color</label>
+                    <select id="player-color" onchange="resetGame()"
+                        style="width:100%; padding:12px; border-radius:10px; border:var(--border-light); background:#f9f9f9;">
                         <option value="w">White</option>
                         <option value="b">Black</option>
                         <option value="r">Random</option>
@@ -822,8 +941,10 @@
                 </div>
 
                 <div>
-                    <label style="display:block; font-size:0.75rem; font-weight:700; color:var(--text-secondary); text-transform:uppercase; margin-bottom:8px;">Difficulty</label>
-                    <select id="min-depth" style="width:100%; padding:12px; border-radius:10px; border:var(--border-light); background:#f9f9f9;">
+                    <label
+                        style="display:block; font-size:0.75rem; font-weight:700; color:var(--text-secondary); text-transform:uppercase; margin-bottom:8px;">Difficulty</label>
+                    <select id="min-depth"
+                        style="width:100%; padding:12px; border-radius:10px; border:var(--border-light); background:#f9f9f9;">
                         <option value="1">Beginner (1)</option>
                         <option value="4">Intermediate (4)</option>
                         <option value="8">Expert (8)</option>
@@ -843,8 +964,9 @@
                     </label>
                 </div>
             </div>
-            
-            <button class="primary" style="width:100%; margin-top:24px;" onclick="toggleSettings(false)">Apply Settings</button>
+
+            <button class="primary" style="width:100%; margin-top:24px;" onclick="toggleSettings(false)">Apply
+                Settings</button>
         </div>
     </div>
 
@@ -2002,7 +2124,7 @@
             if (peer) return;
             // PeerJS public server is free and requires no API key for basic usage.
             peer = new Peer();
-            
+
             peer.on('open', (id) => {
                 console.log('Peer ID:', id);
                 if (currentMode === 'multiplayer' && playerSide === 'w') {
@@ -2103,7 +2225,7 @@
             playerSide = 'b';
             staticHumanSide = 'b';
             initPeer();
-            
+
             const join = () => {
                 conn = peer.connect(id);
                 setupConnection(conn);
@@ -2211,7 +2333,7 @@
             const history = JSON.parse(localStorage.getItem('chess_lab_history') || '[]');
             const tbody = document.getElementById('history-body');
             if (history.length === 0) return;
-            
+
             tbody.innerHTML = history.map(g => `
                 <tr>
                     <td style="padding:20px 24px; border-bottom:1px solid rgba(0,0,0,0.02); font-size:0.9rem;">${g.date}</td>
@@ -2323,7 +2445,7 @@
         function updateUI() {
             let thinkVal = document.getElementById('think-time-val');
             if (thinkVal) thinkVal.innerText = document.getElementById('think-time').value;
-            
+
             let threadsEl = document.getElementById('threads');
             let raw = Number(threadsEl.value);
             let auto = autoThreadCount();
@@ -2333,7 +2455,7 @@
 
             const threadsValEl = document.getElementById('threads-val');
             if (threadsValEl) threadsValEl.innerText = useAuto ? 'Auto' : String(numThreads);
-            
+
             // Sync with first version's variable names if any
             thinkTime = parseFloat(document.getElementById('think-time').value);
             useBook = document.getElementById('use-book')?.checked || false;
@@ -2442,8 +2564,8 @@
             board = Chessboard('board', {
                 position: game.fen(),
                 draggable: true,
-                // Lichess 'cburnett' set for a professional, engineered look.
-                pieceTheme: 'https://lichess1.org/assets/piece/cburnett/{piece}.svg',
+                // Using 'cburnett' set for a professional, engineered look.
+                pieceTheme: 'https://thepollitosd.github.io/chess/pieces/cburnett/{piece}.svg',
                 onDragStart: (a, p) => {
                     if (viewingHistory) { snapToPresent(); return false; }
                     if (game.game_over()) return false;
@@ -2591,7 +2713,7 @@
                         board.position(game.fen());
                         updateLog();
                         const botArrows = document.getElementById('bot-arrows');
-                    if (botArrows) botArrows.innerHTML = '';
+                        if (botArrows) botArrows.innerHTML = '';
                         triggerNextTurn();
                     } else {
                         let p = game.get(sq);
@@ -2699,7 +2821,7 @@
             if (idx >= h.length - 1 && !viewingHistory) { snapToPresent(); return; }
             if (idx < -1) idx = -1;
             if (idx >= h.length) idx = h.length - 1;
-            
+
             viewingIdx = idx;
             let temp = new Chess();
             for (let i = 0; i <= idx; i++) temp.move(h[i]);
@@ -2758,7 +2880,7 @@
                 else if (c >= 'A' && c <= 'Z') blackCaptured[c.toLowerCase()]--;
             }
 
-            const getImg = (p) => `https://lichess1.org/assets/piece/cburnett/${p}.svg`;
+            const getImg = (p) => `https://thepollitosd.github.io/chess/pieces/cburnett/${p}.svg`;
 
             let wHTML = '', bHTML = '';
             const order = ['q', 'r', 'b', 'n', 'p'];
@@ -2837,7 +2959,7 @@
                     setTimeout(() => {
                         try {
                             highlightMove(hv[hv.length - 1].from, hv[hv.length - 1].to);
-                        } catch (e) {}
+                        } catch (e) { }
                     }, 50);
                 }
             }
@@ -2978,7 +3100,7 @@
                 document.getElementById('status-text').innerText = 'Game Over';
                 document.querySelectorAll('.status-dot').forEach(d => d.style.background = '#ff3b30');
                 sounds.gameEnd.play().catch(() => { });
-                saveGameToHistory(); 
+                saveGameToHistory();
 
                 let title = "Game Over";
                 let msg = "The game has ended.";
@@ -3185,11 +3307,11 @@
                 }
 
                 // Display depth header + top 4 lines in commentary
-                let depthHeader = `<div style="font-size:0.8em; color:#aaa; margin-bottom:4px; font-family:monospace;">🔍 Depth: <b style="color:#00e5ff">${e.data.depth}</b> | Nodes: ${(e.data.nodes / 1000).toFixed(0)}k</div>`;
+                let depthHeader = `<div style="font-size:0.8em; color:#aaa; margin-bottom:4px; font-family:monospace;">Depth: <b style="color:#00e5ff">${e.data.depth}</b> | Nodes: ${(e.data.nodes / 1000).toFixed(0)}k</div>`;
                 let lines = multiPV.slice(0, 4).map((x, i) => {
                     let scoreSign = x.score > 0 ? "+" : "";
                     let scoreText = Math.abs(x.score) > 30000 ? "Mate" : (x.score / 100).toFixed(2);
-                    let label = i === 0 ? `<span style="color:#00e5ff">▶ Line ${i + 1}</span>` : `Line ${i + 1}`;
+                    let label = i === 0 ? `<span style="color:#00e5ff">Line ${i + 1}</span>` : `Line ${i + 1}`;
                     return `<div style="margin-bottom:2px; font-family:monospace;">${label}: <b>${x.move}</b> <span style="color:#aaa">(${scoreSign}${scoreText}) d${x.depth}</span></div>`;
                 }).join('');
                 const commEl = document.getElementById('commentary');
@@ -3256,9 +3378,9 @@
         }
 
         function finishAiMove() {
-            isThinking = false; 
+            isThinking = false;
             viewingIdx = game.history().length - 1;
-            board.position(game.fen()); 
+            board.position(game.fen());
             updateLog();
             document.getElementById('status-text').innerText = 'Your Turn';
             document.querySelector('.status-dot').style.background = '#81b64c';
@@ -3266,7 +3388,7 @@
         }
 
         function resetGame() {
-            game.reset(); 
+            game.reset();
             const botArrows = document.getElementById('bot-arrows');
             if (botArrows) botArrows.innerHTML = '';
 
@@ -3281,7 +3403,7 @@
             staticHumanSide = uCol;
 
             viewingIdx = -1;
-            applyThemes(); 
+            applyThemes();
             updateLog();
             if (board) board.orientation(uCol === 'w' ? 'white' : 'black');
 
@@ -3314,13 +3436,23 @@
 
         function showGameOver(title, msg, win) {
             const overlay = document.getElementById('game-over-overlay');
-            const icon = document.getElementById('game-over-icon');
-            const tEl = document.getElementById('game-over-title');
-            const mEl = document.getElementById('game-over-msg');
+            const card = document.getElementById('game-over-card');
 
-            if (win === 'w') icon.innerText = '🏆';
-            else if (win === 'b') icon.innerText = '🏆';
-            else icon.innerText = '🤝';
+            card.classList.remove('win', 'loss', 'draw');
+            
+            let iconSVG = '';
+            if (win === playerSide) {
+                card.classList.add('win');
+                iconSVG = `<svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#34c759" stroke-width="2"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>`;
+            } else if (win === 'd') {
+                card.classList.add('draw');
+                iconSVG = `<svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="2"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></svg>`;
+            } else {
+                card.classList.add('loss');
+                iconSVG = `<svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#ff3b30" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M16 16s-1.5-2-4-2-4 2-4 2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>`;
+            }
+
+            icon.innerHTML = iconSVG;
 
             tEl.innerText = title;
             mEl.innerText = msg;
@@ -3336,7 +3468,7 @@
         });
 
         setTimeout(() => {
-            updateUI(); 
+            updateUI();
             resetGame();
             if (board) board.resize();
         }, 500);
