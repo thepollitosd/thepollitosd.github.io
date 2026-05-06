@@ -234,13 +234,19 @@
             min-height: 0;
         }
 
-        #board {
+        .board-inner {
             width: 100%;
             max-width: min(100%, calc(100vh - 260px));
             margin: 0 auto;
+            position: relative;
+            aspect-ratio: 1;
+        }
+
+        #board {
+            width: 100%;
+            height: 100%;
             border-radius: 4px;
             overflow: hidden;
-            aspect-ratio: 1;
         }
 
         /* --- PLAYER CARDS --- */
@@ -580,10 +586,12 @@
                             <div id="eval-bar-text" class="top">0.0</div>
                         </div>
                         <div id="board-container" style="flex:1; position: relative; min-width: 0;">
-                            <div id="board" style="width:100%;"></div>
-                            <svg id="arrow-svg" style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:10;"></svg>
-                            <svg id="bot-arrows" style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:11;"></svg>
-                            <svg id="user-arrows" style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:12;"></svg>
+                            <div class="board-inner">
+                                <div id="board"></div>
+                                <svg id="arrow-svg" style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:10;"></svg>
+                                <svg id="bot-arrows" style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:11;"></svg>
+                                <svg id="user-arrows" style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:12;"></svg>
+                            </div>
                         </div>
                     </div>
 
