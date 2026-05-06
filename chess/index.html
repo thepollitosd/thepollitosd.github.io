@@ -518,7 +518,11 @@
                             <div id="eval-bar-fill"></div>
                             <div id="eval-bar-text" class="top">0.0</div>
                         </div>
-                        <div id="board" style="flex:1;"></div>
+                        <div id="board" style="flex:1; position: relative;">
+                            <svg id="arrow-svg" style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:10;"></svg>
+                            <svg id="bot-arrows" style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:11;"></svg>
+                            <svg id="user-arrows" style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:12;"></svg>
+                        </div>
                     </div>
 
                     <div class="player-card">
@@ -560,6 +564,11 @@
                         <div id="status-text" style="font-weight:600; font-size:0.9rem; margin-bottom:4px;">White to move</div>
                         <div id="engine-status" style="font-size:0.75rem; color:var(--text-secondary); margin-bottom:12px;">Engine Ready</div>
                         
+                        <div style="display:flex; justify-content:space-between; font-size:0.7rem; color:var(--text-secondary); margin-bottom:8px;">
+                            <span>Nodes/s: <b id="nps-val" style="color:var(--text-main)">0</b>k</span>
+                            <span>TB Hits: <b id="tb-hits" style="color:var(--text-main)">0</b></span>
+                        </div>
+
                         <div id="commentary" style="font-size:0.85rem; line-height:1.5; color:var(--text-main); min-height:60px; padding:10px; background:rgba(0,0,0,0.02); border-radius:8px; margin-bottom:10px;">
                             Waiting for calculation...
                         </div>
@@ -3009,7 +3018,8 @@
                 document.getElementById('commentary').innerHTML = depthHeader + (lines || "<i>Analyzing...</i>");
 
                 let timeTaken = Math.max(1, (Date.now() - window.searchStartGlobal)) / 1000;
-                document.getElementById('nps-val').innerText = (e.data.nodes / timeTaken / 1000).toFixed(1);
+                const npsEl = document.getElementById('nps-val');
+                if (npsEl) npsEl.innerText = (e.data.nodes / timeTaken / 1000).toFixed(1);
 
                 drawArrow(e.data.move);
 
@@ -3075,22 +3085,27 @@
         }
 
         function resetGame() {
-            game.reset(); document.getElementById('bot-arrows').innerHTML = '';
+            game.reset(); 
+            const botArrows = document.getElementById('bot-arrows');
+            if (botArrows) botArrows.innerHTML = '';
 
             whiteTime = 600; blackTime = 600;
             updateClockDisplay('bottom', whiteTime);
             updateClockDisplay('top', blackTime);
             if (clockInterval) { clearInterval(clockInterval); clockInterval = null; }
 
-            let uCol = document.getElementById('player-color').value;
+            const colorEl = document.getElementById('player-color');
+            let uCol = colorEl ? colorEl.value : 'w';
             if (uCol === 'r') uCol = Math.random() > 0.5 ? 'w' : 'b';
             staticHumanSide = uCol;
 
             applyThemes(); updateLog();
-            board.orientation(uCol === 'w' ? 'white' : 'black');
+            if (board) board.orientation(uCol === 'w' ? 'white' : 'black');
 
-            document.getElementById('eval-bar-fill').style.height = '50%';
-            document.getElementById('eval-bar-text').innerText = '0.0';
+            const fillEl = document.getElementById('eval-bar-fill');
+            if (fillEl) fillEl.style.height = '50%';
+            const textEl = document.getElementById('eval-bar-text');
+            if (textEl) textEl.innerText = '0.0';
 
             setTimeout(triggerNextTurn, 300);
         }
