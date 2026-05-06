@@ -236,7 +236,8 @@
 
         #board {
             width: 100%;
-            max-height: 100%;
+            max-width: min(100%, calc(100vh - 260px));
+            margin: 0 auto;
             border-radius: 4px;
             overflow: hidden;
             aspect-ratio: 1;
@@ -2041,6 +2042,19 @@
                     game.load(data.fen);
                     board.position(data.fen);
                     updateLog();
+                } else if (data.type === 'reset') {
+                    game.reset();
+                    board.position('start');
+                    updateLog();
+                } else if (data.type === 'resign') {
+                    showGameOver("Opponent Resigned", "Your opponent has resigned the match.", playerSide);
+                } else if (data.type === 'draw-offer') {
+                    if (confirm("Opponent offers a draw. Accept?")) {
+                        showGameOver("Draw", "The game ended in a draw by mutual agreement.", 'd');
+                        if (conn && conn.open) conn.send({ type: 'draw-accept' });
+                    }
+                } else if (data.type === 'draw-accept') {
+                    showGameOver("Draw", "The game ended in a draw by mutual agreement.", 'd');
                 }
             });
 
@@ -2234,18 +2248,20 @@
         }
 
         function resign() {
-            if (confirm("Are you sure you want to resign?")) {
-                alert("You resigned. Game over.");
-                resetGame();
+            showGameOver("You Resigned", "You have conceded the match. Better luck next time!", playerSide === 'w' ? 'b' : 'w');
+            if (currentMode === 'multiplayer' && conn && conn.open) {
+                conn.send({ type: 'resign' });
             }
         }
 
         function offerDraw() {
-            if (currentMode === 'ai') {
-                alert("The AI declined the draw offer.");
-            } else if (conn) {
-                conn.send({ type: 'draw_offer' });
-                alert("Draw offer sent.");
+            if (currentMode === 'multiplayer') {
+                if (conn && conn.open) {
+                    conn.send({ type: 'draw-offer' });
+                    alert("Draw offer sent.");
+                }
+            } else {
+                alert("The AI declined the draw offer. It plays to win!");
             }
         }
 
@@ -2977,6 +2993,11 @@
             }
             if (!clockInterval) startClocks();
 
+            if (currentMode === 'multiplayer') {
+                processPremoves();
+                return;
+            }
+
             let mode = document.getElementById('play-mode').value;
             let aiSide = staticHumanSide === 'w' ? 'b' : 'w';
 
@@ -3095,8 +3116,13 @@
                         let moves = game.moves({ verbose: true });
                         if (moves.length > 0) m = moves[0].from + moves[0].to + (moves[0].promotion || '');
                     }
-                    if (m) game.move({ from: m.substring(0, 2), to: m.substring(2, 4), promotion: m[4] || 'q' });
-                    finishAiMove();
+                    if (m && currentMode !== 'multiplayer') {
+                        game.move({ from: m.substring(0, 2), to: m.substring(2, 4), promotion: m[4] || 'q' });
+                        finishAiMove();
+                    } else {
+                        isThinking = false;
+                        document.getElementById('status-text').innerText = 'Analysis Done';
+                    }
                 }, 250);
             }, Math.max(500, timeSec * 1000 + 600));
 
@@ -3255,6 +3281,10 @@
             if (fillEl) fillEl.style.height = '50%';
             const textEl = document.getElementById('eval-bar-text');
             if (textEl) textEl.innerText = '0.0';
+
+            if (currentMode === 'multiplayer' && conn && conn.open) {
+                conn.send({ type: 'reset' });
+            }
 
             setTimeout(triggerNextTurn, 300);
         }
