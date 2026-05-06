@@ -3501,6 +3501,9 @@
         window.updateUI = updateUI;
 
         function showGameOver(title, msg, win) {
+            // Always stop the clock when the game ends
+            if (clockInterval) { clearInterval(clockInterval); clockInterval = null; }
+
             const overlay = document.getElementById('game-over-overlay');
             const card = document.getElementById('game-over-card');
             const icon = document.getElementById('game-over-icon');
