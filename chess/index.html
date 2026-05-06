@@ -165,11 +165,50 @@
         .play-grid {
             display: grid;
             grid-template-columns: 1fr 360px;
-            gap: 40px;
-            padding: 40px;
+            gap: 32px;
+            padding: 32px;
             max-width: 1400px;
             margin: 0 auto;
             width: 100%;
+            height: calc(100vh - 64px);
+            min-height: 0;
+        }
+
+        @media (max-width: 1024px) {
+            .play-grid {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto auto;
+                padding: 16px;
+                gap: 16px;
+                height: auto;
+                overflow-y: auto;
+            }
+            .right-panel {
+                height: 500px;
+            }
+        }
+
+        @media (max-width: 600px) {
+            header {
+                padding: 0 16px;
+            }
+            .header-search {
+                display: none;
+            }
+            .play-grid {
+                padding: 8px;
+                gap: 12px;
+            }
+            .board-wrapper {
+                padding: 6px;
+            }
+            .right-panel {
+                height: 400px;
+            }
+            .player-timer {
+                min-width: 60px;
+                font-size: 0.9rem;
+            }
         }
 
         .board-wrapper {
@@ -179,12 +218,16 @@
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08);
             padding: 12px;
             border: var(--border-light);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
         }
 
         #board {
             width: 100%;
             border-radius: 4px;
             overflow: hidden;
+            aspect-ratio: 1;
         }
 
         /* --- PLAYER CARDS --- */
@@ -278,11 +321,13 @@
             color: var(--text-secondary);
             text-align: center;
             background: #fafafa;
+            border-right: var(--border-light);
         }
 
         .move-val {
             padding: 8px 12px;
             font-weight: 500;
+            color: var(--text-main);
         }
 
         .move-val:hover {
@@ -292,6 +337,7 @@
         .move-val.active {
             background: #eef2ff;
             color: var(--accent);
+            border-radius: 4px;
         }
 
         .panel-actions {
@@ -684,6 +730,19 @@
                     <input type="text" id="room-id-input" placeholder="Paste Friend's ID" style="flex:1; padding:12px; border-radius:10px; border:var(--border-light); background:#f9f9f9; outline:none;">
                     <button class="primary" style="padding:0 24px;" onclick="joinRoom()">Join</button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- OVERLAY: GAME OVER -->
+    <div id="game-over-overlay" class="overlay">
+        <div class="modal-card" style="text-align: center;">
+            <div id="game-over-icon" style="font-size: 4rem; margin-bottom: 20px;">🏆</div>
+            <h2 id="game-over-title" style="font-size: 1.8rem; font-weight: 800; margin-bottom: 12px;">Checkmate!</h2>
+            <p id="game-over-msg" style="color: var(--text-secondary); margin-bottom: 32px; font-size: 1.1rem; line-height: 1.5;">White has won the game by checkmate.</p>
+            <div style="display: flex; gap: 12px;">
+                <button class="primary" onclick="closeGameOver(); resetGame();" style="flex: 1;">New Game</button>
+                <button class="secondary" onclick="closeGameOver()" style="flex: 1;">Analyze</button>
             </div>
         </div>
     </div>
@@ -2371,6 +2430,7 @@
                         syncMove(m);
                     }
 
+                    viewingIdx = game.history().length - 1;
                     updateLog();
                     const botArrows = document.getElementById('bot-arrows');
                     if (botArrows) botArrows.innerHTML = '';
@@ -2459,10 +2519,12 @@
 
         function snapToPresent() {
             viewingHistory = false;
+            viewingIdx = -1;
             board.position(game.fen(), false);
             let hv = game.history({ verbose: true });
             if (hv.length > 0) highlightMove(hv[hv.length - 1].from, hv[hv.length - 1].to);
             else removeHighlights();
+            updateLog();
         }
 
         function handleSquareClick(sq) {
@@ -2596,7 +2658,7 @@
 
         function viewHistory(idx) {
             let h = game.history();
-            if (idx >= h.length) { snapToPresent(); return; }
+            if (idx >= h.length - 1 && !viewingHistory) { snapToPresent(); return; }
             viewingIdx = idx;
             let temp = new Chess();
             for (let i = 0; i <= idx; i++) temp.move(h[i]);
@@ -2607,6 +2669,18 @@
                 let m = temp.history({ verbose: true }).pop();
                 if (m) highlightMove(m.from, m.to);
             }
+            updateLog();
+        }
+
+        function resign() {
+            let win = game.turn() === 'w' ? 'b' : 'w';
+            showGameOver("Resignation", (win === 'w' ? "White" : "Black") + " has won by resignation.", win);
+            sounds.gameEnd.play().catch(() => { });
+        }
+
+        function offerDraw() {
+            showGameOver("Draw Offered", "The game ended in a mutual draw.", null);
+            sounds.gameEnd.play().catch(() => { });
         }
 
         function updateMaterial() {
@@ -2673,7 +2747,7 @@
                 row.className = 'move-row';
 
                 let num = document.createElement('div');
-                num.className = 'move-number';
+                num.className = 'move-num';
                 num.innerText = (i / 2 + 1) + '.';
                 row.appendChild(num);
 
@@ -2844,8 +2918,25 @@
                 document.getElementById('status-text').innerText = 'Game Over';
                 document.querySelectorAll('.status-dot').forEach(d => d.style.background = '#ff3b30');
                 sounds.gameEnd.play().catch(() => { });
-                saveGameToHistory(); // Save to local history
-                setTimeout(() => alert('Game Over!'), 200);
+                saveGameToHistory(); 
+
+                let title = "Game Over";
+                let msg = "The game has ended.";
+                let win = null;
+
+                if (game.in_checkmate()) {
+                    win = game.turn() === 'w' ? 'b' : 'w';
+                    title = "Checkmate!";
+                    msg = (win === 'w' ? "White" : "Black") + " has won the game.";
+                } else if (game.in_draw()) {
+                    title = "Draw";
+                    msg = "The game ended in a draw.";
+                } else if (game.in_stalemate()) {
+                    title = "Stalemate";
+                    msg = "The game is a stalemate.";
+                }
+
+                showGameOver(title, msg, win);
                 return;
             }
             if (!clockInterval) startClocks();
@@ -3095,7 +3186,10 @@
         }
 
         function finishAiMove() {
-            isThinking = false; board.position(game.fen()); updateLog();
+            isThinking = false; 
+            viewingIdx = game.history().length - 1;
+            board.position(game.fen()); 
+            updateLog();
             document.getElementById('status-text').innerText = 'Your Turn';
             document.querySelector('.status-dot').style.background = '#81b64c';
             triggerNextTurn();
@@ -3116,7 +3210,9 @@
             if (uCol === 'r') uCol = Math.random() > 0.5 ? 'w' : 'b';
             staticHumanSide = uCol;
 
-            applyThemes(); updateLog();
+            viewingIdx = -1;
+            applyThemes(); 
+            updateLog();
             if (board) board.orientation(uCol === 'w' ? 'white' : 'black');
 
             const fillEl = document.getElementById('eval-bar-fill');
@@ -3141,6 +3237,29 @@
         window.snapToPresent = snapToPresent;
         window.toggleSettings = toggleSettings;
         window.updateUI = updateUI;
+
+        function showGameOver(title, msg, win) {
+            const overlay = document.getElementById('game-over-overlay');
+            const icon = document.getElementById('game-over-icon');
+            const tEl = document.getElementById('game-over-title');
+            const mEl = document.getElementById('game-over-msg');
+
+            if (win === 'w') icon.innerText = '🏆';
+            else if (win === 'b') icon.innerText = '🏆';
+            else icon.innerText = '🤝';
+
+            tEl.innerText = title;
+            mEl.innerText = msg;
+            overlay.style.display = 'flex';
+        }
+
+        function closeGameOver() {
+            document.getElementById('game-over-overlay').style.display = 'none';
+        }
+
+        window.addEventListener('resize', () => {
+            if (board) board.resize();
+        });
 
         updateUI(); resetGame();
     </script>
