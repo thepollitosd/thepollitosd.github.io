@@ -518,7 +518,8 @@
                             <div id="eval-bar-fill"></div>
                             <div id="eval-bar-text" class="top">0.0</div>
                         </div>
-                        <div id="board" style="flex:1; position: relative;">
+                        <div id="board-container" style="flex:1; position: relative;">
+                            <div id="board" style="width:100%;"></div>
                             <svg id="arrow-svg" style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:10;"></svg>
                             <svg id="bot-arrows" style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:11;"></svg>
                             <svg id="user-arrows" style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:12;"></svg>
@@ -1943,10 +1944,11 @@
             c.on('open', () => {
                 console.log('Connected to:', c.peer);
                 toggleLobby(false);
+                const oppEl = document.getElementById('opponent-name');
                 if (playerSide === 'b') {
-                    document.getElementById('opponent-name').innerHTML = 'Player 1 <span class="title-badge">P2P</span>';
+                    if (oppEl) oppEl.innerHTML = 'Player 1 <span class="title-badge">P2P</span>';
                 } else {
-                    document.getElementById('opponent-name').innerHTML = 'Player 2 <span class="title-badge">P2P</span>';
+                    if (oppEl) oppEl.innerHTML = 'Player 2 <span class="title-badge">P2P</span>';
                     // Send initial state
                     c.send({ type: 'init', fen: game.fen(), turn: game.turn() });
                 }
@@ -1986,7 +1988,8 @@
             playerSide = 'w';
             staticHumanSide = 'w';
             initPeer();
-            document.getElementById('lobby-status').innerHTML = `
+            const lobbyStat = document.getElementById('lobby-status');
+            if (lobbyStat) lobbyStat.innerHTML = `
                 <div style="text-align:center; padding:20px;">
                     <div style="font-size:0.75rem; color:var(--text-secondary); margin-bottom:8px;">YOUR ROOM ID</div>
                     <div id="room-id-display" style="font-size:1.2rem; font-weight:800; color:var(--accent); letter-spacing:2px; margin-bottom:24px;">GENERATING...</div>
@@ -2146,7 +2149,8 @@
             if (mode === 'ai') {
                 const aiLink = document.querySelector('.side-item[onclick*="\'ai\'"]');
                 if (aiLink) aiLink.classList.add('active');
-                document.getElementById('opponent-name').innerHTML = 'Stockfish 16 (AI) <span class="title-badge">LVL 8</span>';
+                const oppEl = document.getElementById('opponent-name');
+                if (oppEl) oppEl.innerHTML = 'Stockfish 16 (AI) <span class="title-badge">LVL 8</span>';
                 roomId = null;
                 resetGame();
             } else if (mode === 'multiplayer') {
@@ -2368,7 +2372,8 @@
                     }
 
                     updateLog();
-                    document.getElementById('bot-arrows').innerHTML = '';
+                    const botArrows = document.getElementById('bot-arrows');
+                    if (botArrows) botArrows.innerHTML = '';
                     triggerNextTurn();
                 },
                 onSnapEnd: () => {
@@ -2402,10 +2407,10 @@
 
         // Sound System
         const sounds = {
-            move: new Audio('https://www.chess.com/chess-themes/sounds/standard/move-self.mp3'),
-            capture: new Audio('https://www.chess.com/chess-themes/sounds/standard/capture.mp3'),
-            check: new Audio('https://www.chess.com/chess-themes/sounds/standard/move-check.mp3'),
-            gameEnd: new Audio('https://www.chess.com/chess-themes/sounds/standard/game-end.mp3')
+            move: new Audio('https://lichess1.org/assets/sound/standard/Move.mp3'),
+            capture: new Audio('https://lichess1.org/assets/sound/standard/Capture.mp3'),
+            check: new Audio('https://lichess1.org/assets/sound/standard/Check.mp3'),
+            gameEnd: new Audio('https://lichess1.org/assets/sound/standard/Victory.mp3')
         };
 
         // Clock System
@@ -2485,7 +2490,8 @@
                         clearDots();
                         board.position(game.fen());
                         updateLog();
-                        document.getElementById('bot-arrows').innerHTML = '';
+                        const botArrows = document.getElementById('bot-arrows');
+                    if (botArrows) botArrows.innerHTML = '';
                         triggerNextTurn();
                     } else {
                         let p = game.get(sq);
@@ -2657,6 +2663,7 @@
 
         function updateLog() {
             let d = document.getElementById('move-list-container');
+            if (!d) return;
             d.innerHTML = "";
             let h = game.history();
             let hv = game.history({ verbose: true });
@@ -2692,7 +2699,13 @@
 
             if (!viewingHistory) {
                 viewingIdx = hv.length - 1;
-                if (hv.length > 0) setTimeout(() => highlightMove(hv[hv.length - 1].from, hv[hv.length - 1].to), 50);
+                if (hv.length > 0) {
+                    setTimeout(() => {
+                        try {
+                            highlightMove(hv[hv.length - 1].from, hv[hv.length - 1].to);
+                        } catch (e) {}
+                    }, 50);
+                }
             }
         }
 
@@ -2856,7 +2869,8 @@
             isThinking = true;
             document.getElementById('status-text').innerText = 'Stockfish 16 Thinking...';
             document.querySelector('.status-dot').style.background = '#0a5c88';
-            document.getElementById('bot-arrows').innerHTML = '';
+            const botArrows = document.getElementById('bot-arrows');
+            if (botArrows) botArrows.innerHTML = '';
 
             try {
                 let res = await fetch(`https://stockfish.online/api/s/v2.php?fen=${encodeURIComponent(game.fen())}&depth=13`);
@@ -2883,10 +2897,12 @@
         async function makeAiMove() {
             if (game.game_over()) return;
             isThinking = true;
-            document.getElementById('bot-arrows').innerHTML = '';
+            const botArrows = document.getElementById('bot-arrows');
+            if (botArrows) botArrows.innerHTML = '';
             document.getElementById('status-text').innerText = 'AI Thinking...';
             document.querySelector('.status-dot').style.background = '#d32f2f';
-            document.getElementById('engine-status').innerHTML = `Speed: <span id="nps-val" style="color:var(--accent);">${(0).toFixed(1)}</span> kN/s | Threads: ${numThreads}`;
+            const engStat = document.getElementById('engine-status');
+            if (engStat) engStat.innerHTML = `Speed: <span id="nps-val" style="color:var(--accent);">${(0).toFixed(1)}</span> kN/s | Threads: ${numThreads}`;
             window.searchStartGlobal = Date.now();
             hasSmoothedEval = false;
             activeSearchToken++;
@@ -3015,7 +3031,8 @@
                     let label = i === 0 ? `<span style="color:#00e5ff">▶ Line ${i + 1}</span>` : `Line ${i + 1}`;
                     return `<div style="margin-bottom:2px; font-family:monospace;">${label}: <b>${x.move}</b> <span style="color:#aaa">(${scoreSign}${scoreText}) d${x.depth}</span></div>`;
                 }).join('');
-                document.getElementById('commentary').innerHTML = depthHeader + (lines || "<i>Analyzing...</i>");
+                const commEl = document.getElementById('commentary');
+                if (commEl) commEl.innerHTML = depthHeader + (lines || "<i>Analyzing...</i>");
 
                 let timeTaken = Math.max(1, (Date.now() - window.searchStartGlobal)) / 1000;
                 const npsEl = document.getElementById('nps-val');
