@@ -2880,14 +2880,14 @@
                 else if (c >= 'A' && c <= 'Z') blackCaptured[c.toLowerCase()]--;
             }
 
-            const getImg = (p) => `https://thepollitosd.github.io/chess/pieces/cburnett/${p}.svg`;
+            const getImg = (color, piece) => `https://thepollitosd.github.io/chess/pieces/cburnett/${color}${piece.toUpperCase()}.svg`;
 
             let wHTML = '', bHTML = '';
             const order = ['q', 'r', 'b', 'n', 'p'];
 
             for (let p of order) {
-                for (let i = 0; i < whiteCaptured[p]; i++) wHTML += `<img src="${getImg('w' + p)}" style="width:16px; margin-right:-4px;">`;
-                for (let i = 0; i < blackCaptured[p]; i++) bHTML += `<img src="${getImg('b' + p)}" style="width:16px; margin-right:-4px;">`;
+                for (let i = 0; i < whiteCaptured[p]; i++) wHTML += `<img src="${getImg('w', p)}" style="width:16px; margin-right:-4px;">`;
+                for (let i = 0; i < blackCaptured[p]; i++) bHTML += `<img src="${getImg('b', p)}" style="width:16px; margin-right:-4px;">`;
             }
 
             // Note: In the new layout, we might not have these specific IDs yet,
