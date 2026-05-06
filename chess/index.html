@@ -2886,16 +2886,18 @@
             const order = ['q', 'r', 'b', 'n', 'p'];
 
             for (let p of order) {
-                for (let i = 0; i < whiteCaptured[p]; i++) wHTML += `<img src="${getImg('w', p)}" style="width:16px; margin-right:-4px;">`;
-                for (let i = 0; i < blackCaptured[p]; i++) bHTML += `<img src="${getImg('b', p)}" style="width:16px; margin-right:-4px;">`;
+                // whiteCaptured = black pieces taken by white → show black piece icons
+                for (let i = 0; i < whiteCaptured[p]; i++) wHTML += `<img src="${getImg('b', p)}" style="width:16px; margin-right:-4px;">`;
+                // blackCaptured = white pieces taken by black → show white piece icons
+                for (let i = 0; i < blackCaptured[p]; i++) bHTML += `<img src="${getImg('w', p)}" style="width:16px; margin-right:-4px;">`;
             }
 
             // Note: In the new layout, we might not have these specific IDs yet,
             // but we'll ensure they are handled if present.
             let wcEl = document.getElementById('bottom-captured');
             let bcEl = document.getElementById('top-captured');
-            if (wcEl) wcEl.innerHTML = bHTML;
-            if (bcEl) bcEl.innerHTML = wHTML;
+            if (wcEl) wcEl.innerHTML = wHTML;  // bottom (white's row) = what white captured
+            if (bcEl) bcEl.innerHTML = bHTML;  // top (black's row) = what black captured
 
             // Material diff
             let vals = { 'p': 1, 'n': 3, 'b': 3, 'r': 5, 'q': 9, 'P': -1, 'N': -3, 'B': -3, 'R': -5, 'Q': -9, 'k': 0, 'K': 0 };
