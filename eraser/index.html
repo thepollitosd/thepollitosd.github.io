@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deluxe Toon Eraser Flip</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #87CEEB; font-family: 'Arial Black', sans-serif; }
+        #ui {
+            position: absolute;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+        }
+        button {
+            padding: 20px 50px;
+            font-size: 28px;
+            font-weight: 900;
+            background: #ff5c8a;
+            color: white;
+            border: 6px solid #000;
+            cursor: pointer;
+            border-radius: 50px;
+            box-shadow: 0px 8px 0px #000;
+            transition: all 0.1s;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        button:hover { background: #ff76a1; transform: translateY(-2px); box-shadow: 0px 10px 0px #000; }
+        button:active { transform: translateY(4px); box-shadow: 0px 4px 0px #000; }
+
+        #result-container {
+            position: absolute;
+            top: 20%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            text-align: center;
+            pointer-events: none;
+            transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 5;
+        }
+        #result-text {
+            font-size: 120px;
+            color: #fff;
+            -webkit-text-stroke: 4px black;
+            filter: drop-shadow(8px 8px 0px #000);
+            margin: 0;
+        }
+        .show-result { transform: translate(-50%, -50%) scale(1) !important; }
+    </style>
+</head>
+<body>
+
+    <div id="result-container">
+        <h1 id="result-text">YES</h1>
+    </div>
+
+    <div id="ui">
+        <button id="flipBtn">FLIP!</button>
+    </div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "cannon-es": "https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/+esm"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import * as CANNON from 'cannon-es';
+
+        // --- Config ---
+        const COLORS = {
+            sky: 0x4cc9f0,
+            ground: 0xffffff,
+            eraser: 0xffafcc,
+            eraserDark: 0xff8fab,
+            outline: 0x000000
+        };
+
+        // --- Setup Scene ---
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(COLORS.sky);
+        scene.fog = new THREE.Fog(COLORS.sky, 20, 50);
+
+        const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        document.body.appendChild(renderer.domElement);
+
+        // --- Physics ---
+        const world = new CANNON.World();
+        world.gravity.set(0, -25, 0);
+
+        // --- Lighting ---
+        const ambient = new THREE.AmbientLight(0xffffff, 1.2);
+        scene.add(ambient);
+
+        const sun = new THREE.DirectionalLight(0xffffff, 1.5);
+        sun.position.set(10, 20, 10);
+        sun.castShadow = true;
+        sun.shadow.mapSize.width = 2048;
+        sun.shadow.mapSize.height = 2048;
+        scene.add(sun);
+
+        // --- Environment ---
+        // Ground
+        const groundGeo = new THREE.CircleGeometry(50, 32);
+        const groundMat = new THREE.MeshToonMaterial({ color: COLORS.ground });
+        const ground = new THREE.Mesh(groundGeo, groundMat);
+        ground.rotation.x = -Math.PI / 2;
+        ground.receiveShadow = true;
+        scene.add(ground);
+
+        const groundBody = new CANNON.Body({
+            mass: 0,
+            shape: new CANNON.Plane(),
+        });
+        groundBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0);
+        world.addBody(groundBody);
+
+        // --- The Eraser ---
+        function createHiResText(text) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 1024; // High res
+            canvas.height = 1024;
+            const ctx = canvas.getContext('2d');
+            
+            // Background
+            ctx.fillStyle = '#ffafcc';
+            ctx.fillRect(0, 0, 1024, 1024);
+            
+            // Text
+            ctx.fillStyle = '#000000';
+            ctx.font = '900 300px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            
+            // Add a slight "print" texture effect
+            ctx.fillText(text, 512, 512);
+            
+            const tex = new THREE.CanvasTexture(canvas);
+            tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+            return tex;
+        }
+
+        const eWidth = 2.5, eHeight = 0.7, eDepth = 1.2;
+        const eraserGeo = new THREE.BoxGeometry(eWidth, eHeight, eDepth);
+        
+        const eraserMaterials = [
+            new THREE.MeshToonMaterial({ color: COLORS.eraser }), // sides
+            new THREE.MeshToonMaterial({ color: COLORS.eraser }),
+            new THREE.MeshToonMaterial({ map: createHiResText('YES') }), // Top
+            new THREE.MeshToonMaterial({ map: createHiResText('NO') }), // Bottom
+            new THREE.MeshToonMaterial({ color: COLORS.eraser }),
+            new THREE.MeshToonMaterial({ color: COLORS.eraser }),
+        ];
+
+        const eraserMesh = new THREE.Mesh(eraserGeo, eraserMaterials);
+        eraserMesh.castShadow = true;
+        scene.add(eraserMesh);
+
+        // Outline Effect
+        const outlineGeo = new THREE.BoxGeometry(eWidth * 1.04, eHeight * 1.1, eDepth * 1.06);
+        const outlineMat = new THREE.MeshBasicMaterial({ color: COLORS.outline, side: THREE.BackSide });
+        const outline = new THREE.Mesh(outlineGeo, outlineMat);
+        eraserMesh.add(outline);
+
+        const eraserBody = new CANNON.Body({
+            mass: 2,
+            shape: new CANNON.Box(new CANNON.Vec3(eWidth/2, eHeight/2, eDepth/2)),
+            position: new CANNON.Vec3(0, 0.5, 0),
+            angularDamping: 0.2
+        });
+        world.addBody(eraserBody);
+
+        // --- Particles ---
+        const particles = [];
+        function createBurst(pos, color, count = 10) {
+            for(let i=0; i<count; i++) {
+                const pGeo = new THREE.BoxGeometry(0.2, 0.2, 0.2);
+                const pMat = new THREE.MeshBasicMaterial({ color: color });
+                const p = new THREE.Mesh(pGeo, pMat);
+                p.position.copy(pos);
+                scene.add(p);
+                const vel = new THREE.Vector3((Math.random()-0.5)*0.5, Math.random()*0.5, (Math.random()-0.5)*0.5);
+                particles.push({ mesh: p, vel, life: 1.0 });
+            }
+        }
+
+        // --- Interaction Logic ---
+        const btn = document.getElementById('flipBtn');
+        const resCont = document.getElementById('result-container');
+        const resText = document.getElementById('result-text');
+        
+        let isFlipping = false;
+        let camTarget = new THREE.Vector3(0, 0, 0);
+
+        function flip() {
+            if(isFlipping) return;
+            isFlipping = true;
+            resCont.classList.remove('show-result');
+            
+            // Reset
+            eraserBody.position.set(0, 1, 0);
+            eraserBody.velocity.set(0, 0, 0);
+            eraserBody.angularVelocity.set(0, 0, 0);
+
+            // Impulse
+            const upForce = 18 + Math.random() * 7;
+            eraserBody.velocity.set((Math.random()-0.5)*5, upForce, (Math.random()-0.5)*5);
+            eraserBody.angularVelocity.set(
+                Math.random() * 15 + 5,
+                Math.random() * 10,
+                Math.random() * 15 + 5
+            );
+        }
+
+        btn.addEventListener('click', flip);
+
+        // Collision sound/effect
+        eraserBody.addEventListener('collide', (e) => {
+            if (e.contact.getImpactVelocityAlongNormal() > 2) {
+                createBurst(eraserMesh.position, 0xffffff, 5);
+            }
+        });
+
+        // --- Animation Loop ---
+        const clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const delta = clock.getDelta();
+            const time = clock.getElapsedTime();
+
+            world.fixedStep();
+
+            // Sync Physics
+            eraserMesh.position.copy(eraserBody.position);
+            eraserMesh.quaternion.copy(eraserBody.quaternion);
+
+            // Dynamic Camera
+            if (isFlipping) {
+                // Follow the eraser in flight
+                const targetCamPos = new THREE.Vector3(
+                    eraserMesh.position.x + 8,
+                    Math.max(4, eraserMesh.position.y + 2),
+                    eraserMesh.position.z + 8
+                );
+                camera.position.lerp(targetCamPos, 0.05);
+                camTarget.lerp(eraserMesh.position, 0.1);
+                
+                // Check if stopped
+                if (eraserBody.velocity.length() < 0.1 && eraserBody.angularVelocity.length() < 0.1 && eraserBody.position.y < 1) {
+                    isFlipping = false;
+                    finishFlip();
+                }
+            } else {
+                // Idle Panning
+                camera.position.x = Math.sin(time * 0.3) * 10;
+                camera.position.z = Math.cos(time * 0.3) * 10;
+                camera.position.y = 5;
+                camTarget.lerp(new THREE.Vector3(0, 0, 0), 0.05);
+            }
+            camera.lookAt(camTarget);
+
+            // Particles Update
+            for(let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.mesh.position.add(p.vel);
+                p.life -= 0.02;
+                p.mesh.scale.setScalar(p.life);
+                if(p.life <= 0) {
+                    scene.remove(p.mesh);
+                    particles.splice(i, 1);
+                }
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        function finishFlip() {
+            const up = new THREE.Vector3(0, 1, 0);
+            const matrix = new THREE.Matrix4().makeRotationFromQuaternion(eraserMesh.quaternion);
+            const localY = new THREE.Vector3(0, 1, 0).applyMatrix4(matrix);
+
+            let result = "MAYBE";
+            if (localY.dot(up) > 0.8) result = "YES";
+            else if (localY.dot(up) < -0.8) result = "NO";
+
+            resText.innerText = result;
+            resCont.classList.add('show-result');
+            
+            // Confetti burst for results
+            const color = result === "YES" ? 0x00ff00 : (result === "NO" ? 0xff0000 : 0xffff00);
+            createBurst(eraserMesh.position, color, 30);
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        animate();
+    </script>
+</body>
+</html>
