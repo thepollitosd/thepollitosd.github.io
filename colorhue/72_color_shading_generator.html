@@ -1,0 +1,453 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<title>72-Color Sphere Shader</title>
+<style>
+:root{
+  --bg:#f5f5f2; --panel:#ffffff; --ink:#111214; --muted:#74777f; --line:#dedfd9;
+  --soft:#ecece7; --shadow:0 18px 50px rgba(20,20,20,.08);
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+button,input,select{font:inherit}
+body{min-height:100vh}
+.app{max-width:1440px;margin:auto;padding:22px}
+.topbar{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin-bottom:18px}
+h1{font-size:clamp(28px,4vw,48px);letter-spacing:-.055em;line-height:.95;margin:0}
+.subtitle{margin:8px 0 0;color:var(--muted);font-size:14px;max-width:720px}
+.grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(360px,.85fr);gap:18px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:24px;box-shadow:var(--shadow)}
+.previewCard{padding:18px;display:flex;flex-direction:column;min-height:720px}
+.previewTop{display:flex;justify-content:space-between;gap:12px;align-items:center}
+.badge{font-size:12px;border:1px solid var(--line);border-radius:999px;padding:7px 10px;background:#fafafa;color:var(--muted)}
+canvas{display:block;width:100%;height:auto;aspect-ratio:1/1;border-radius:18px;margin-top:14px;touch-action:none}
+.ramp{display:flex;height:66px;border-radius:16px;overflow:hidden;border:1px solid var(--line);margin-top:14px}
+.rampCell{flex:1;position:relative;min-width:0}
+.rampCell span{position:absolute;left:8px;bottom:6px;font:600 10px/1 ui-monospace,SFMono-Regular,Menlo,monospace;background:rgba(255,255,255,.72);padding:3px 5px;border-radius:6px;backdrop-filter:blur(8px)}
+.infoRow{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}
+.metric{padding:12px;border:1px solid var(--line);border-radius:14px;background:#fafafa}
+.metric small{display:block;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.08em}
+.metric strong{display:block;margin-top:4px;font-size:14px}
+.controls{padding:18px;max-height:calc(100vh - 44px);overflow:auto}
+.section{padding:14px 0;border-bottom:1px solid var(--line)}
+.section:first-child{padding-top:0}.section:last-child{border-bottom:0}
+.sectionTitle{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.sectionTitle b{font-size:13px}.sectionTitle span{color:var(--muted);font-size:11px}
+.swatches{display:grid;grid-template-columns:repeat(9,1fr);gap:7px}
+.swatch{aspect-ratio:1;border-radius:9px;border:1px solid rgba(0,0,0,.12);padding:0;cursor:pointer;position:relative}
+.swatch:hover{transform:translateY(-1px)}
+.swatch.selected{outline:3px solid #111;outline-offset:2px}
+.swatch.locked::after{content:"•";position:absolute;right:3px;top:0;font-size:16px;color:#111;text-shadow:0 1px 2px white}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+label{display:block;font-size:11px;color:var(--muted);margin-bottom:5px}
+select,.numberBox{width:100%;background:#fafafa;border:1px solid var(--line);border-radius:12px;padding:10px;color:var(--ink)}
+.sliderLine{display:grid;grid-template-columns:110px 1fr 44px;align-items:center;gap:10px;margin:10px 0}
+.sliderLine label{margin:0;color:var(--ink);font-size:12px}
+input[type=range]{width:100%;accent-color:#151515}
+.value{text-align:right;color:var(--muted);font:600 11px ui-monospace,SFMono-Regular,Menlo,monospace}
+.toggleRow{display:flex;gap:8px;flex-wrap:wrap}
+.toggle{border:1px solid var(--line);background:#fafafa;border-radius:999px;padding:8px 11px;font-size:11px;cursor:pointer}
+.toggle.on{background:#111;color:#fff;border-color:#111}
+.selectedStrip{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.colorChip{display:flex;align-items:center;gap:7px;border:1px solid var(--line);border-radius:12px;padding:7px 9px;background:#fafafa;font-size:11px}
+.colorDot{width:18px;height:18px;border-radius:6px;border:1px solid rgba(0,0,0,.14)}
+.actions{display:flex;gap:8px;margin-top:12px}
+.action{flex:1;border:1px solid var(--line);border-radius:12px;background:#fafafa;padding:10px;font-size:11px;cursor:pointer}
+.action.primary{background:#111;color:#fff;border-color:#111}
+@media(max-width:900px){
+  .app{padding:12px}.grid{grid-template-columns:1fr}.previewCard{min-height:0}.controls{max-height:none}
+  .swatches{grid-template-columns:repeat(9,1fr)} .topbar{align-items:flex-start;flex-direction:column}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div>
+      <h1>72-Color Sphere Shader</h1>
+      <p class="subtitle">A palette-locked color-theory shading generator. Perceptual OKLab ramp generation chooses smarter shadow and highlight colors, while every rendered pixel still stays inside your marker palette.</p>
+    </div>
+    <div class="badge">Palette locked · 72 slots</div>
+  </div>
+
+  <div class="grid">
+    <section class="card previewCard">
+      <div class="previewTop">
+        <div>
+          <b>Sphere preview</b>
+          <div style="font-size:11px;color:var(--muted);margin-top:3px">Drag directly on the sphere to move the light.</div>
+        </div>
+        <div class="badge" id="modeBadge">Cel · 8 steps</div>
+      </div>
+      <canvas id="sphere" width="760" height="760"></canvas>
+      <div class="ramp" id="ramp"></div>
+      <div class="infoRow">
+        <div class="metric"><small>Base</small><strong id="baseHex">#E95432</strong></div>
+        <div class="metric"><small>Shadow strategy</small><strong id="theoryText">Cool analogous</strong></div>
+        <div class="metric"><small>Light angle</small><strong id="angleText">315° / 38°</strong></div>
+      </div>
+    </section>
+
+    <aside class="card controls">
+      <div class="section">
+        <div class="sectionTitle"><b>1. Base color</b><span>click a marker color</span></div>
+        <div class="swatches" id="swatches"></div>
+      </div>
+
+      <div class="section">
+        <div class="sectionTitle"><b>2. Color theory</b><span>shadow hue logic</span></div>
+        <div class="row">
+          <div>
+            <label>Shadow relationship</label>
+            <select id="theory">
+              <option value="cool">Cool analogous</option>
+              <option value="warm">Warm analogous</option>
+              <option value="complement">Complementary</option>
+              <option value="split">Split complementary</option>
+              <option value="triad">Triadic</option>
+              <option value="mono">Monochromatic</option>
+            </select>
+          </div>
+          <div>
+            <label>Render style</label>
+            <select id="style">
+              <option value="soft" selected>Smooth painted</option>
+              <option value="cel">Cel / anime</option>
+              <option value="poster">Posterized</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="sliderLine"><label>Shade steps</label><input id="steps" type="range" min="5" max="12" value="8"><div class="value" id="stepsV">5</div></div>
+        <div class="sliderLine"><label>Hue influence</label><input id="hueMix" type="range" min="0" max="100" value="72"><div class="value" id="hueMixV">72%</div></div>
+        <div class="sliderLine"><label>Shadow depth</label><input id="depth" type="range" min="20" max="100" value="68"><div class="value" id="depthV">68%</div></div>
+      </div>
+
+      <div class="section">
+        <div class="sectionTitle"><b>3. Lighting</b><span>art-directed, not physically strict</span></div>
+        <div class="sliderLine"><label>Azimuth</label><input id="azimuth" type="range" min="0" max="360" value="315"><div class="value" id="azimuthV">315°</div></div>
+        <div class="sliderLine"><label>Elevation</label><input id="elevation" type="range" min="5" max="85" value="38"><div class="value" id="elevationV">38°</div></div>
+        <div class="sliderLine"><label>Terminator</label><input id="hardness" type="range" min="0" max="100" value="74"><div class="value" id="hardnessV">74%</div></div>
+        <div class="sliderLine"><label>Light wrap</label><input id="wrap" type="range" min="0" max="55" value="14"><div class="value" id="wrapV">14%</div></div>
+      </div>
+
+      <div class="section">
+        <div class="sectionTitle"><b>4. Stylization</b><span>optional accents</span></div>
+        <div class="toggleRow">
+          <button class="toggle on" id="specular">Specular</button>
+          <button class="toggle on" id="rim">Rim light</button>
+          <button class="toggle" id="bounce">Bounce light</button>
+          <button class="toggle" id="grain">Dither</button>
+        </div>
+        <div class="sliderLine"><label>Specular size</label><input id="specSize" type="range" min="4" max="45" value="17"><div class="value" id="specSizeV">17%</div></div>
+        <div class="sliderLine"><label>Rim strength</label><input id="rimPower" type="range" min="0" max="100" value="38"><div class="value" id="rimPowerV">38%</div></div>
+      </div>
+
+      <div class="section">
+        <div class="sectionTitle"><b>5. Generated ramp</b><span>click a chip to lock it</span></div>
+        <div class="selectedStrip" id="selectedStrip"></div>
+        <div class="actions">
+          <button class="action" id="randomize">Randomize</button>
+          <button class="action" id="copyRamp">Copy hex ramp</button>
+          <button class="action primary" id="reset">Reset</button>
+        </div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<script>
+const PALETTE = ["#C81333", "#E74C41", "#E74061", "#B83566", "#E46184", "#EC6D74", "#E95432", "#EC695A", "#EC695A", "#EE784A", "#F39B50", "#005322", "#298337", "#6FB26B", "#AAD061", "#233449", "#272975", "#2960A6", "#FD7582", "#FFAABE", "#F9BEC0", "#FEC8D6", "#FFD0D3", "#FFDDD0", "#F8B11F", "#FEC603", "#FFD413", "#FEE44D", "#FEF4B3", "#A5D95C", "#43CCC4", "#18CCBF", "#5FF6D8", "#57CDFB", "#A0DFFD", "#96F1F4", "#EB9EB9", "#EC79AB", "#EF8687", "#E08E9E", "#EDADC6", "#F9CEDA", "#F5A236", "#FAC13B", "#FED000", "#FFE460", "#F7F5AD", "#74997C", "#58858E", "#018596", "#33ABA2", "#1B6EAB", "#34A3DD", "#7AC9BE", "#92C7EC", "#A2D7D3", "#465590", "#5F68AE", "#8E93C8", "#9170B0", "#A57EB7", "#BA8EBF", "#A8635D", "#E6BD96", "#F1C999", "#F3D4A3", "#F5E6B9", "#878C96", "#BBBFB5", "#CCCCBD", "#FFFFFF", "#DDDDDD"];
+const canvas = document.getElementById('sphere'), ctx=canvas.getContext('2d',{alpha:false});
+const els = Object.fromEntries([...document.querySelectorAll('[id]')].map(e=>[e.id,e]));
+let baseIndex=6, locks={};
+let toggles={specular:true,rim:true,bounce:false,grain:false};
+
+const hexToRgb=h=>[parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)];
+const rgbToHex=rgb=>'#'+rgb.map(v=>Math.max(0,Math.min(255,Math.round(v))).toString(16).padStart(2,'0')).join('').toUpperCase();
+const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
+function rgbToHsl([r,g,b]){
+  r/=255;g/=255;b/=255;let mx=Math.max(r,g,b),mn=Math.min(r,g,b),h=0,s=0,l=(mx+mn)/2,d=mx-mn;
+  if(d){s=d/(1-Math.abs(2*l-1)); if(mx===r)h=60*(((g-b)/d)%6); else if(mx===g)h=60*((b-r)/d+2); else h=60*((r-g)/d+4);}
+  if(h<0)h+=360; return [h,s,l];
+}
+function hslToRgb([h,s,l]){
+  h=((h%360)+360)%360; let c=(1-Math.abs(2*l-1))*s,x=c*(1-Math.abs((h/60)%2-1)),m=l-c/2,r=0,g=0,b=0;
+  if(h<60)[r,g,b]=[c,x,0]; else if(h<120)[r,g,b]=[x,c,0]; else if(h<180)[r,g,b]=[0,c,x]; else if(h<240)[r,g,b]=[0,x,c]; else if(h<300)[r,g,b]=[x,0,c]; else [r,g,b]=[c,0,x];
+  return [(r+m)*255,(g+m)*255,(b+m)*255];
+}
+function rgbToOklab([r,g,b]){
+  const f=v=>{v/=255; return v<=.04045?v/12.92:Math.pow((v+.055)/1.055,2.4)};
+  r=f(r);g=f(g);b=f(b);
+  let l=.4122214708*r+.5363325363*g+.0514459929*b;
+  let m=.2119034982*r+.6806995451*g+.1073969566*b;
+  let s=.0883024619*r+.2817188376*g+.6299787005*b;
+  l=Math.cbrt(l);m=Math.cbrt(m);s=Math.cbrt(s);
+  return [.2104542553*l+.793617785*m-.0040720468*s,1.9779984951*l-2.428592205*m+.4505937099*s,.0259040371*l+.7827717662*m-.808675766*s];
+}
+const palRGB=PALETTE.map(hexToRgb), palLab=palRGB.map(rgbToOklab);
+function nearest(rgb, biasIndex=null){
+  const q=rgbToOklab(rgb);let best=0,bd=1e9;
+  for(let i=0;i<PALETTE.length;i++){
+    let d=(q[0]-palLab[i][0])**2*2.25+(q[1]-palLab[i][1])**2+(q[2]-palLab[i][2])**2;
+    if(i===biasIndex)d*=.88;
+    if(d<bd){bd=d;best=i}
+  } return PALETTE[best];
+}
+function mix(a,b,t){return a.map((v,i)=>v+(b[i]-v)*t)}
+function theoryHue(baseHue, mode){
+  if(mode==='cool') return baseHue>180&&baseHue<300?baseHue+18:baseHue-34;
+  if(mode==='warm') return baseHue>330||baseHue<70?baseHue+15:baseHue+38;
+  if(mode==='complement') return baseHue+180;
+  if(mode==='split') return baseHue+150;
+  if(mode==='triad') return baseHue+120;
+  return baseHue;
+}
+function hueDelta(a,b){
+  let d=((a-b+540)%360)-180;
+  return Math.abs(d);
+}
+function paletteFeatures(){
+  return PALETTE.map((hex,i)=>{
+    const rgb=palRGB[i], hsl=rgbToHsl(rgb), lab=palLab[i];
+    const C=Math.hypot(lab[1],lab[2]);
+    const H=(Math.atan2(lab[2],lab[1])*180/Math.PI+360)%360;
+    return {i,hex,rgb,hsl,lab,L:lab[0],C,H};
+  });
+}
+const FEATURES=paletteFeatures();
+
+function targetHueForT(baseHue, mode, t){
+  // t: 0 shadow -> 1 highlight.
+  // Shadows get stronger hue rotation; highlights stay closer to the local color.
+  let sh=baseHue;
+  if(mode==='cool') sh=baseHue-38;
+  else if(mode==='warm') sh=baseHue+32;
+  else if(mode==='complement') sh=baseHue+180;
+  else if(mode==='split') sh=baseHue+150;
+  else if(mode==='triad') sh=baseHue+120;
+  else if(mode==='mono') sh=baseHue;
+  const amt=Math.pow(1-t,1.25);
+  const d=((sh-baseHue+540)%360)-180;
+  return (baseHue+d*amt+360)%360;
+}
+
+function makeRamp(){
+  const n=+els.steps.value;
+  const baseF=FEATURES[baseIndex], base=baseF.rgb;
+  const hm=+els.hueMix.value/100, depth=+els.depth.value/100;
+  const mode=els.theory.value;
+
+  // Artist-friendly lightness curve: more room in shadows, compressed highlights.
+  const shadowL=Math.max(.07, baseF.L-(.20+.34*depth));
+  const highlightL=Math.min(.985, baseF.L+.24+.18*(1-baseF.L));
+
+  let chosen=[], used=new Set();
+  for(let i=0;i<n;i++){
+    const t=i/(n-1);
+    let targetL;
+    if(t<.62){
+      const u=t/.62;
+      targetL=shadowL+(baseF.L-shadowL)*Math.pow(u,1.12);
+    }else{
+      const u=(t-.62)/.38;
+      targetL=baseF.L+(highlightL-baseF.L)*Math.pow(u,.8);
+    }
+
+    const targetH=targetHueForT(baseF.H,mode,t);
+    // Keep saturation/chroma substantial through midtones but let highlights desaturate naturally.
+    const targetC=Math.max(.018, baseF.C*(.62+.35*(1-Math.abs(t-.58)/.58))*(1-.42*Math.max(0,t-.70)/.30));
+
+    let best=null,bestScore=1e9;
+    for(const f of FEATURES){
+      // White/near-white is only allowed at the brightest end unless the base itself is pale.
+      if(f.L>.965 && t<.82 && baseF.L<.86) continue;
+
+      const lErr=Math.abs(f.L-targetL);
+      const hErr=hueDelta(f.H,targetH)/180;
+      const cErr=Math.abs(f.C-targetC)/(targetC+.035);
+
+      // Weighted perceptual score.
+      let score=lErr*5.2 + hErr*(0.45+2.35*hm) + cErr*.62;
+
+      // Prefer the base color around the local-color region.
+      if(f.i===baseIndex) score-=Math.exp(-Math.pow((t-.60)/.12,2))*1.05;
+
+      // Avoid repeated colors and enforce monotonic lightness.
+      if(used.has(f.i)) score+=1.8;
+      if(chosen.length){
+        const prev=FEATURES[chosen[chosen.length-1]];
+        if(f.L < prev.L-.012) score += 5.0 + (prev.L-f.L)*12;
+        if(Math.abs(f.L-prev.L)<.018 && hueDelta(f.H,prev.H)<12) score += .8;
+      }
+
+      // Complement/triad modes can get ugly fast; keep extreme hue shifts mostly in deepest shadows.
+      if((mode==='complement'||mode==='split'||mode==='triad') && t>.58)
+        score += hErr*1.25;
+
+      if(score<bestScore){bestScore=score;best=f}
+    }
+    chosen.push(best.i); used.add(best.i);
+  }
+
+  // Force the closest ramp slot to the actual selected base.
+  let baseSlot=0,bd=1e9;
+  chosen.forEach((idx,i)=>{
+    const d=Math.abs(FEATURES[idx].L-baseF.L)+Math.abs(i/(n-1)-.60)*.16;
+    if(d<bd){bd=d;baseSlot=i}
+  });
+  chosen[baseSlot]=baseIndex;
+
+  // Locks override optimization.
+  return chosen.map((idx,i)=>locks[i] || PALETTE[idx]);
+}
+function draw(){
+  const ramp=makeRamp(), n=ramp.length, W=canvas.width,H=canvas.height,cx=W/2,cy=H/2,R=W*.355;
+  ctx.fillStyle='#F1F1ED';ctx.fillRect(0,0,W,H);
+
+  // ground shadow
+  let g=ctx.createRadialGradient(cx+R*.16,cy+R*.91,20,cx+R*.16,cy+R*.91,R*.72);
+  g.addColorStop(0,'rgba(0,0,0,.16)');g.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=g;ctx.save();ctx.scale(1,0.28);ctx.beginPath();ctx.arc(cx+R*.15,(cy+R*.95)/.28,R*.78,0,Math.PI*2);ctx.fill();ctx.restore();
+
+  const img=ctx.createImageData(W,H), d=img.data;
+  const az=+els.azimuth.value*Math.PI/180, el=+els.elevation.value*Math.PI/180;
+  const lx=Math.cos(el)*Math.cos(az), ly=-Math.cos(el)*Math.sin(az), lz=Math.sin(el);
+  const hard=+els.hardness.value/100, wrap=+els.wrap.value/100;
+  const style=els.style.value, specSize=+els.specSize.value/100, rimPower=+els.rimPower.value/100;
+  const rampRgb=ramp.map(hexToRgb);
+  const quant = style==='soft'? n*2.1 : style==='poster'? Math.max(3,n-1):n;
+
+  for(let y=Math.floor(cy-R);y<=Math.ceil(cy+R);y++){
+    for(let x=Math.floor(cx-R);x<=Math.ceil(cx+R);x++){
+      let nx=(x-cx)/R, ny=(y-cy)/R, rr=nx*nx+ny*ny;if(rr>1)continue;
+      let nz=Math.sqrt(1-rr), nd=nx*lx+ny*ly+nz*lz;
+      let light=clamp((nd+wrap)/(1+wrap));
+      light=Math.pow(light, .72 + hard*.72);
+
+      // sculpted art-lighting: bias cheeks toward midtone, compress the terminator
+      if(style==='cel') light = Math.floor(light*quant)/Math.max(1,quant-1);
+      else if(style==='poster') light = Math.round(light*(quant-1))/(quant-1);
+
+      // Continuous tonal coordinate, then stochastic/ordered palette interpolation.
+      // Every actual pixel remains one of the allowed marker colors, but the eye sees smoother gradients.
+      let ri=clamp(light)*(rampRgb.length-1);
+      let i0=Math.floor(ri), i1=Math.min(rampRgb.length-1,i0+1), frac=ri-i0;
+
+      // Small 8x8 Bayer-style threshold. Much smoother than hard cel bands and stable frame-to-frame.
+      const bayer8=[
+        0,32,8,40,2,34,10,42,48,16,56,24,50,18,58,26,
+        12,44,4,36,14,46,6,38,60,28,52,20,62,30,54,22,
+        3,35,11,43,1,33,9,41,51,19,59,27,49,17,57,25,
+        15,47,7,39,13,45,5,37,63,31,55,23,61,29,53,21
+      ];
+      const threshold=(bayer8[(x&7)+((y&7)<<3)]+.5)/64;
+
+      let idx;
+      if(style==='soft'){
+        idx = frac>threshold ? i1 : i0;
+      }else if(style==='poster'){
+        idx = Math.round(ri);
+      }else{
+        // Cel keeps distinct shapes but softens edges enough to avoid ugly digital banding.
+        const celRi=Math.round(ri*1.18)/1.18;
+        const c0=Math.floor(celRi), c1=Math.min(rampRgb.length-1,c0+1), cf=celRi-c0;
+        idx = cf>(threshold*.55+.225) ? c1 : c0;
+      }
+      let col=rampRgb[Math.max(0,Math.min(rampRgb.length-1,idx))];
+
+      if(toggles.bounce && ny>.25){
+        const b=clamp((ny-.25)/.75)*.22;
+        col=hexToRgb(nearest(mix(col,palRGB[baseIndex],b)));
+      }
+      if(toggles.rim){
+        const rim=Math.pow(1-nz,2.2)*rimPower*clamp(.3+(-nx*.55+ny*.15));
+        if(rim>.06) col=hexToRgb(nearest(mix(col,rampRgb[rampRgb.length-1],clamp(rim))));
+      }
+      if(toggles.specular){
+        const hx=lx,hy=ly,hz=lz+1,hl=Math.hypot(hx,hy,hz);
+        const hd=(nx*hx+ny*hy+nz*hz)/hl;
+        const sp=Math.pow(clamp(hd), 18+130*(1-specSize));
+        if(sp>.12) col=hexToRgb(nearest(mix(col,rampRgb[rampRgb.length-1],clamp(sp*.82))));
+      }
+      if(toggles.grain){
+        const noise=(((x*37+y*101)%31)/31-.5)*.12;
+        const j=Math.max(0,Math.min(rampRgb.length-1,idx+(noise>0?1:-1)));
+        if(Math.abs(noise)>.055) col=rampRgb[j];
+      }
+      const snapped=col;
+      let p=(y*W+x)*4;d[p]=snapped[0];d[p+1]=snapped[1];d[p+2]=snapped[2];d[p+3]=255;
+    }
+  }
+  ctx.putImageData(img,0,0);
+
+  // crisp edge
+  ctx.strokeStyle='rgba(20,20,20,.10)';ctx.lineWidth=2;ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.stroke();
+  renderRamp(ramp);
+  els.baseHex.textContent=PALETTE[baseIndex];
+  els.theoryText.textContent=els.theory.options[els.theory.selectedIndex].text;
+  els.angleText.textContent=`${els.azimuth.value}° / ${els.elevation.value}°`;
+  els.modeBadge.textContent=`${els.style.options[els.style.selectedIndex].text.split(' / ')[0]} · ${n} steps`;
+}
+function renderRamp(ramp){
+  els.ramp.innerHTML='';
+  ramp.forEach((h,i)=>{
+    const c=document.createElement('div');c.className='rampCell';c.style.background=h;
+    const s=document.createElement('span');s.textContent=h;c.appendChild(s);els.ramp.appendChild(c);
+  });
+  els.selectedStrip.innerHTML='';
+  ramp.forEach((h,i)=>{
+    const b=document.createElement('button');b.className='colorChip';b.title='Click to lock/unlock this ramp slot';
+    b.innerHTML=`<span class="colorDot" style="background:${h}"></span><span>${i+1}${locks[i]?' · locked':''}</span>`;
+    b.onclick=()=>{if(locks[i]) delete locks[i]; else locks[i]=h;draw()};els.selectedStrip.appendChild(b);
+  });
+}
+function renderSwatches(){
+  els.swatches.innerHTML='';
+  PALETTE.forEach((h,i)=>{
+    const b=document.createElement('button');b.className='swatch'+(i===baseIndex?' selected':'');b.style.background=h;b.title=`${i+1}: ${h}`;
+    if(h==='#FFFFFF') b.style.boxShadow='inset 0 0 0 1px #bbb';
+    b.onclick=()=>{baseIndex=i;locks={};renderSwatches();draw()};els.swatches.appendChild(b);
+  })
+}
+function bindRange(id,suffix=''){
+  els[id].addEventListener('input',()=>{els[id+'V'].textContent=els[id].value+suffix;draw()});
+}
+['steps','hueMix','depth','azimuth','elevation','hardness','wrap','specSize','rimPower'].forEach(id=>bindRange(id, ['steps'].includes(id)?'':(['azimuth','elevation'].includes(id)?'°':'%')));
+['theory','style'].forEach(id=>els[id].addEventListener('change',draw));
+['specular','rim','bounce','grain'].forEach(id=>els[id].onclick=()=>{toggles[id]=!toggles[id];els[id].classList.toggle('on',toggles[id]);draw()});
+
+canvas.addEventListener('pointerdown',e=>{
+  canvas.setPointerCapture(e.pointerId);
+  const move=ev=>{
+    const r=canvas.getBoundingClientRect(),x=(ev.clientX-r.left)/r.width*canvas.width-canvas.width/2,y=(ev.clientY-r.top)/r.height*canvas.height-canvas.height/2;
+    let az=(Math.atan2(-y,x)*180/Math.PI+360)%360;
+    let rad=Math.min(1,Math.hypot(x,y)/(canvas.width*.355));
+    let elev=85-rad*70;
+    els.azimuth.value=Math.round(az);els.elevation.value=Math.round(elev);
+    els.azimuthV.textContent=els.azimuth.value+'°';els.elevationV.textContent=els.elevation.value+'°';draw();
+  }; move(e); canvas.onpointermove=move; canvas.onpointerup=()=>canvas.onpointermove=null;
+});
+els.randomize.onclick=()=>{
+  baseIndex=Math.floor(Math.random()*PALETTE.length);els.theory.selectedIndex=Math.floor(Math.random()*els.theory.options.length);
+  els.azimuth.value=Math.floor(Math.random()*360);els.elevation.value=20+Math.floor(Math.random()*50);locks={};
+  els.azimuthV.textContent=els.azimuth.value+'°';els.elevationV.textContent=els.elevation.value+'°';renderSwatches();draw();
+};
+els.copyRamp.onclick=async()=>{
+  const txt=makeRamp().join(', ');
+  try{await navigator.clipboard.writeText(txt);els.copyRamp.textContent='Copied';setTimeout(()=>els.copyRamp.textContent='Copy hex ramp',900)}
+  catch{prompt('Copy ramp:',txt)}
+};
+els.reset.onclick=()=>{
+  baseIndex=6;locks={};els.theory.value='cool';els.style.value='soft';
+  const vals={steps:8,hueMix:72,depth:68,azimuth:315,elevation:38,hardness:74,wrap:14,specSize:17,rimPower:38};
+  for(const [k,v] of Object.entries(vals)){els[k].value=v;els[k+'V'].textContent=v+(['azimuth','elevation'].includes(k)?'°':k==='steps'?'':'%')}
+  toggles={specular:true,rim:true,bounce:false,grain:false};['specular','rim','bounce','grain'].forEach(id=>els[id].classList.toggle('on',toggles[id]));
+  renderSwatches();draw();
+};
+
+renderSwatches();draw();
+</script>
+</body></html>
